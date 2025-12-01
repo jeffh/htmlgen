@@ -12,6 +12,8 @@ type Attribute struct {
 	Value string
 }
 
+func (a Attribute) isTagArg() {}
+
 // Attr creates a new Attribute with the given name and value.
 // Panics if name is empty.
 func Attr(name, value string) Attribute {
@@ -24,6 +26,8 @@ func Attr(name, value string) Attribute {
 // Attributes is a slice of Attribute values representing HTML element attributes.
 // It provides methods for getting, setting, and deleting attributes by name.
 type Attributes []Attribute
+
+func (a Attributes) isTagArg() {}
 
 // Attrs creates an Attributes slice from alternating key-value string pairs.
 // Panics if an odd number of arguments is provided or if any key is empty.

@@ -1,7 +1,7 @@
 package h
 
 // Fragment creates a Builder that renders its children without a wrapping element.
-func Fragment(c ...Builder) Builder { return &fragmentBuilder{c} }
+func Fragment(children ...Builder) Builder { return &fragmentBuilder{children} }
 
 // Text creates a Builder that renders HTML-escaped text content.
 func Text(value string) Builder { return &textBuilder{value, false} }
@@ -12,349 +12,352 @@ func Raw(value string) Builder { return &textBuilder{value, true} }
 
 // Html creates the root <html> element with DOCTYPE declaration.
 // Sets lang="en" by default if not specified in attributes.
-func Html(a Attributes, c ...Builder) Builder { return &htmlTagBuilder{a, c} }
+func Html(args ...TagArg) Builder {
+	attrs, children := parseTagArgs(args)
+	return &htmlTagBuilder{attrs, children}
+}
 
 // Head creates a <head> element for document metadata.
-func Head(a Attributes, c ...Builder) Builder { return tag("head", a, c) }
+func Head(args ...TagArg) Builder { return tag("head", args...) }
 
 // Title creates a <title> element for the document title.
-func Title(a Attributes, c ...Builder) Builder { return tag("title", a, c) }
+func Title(args ...TagArg) Builder { return tag("title", args...) }
 
 // Meta creates a <meta> element for document metadata.
-func Meta(a Attributes, c ...Builder) Builder { return stag("meta", a, c) }
+func Meta(args ...TagArg) Builder { return stag("meta", args...) }
 
 // Link creates a <link> element for external resources.
-func Link(a Attributes, c ...Builder) Builder { return stag("link", a, c) }
+func Link(args ...TagArg) Builder { return stag("link", args...) }
 
 // Style creates a <style> element for embedded CSS.
-func Style(a Attributes, c ...Builder) Builder { return tag("style", a, c) }
+func Style(args ...TagArg) Builder { return tag("style", args...) }
 
 // Script creates a <script> element for JavaScript.
-func Script(a Attributes, c ...Builder) Builder { return tag("script", a, c) }
+func Script(args ...TagArg) Builder { return tag("script", args...) }
 
 // Noscript creates a <noscript> element for fallback content.
-func Noscript(a Attributes, c ...Builder) Builder { return tag("noscript", a, c) }
+func Noscript(args ...TagArg) Builder { return tag("noscript", args...) }
 
 // Base creates a <base> element for document base URL.
-func Base(a Attributes, c ...Builder) Builder { return stag("base", a, c) }
+func Base(args ...TagArg) Builder { return stag("base", args...) }
 
 // Body creates a <body> element as the document's sectioning root.
-func Body(a Attributes, c ...Builder) Builder { return tag("body", a, c) }
+func Body(args ...TagArg) Builder { return tag("body", args...) }
 
 // Address creates an <address> element for contact information.
-func Address(a Attributes, c ...Builder) Builder { return tag("address", a, c) }
+func Address(args ...TagArg) Builder { return tag("address", args...) }
 
 // Article creates an <article> element for self-contained content.
-func Article(a Attributes, c ...Builder) Builder { return tag("article", a, c) }
+func Article(args ...TagArg) Builder { return tag("article", args...) }
 
 // Aside creates an <aside> element for tangentially related content.
-func Aside(a Attributes, c ...Builder) Builder { return tag("aside", a, c) }
+func Aside(args ...TagArg) Builder { return tag("aside", args...) }
 
 // Footer creates a <footer> element for footer content.
-func Footer(a Attributes, c ...Builder) Builder { return tag("footer", a, c) }
+func Footer(args ...TagArg) Builder { return tag("footer", args...) }
 
 // Header creates a <header> element for introductory content.
-func Header(a Attributes, c ...Builder) Builder { return tag("header", a, c) }
+func Header(args ...TagArg) Builder { return tag("header", args...) }
 
 // H1 creates an <h1> heading element.
-func H1(a Attributes, c ...Builder) Builder { return tag("h1", a, c) }
+func H1(args ...TagArg) Builder { return tag("h1", args...) }
 
 // H2 creates an <h2> heading element.
-func H2(a Attributes, c ...Builder) Builder { return tag("h2", a, c) }
+func H2(args ...TagArg) Builder { return tag("h2", args...) }
 
 // H3 creates an <h3> heading element.
-func H3(a Attributes, c ...Builder) Builder { return tag("h3", a, c) }
+func H3(args ...TagArg) Builder { return tag("h3", args...) }
 
 // H4 creates an <h4> heading element.
-func H4(a Attributes, c ...Builder) Builder { return tag("h4", a, c) }
+func H4(args ...TagArg) Builder { return tag("h4", args...) }
 
 // H5 creates an <h5> heading element.
-func H5(a Attributes, c ...Builder) Builder { return tag("h5", a, c) }
+func H5(args ...TagArg) Builder { return tag("h5", args...) }
 
 // H6 creates an <h6> heading element.
-func H6(a Attributes, c ...Builder) Builder { return tag("h6", a, c) }
+func H6(args ...TagArg) Builder { return tag("h6", args...) }
 
 // Hgroup creates an <hgroup> element for heading groups.
-func Hgroup(a Attributes, c ...Builder) Builder { return tag("hgroup", a, c) }
+func Hgroup(args ...TagArg) Builder { return tag("hgroup", args...) }
 
 // Main creates a <main> element for the dominant content.
-func Main(a Attributes, c ...Builder) Builder { return tag("main", a, c) }
+func Main(args ...TagArg) Builder { return tag("main", args...) }
 
 // Nav creates a <nav> element for navigation links.
-func Nav(a Attributes, c ...Builder) Builder { return tag("nav", a, c) }
+func Nav(args ...TagArg) Builder { return tag("nav", args...) }
 
 // Section creates a <section> element for thematic content grouping.
-func Section(a Attributes, c ...Builder) Builder { return tag("section", a, c) }
+func Section(args ...TagArg) Builder { return tag("section", args...) }
 
 // Search creates a <search> element for search functionality.
-func Search(a Attributes, c ...Builder) Builder { return tag("search", a, c) }
+func Search(args ...TagArg) Builder { return tag("search", args...) }
 
 // Blockquote creates a <blockquote> element for extended quotations.
-func Blockquote(a Attributes, c ...Builder) Builder { return tag("blockquote", a, c) }
+func Blockquote(args ...TagArg) Builder { return tag("blockquote", args...) }
 
 // Dd creates a <dd> element for description list definitions.
-func Dd(a Attributes, c ...Builder) Builder { return tag("dd", a, c) }
+func Dd(args ...TagArg) Builder { return tag("dd", args...) }
 
 // Div creates a <div> element as a generic container.
-func Div(a Attributes, c ...Builder) Builder { return tag("div", a, c) }
+func Div(args ...TagArg) Builder { return tag("div", args...) }
 
 // Dl creates a <dl> element for description lists.
-func Dl(a Attributes, c ...Builder) Builder { return tag("dl", a, c) }
+func Dl(args ...TagArg) Builder { return tag("dl", args...) }
 
 // Dt creates a <dt> element for description list terms.
-func Dt(a Attributes, c ...Builder) Builder { return tag("dt", a, c) }
+func Dt(args ...TagArg) Builder { return tag("dt", args...) }
 
 // Figcaption creates a <figcaption> element for figure captions.
-func Figcaption(a Attributes, c ...Builder) Builder { return tag("figcaption", a, c) }
+func Figcaption(args ...TagArg) Builder { return tag("figcaption", args...) }
 
 // Figure creates a <figure> element for self-contained content with optional caption.
-func Figure(a Attributes, c ...Builder) Builder { return tag("figure", a, c) }
+func Figure(args ...TagArg) Builder { return tag("figure", args...) }
 
 // Hr creates an <hr> element for thematic breaks.
-func Hr(a Attributes, c ...Builder) Builder { return stag("hr", a, c) }
+func Hr(args ...TagArg) Builder { return stag("hr", args...) }
 
 // Li creates an <li> element for list items.
-func Li(a Attributes, c ...Builder) Builder { return tag("li", a, c) }
+func Li(args ...TagArg) Builder { return tag("li", args...) }
 
 // Menu creates a <menu> element for toolbar menus.
-func Menu(a Attributes, c ...Builder) Builder { return tag("menu", a, c) }
+func Menu(args ...TagArg) Builder { return tag("menu", args...) }
 
 // Ol creates an <ol> element for ordered lists.
-func Ol(a Attributes, c ...Builder) Builder { return tag("ol", a, c) }
+func Ol(args ...TagArg) Builder { return tag("ol", args...) }
 
 // P creates a <p> element for paragraphs.
-func P(a Attributes, c ...Builder) Builder { return tag("p", a, c) }
+func P(args ...TagArg) Builder { return tag("p", args...) }
 
 // Pre creates a <pre> element for preformatted text.
-func Pre(a Attributes, c ...Builder) Builder { return tag("pre", a, c) }
+func Pre(args ...TagArg) Builder { return tag("pre", args...) }
 
 // Ul creates a <ul> element for unordered lists.
-func Ul(a Attributes, c ...Builder) Builder { return tag("ul", a, c) }
+func Ul(args ...TagArg) Builder { return tag("ul", args...) }
 
 // A creates an <a> element for hyperlinks.
-func A(a Attributes, c ...Builder) Builder { return tag("a", a, c) }
+func A(args ...TagArg) Builder { return tag("a", args...) }
 
 // Abbr creates an <abbr> element for abbreviations.
-func Abbr(a Attributes, c ...Builder) Builder { return tag("abbr", a, c) }
+func Abbr(args ...TagArg) Builder { return tag("abbr", args...) }
 
 // B creates a <b> element for bold text.
-func B(a Attributes, c ...Builder) Builder { return tag("b", a, c) }
+func B(args ...TagArg) Builder { return tag("b", args...) }
 
 // Bdi creates a <bdi> element for bidirectional text isolation.
-func Bdi(a Attributes, c ...Builder) Builder { return tag("bdi", a, c) }
+func Bdi(args ...TagArg) Builder { return tag("bdi", args...) }
 
 // Bdo creates a <bdo> element for bidirectional text override.
-func Bdo(a Attributes, c ...Builder) Builder { return tag("bdo", a, c) }
+func Bdo(args ...TagArg) Builder { return tag("bdo", args...) }
 
 // Br creates a <br> element for line breaks.
-func Br(a Attributes, c ...Builder) Builder { return stag("br", a, c) }
+func Br(args ...TagArg) Builder { return stag("br", args...) }
 
 // Cite creates a <cite> element for citations.
-func Cite(a Attributes, c ...Builder) Builder { return tag("cite", a, c) }
+func Cite(args ...TagArg) Builder { return tag("cite", args...) }
 
 // Code creates a <code> element for code fragments.
-func Code(a Attributes, c ...Builder) Builder { return tag("code", a, c) }
+func Code(args ...TagArg) Builder { return tag("code", args...) }
 
 // Data creates a <data> element for machine-readable content.
-func Data(a Attributes, c ...Builder) Builder { return tag("data", a, c) }
+func Data(args ...TagArg) Builder { return tag("data", args...) }
 
 // Dfn creates a <dfn> element for definitions.
-func Dfn(a Attributes, c ...Builder) Builder { return tag("dfn", a, c) }
+func Dfn(args ...TagArg) Builder { return tag("dfn", args...) }
 
 // Em creates an <em> element for emphasized text.
-func Em(a Attributes, c ...Builder) Builder { return tag("em", a, c) }
+func Em(args ...TagArg) Builder { return tag("em", args...) }
 
 // I creates an <i> element for idiomatic text.
-func I(a Attributes, c ...Builder) Builder { return tag("i", a, c) }
+func I(args ...TagArg) Builder { return tag("i", args...) }
 
 // Kbd creates a <kbd> element for keyboard input.
-func Kbd(a Attributes, c ...Builder) Builder { return tag("kbd", a, c) }
+func Kbd(args ...TagArg) Builder { return tag("kbd", args...) }
 
 // Mark creates a <mark> element for highlighted text.
-func Mark(a Attributes, c ...Builder) Builder { return tag("mark", a, c) }
+func Mark(args ...TagArg) Builder { return tag("mark", args...) }
 
 // Q creates a <q> element for inline quotations.
-func Q(a Attributes, c ...Builder) Builder { return tag("q", a, c) }
+func Q(args ...TagArg) Builder { return tag("q", args...) }
 
 // Rp creates an <rp> element for ruby fallback parentheses.
-func Rp(a Attributes, c ...Builder) Builder { return tag("rp", a, c) }
+func Rp(args ...TagArg) Builder { return tag("rp", args...) }
 
 // Rt creates an <rt> element for ruby text.
-func Rt(a Attributes, c ...Builder) Builder { return tag("rt", a, c) }
+func Rt(args ...TagArg) Builder { return tag("rt", args...) }
 
 // Ruby creates a <ruby> element for ruby annotations.
-func Ruby(a Attributes, c ...Builder) Builder { return tag("ruby", a, c) }
+func Ruby(args ...TagArg) Builder { return tag("ruby", args...) }
 
 // S creates an <s> element for strikethrough text.
-func S(a Attributes, c ...Builder) Builder { return tag("s", a, c) }
+func S(args ...TagArg) Builder { return tag("s", args...) }
 
 // Samp creates a <samp> element for sample output.
-func Samp(a Attributes, c ...Builder) Builder { return tag("samp", a, c) }
+func Samp(args ...TagArg) Builder { return tag("samp", args...) }
 
 // Small creates a <small> element for side comments.
-func Small(a Attributes, c ...Builder) Builder { return tag("small", a, c) }
+func Small(args ...TagArg) Builder { return tag("small", args...) }
 
 // Span creates a <span> element as a generic inline container.
-func Span(a Attributes, c ...Builder) Builder { return tag("span", a, c) }
+func Span(args ...TagArg) Builder { return tag("span", args...) }
 
 // Strong creates a <strong> element for strong importance.
-func Strong(a Attributes, c ...Builder) Builder { return tag("strong", a, c) }
+func Strong(args ...TagArg) Builder { return tag("strong", args...) }
 
 // Sub creates a <sub> element for subscript text.
-func Sub(a Attributes, c ...Builder) Builder { return tag("sub", a, c) }
+func Sub(args ...TagArg) Builder { return tag("sub", args...) }
 
 // Sup creates a <sup> element for superscript text.
-func Sup(a Attributes, c ...Builder) Builder { return tag("sup", a, c) }
+func Sup(args ...TagArg) Builder { return tag("sup", args...) }
 
 // Time creates a <time> element for dates and times.
-func Time(a Attributes, c ...Builder) Builder { return tag("time", a, c) }
+func Time(args ...TagArg) Builder { return tag("time", args...) }
 
 // U creates a <u> element for underlined text.
-func U(a Attributes, c ...Builder) Builder { return tag("u", a, c) }
+func U(args ...TagArg) Builder { return tag("u", args...) }
 
 // Var creates a <var> element for variable names.
-func Var(a Attributes, c ...Builder) Builder { return tag("var", a, c) }
+func Var(args ...TagArg) Builder { return tag("var", args...) }
 
 // Wbr creates a <wbr> element for word break opportunities.
-func Wbr(a Attributes, c ...Builder) Builder { return stag("wbr", a, c) }
+func Wbr(args ...TagArg) Builder { return stag("wbr", args...) }
 
 // Area creates an <area> element for image map areas.
-func Area(a Attributes, c ...Builder) Builder { return stag("area", a, c) }
+func Area(args ...TagArg) Builder { return stag("area", args...) }
 
 // Audio creates an <audio> element for sound content.
-func Audio(a Attributes, c ...Builder) Builder { return tag("audio", a, c) }
+func Audio(args ...TagArg) Builder { return tag("audio", args...) }
 
 // Img creates an <img> element for images.
-func Img(a Attributes, c ...Builder) Builder { return stag("img", a, c) }
+func Img(args ...TagArg) Builder { return stag("img", args...) }
 
 // Map creates a <map> element for image maps.
-func Map(a Attributes, c ...Builder) Builder { return tag("map", a, c) }
+func Map(args ...TagArg) Builder { return tag("map", args...) }
 
 // Track creates a <track> element for media text tracks.
-func Track(a Attributes, c ...Builder) Builder { return stag("track", a, c) }
+func Track(args ...TagArg) Builder { return stag("track", args...) }
 
 // Video creates a <video> element for video content.
-func Video(a Attributes, c ...Builder) Builder { return tag("video", a, c) }
+func Video(args ...TagArg) Builder { return tag("video", args...) }
 
 // Embed creates an <embed> element for external content.
-func Embed(a Attributes, c ...Builder) Builder { return stag("embed", a, c) }
+func Embed(args ...TagArg) Builder { return stag("embed", args...) }
 
 // Iframe creates an <iframe> element for nested browsing contexts.
-func Iframe(a Attributes, c ...Builder) Builder { return tag("iframe", a, c) }
+func Iframe(args ...TagArg) Builder { return tag("iframe", args...) }
 
 // Object creates an <object> element for external resources.
-func Object(a Attributes, c ...Builder) Builder { return tag("object", a, c) }
+func Object(args ...TagArg) Builder { return tag("object", args...) }
 
 // Picture creates a <picture> element for responsive images.
-func Picture(a Attributes, c ...Builder) Builder { return tag("picture", a, c) }
+func Picture(args ...TagArg) Builder { return tag("picture", args...) }
 
 // Portal creates a <portal> element for embedded pages.
-func Portal(a Attributes, c ...Builder) Builder { return tag("portal", a, c) }
+func Portal(args ...TagArg) Builder { return tag("portal", args...) }
 
 // Source creates a <source> element for media sources.
-func Source(a Attributes, c ...Builder) Builder { return stag("source", a, c) }
+func Source(args ...TagArg) Builder { return stag("source", args...) }
 
 // Svg creates an <svg> element for SVG graphics.
-func Svg(a Attributes, c ...Builder) Builder { return tag("svg", a, c) }
+func Svg(args ...TagArg) Builder { return tag("svg", args...) }
 
 // Math creates a <math> element for MathML content.
-func Math(a Attributes, c ...Builder) Builder { return tag("math", a, c) }
+func Math(args ...TagArg) Builder { return tag("math", args...) }
 
 // Canvas creates a <canvas> element for graphics rendering.
-func Canvas(a Attributes, c ...Builder) Builder { return tag("canvas", a, c) }
+func Canvas(args ...TagArg) Builder { return tag("canvas", args...) }
 
 // Template creates a <template> element for client-side content templates.
-func Template(a Attributes, c ...Builder) Builder { return tag("template", a, c) }
+func Template(args ...TagArg) Builder { return tag("template", args...) }
 
 // Slot creates a <slot> element for web component content distribution.
-func Slot(a Attributes, c ...Builder) Builder { return tag("slot", a, c) }
+func Slot(args ...TagArg) Builder { return tag("slot", args...) }
 
 // Del creates a <del> element for deleted text.
-func Del(a Attributes, c ...Builder) Builder { return tag("del", a, c) }
+func Del(args ...TagArg) Builder { return tag("del", args...) }
 
 // Ins creates an <ins> element for inserted text.
-func Ins(a Attributes, c ...Builder) Builder { return tag("ins", a, c) }
+func Ins(args ...TagArg) Builder { return tag("ins", args...) }
 
 // Caption creates a <caption> element for table captions.
-func Caption(a Attributes, c ...Builder) Builder { return tag("caption", a, c) }
+func Caption(args ...TagArg) Builder { return tag("caption", args...) }
 
 // Col creates a <col> element for table column properties.
-func Col(a Attributes, c ...Builder) Builder { return stag("col", a, c) }
+func Col(args ...TagArg) Builder { return stag("col", args...) }
 
 // Colgroup creates a <colgroup> element for table column groups.
-func Colgroup(a Attributes, c ...Builder) Builder { return tag("colgroup", a, c) }
+func Colgroup(args ...TagArg) Builder { return tag("colgroup", args...) }
 
 // Table creates a <table> element for tabular data.
-func Table(a Attributes, c ...Builder) Builder { return tag("table", a, c) }
+func Table(args ...TagArg) Builder { return tag("table", args...) }
 
 // Tbody creates a <tbody> element for table body content.
-func Tbody(a Attributes, c ...Builder) Builder { return tag("tbody", a, c) }
+func Tbody(args ...TagArg) Builder { return tag("tbody", args...) }
 
 // Td creates a <td> element for table data cells.
-func Td(a Attributes, c ...Builder) Builder { return tag("td", a, c) }
+func Td(args ...TagArg) Builder { return tag("td", args...) }
 
 // Tfoot creates a <tfoot> element for table footer content.
-func Tfoot(a Attributes, c ...Builder) Builder { return tag("tfoot", a, c) }
+func Tfoot(args ...TagArg) Builder { return tag("tfoot", args...) }
 
 // Th creates a <th> element for table header cells.
-func Th(a Attributes, c ...Builder) Builder { return tag("th", a, c) }
+func Th(args ...TagArg) Builder { return tag("th", args...) }
 
 // Thead creates a <thead> element for table header content.
-func Thead(a Attributes, c ...Builder) Builder { return tag("thead", a, c) }
+func Thead(args ...TagArg) Builder { return tag("thead", args...) }
 
 // Tr creates a <tr> element for table rows.
-func Tr(a Attributes, c ...Builder) Builder { return tag("tr", a, c) }
+func Tr(args ...TagArg) Builder { return tag("tr", args...) }
 
 // Button creates a <button> element for clickable buttons.
-func Button(a Attributes, c ...Builder) Builder { return tag("button", a, c) }
+func Button(args ...TagArg) Builder { return tag("button", args...) }
 
 // Datalist creates a <datalist> element for input suggestions.
-func Datalist(a Attributes, c ...Builder) Builder { return tag("datalist", a, c) }
+func Datalist(args ...TagArg) Builder { return tag("datalist", args...) }
 
 // Fieldset creates a <fieldset> element for form field groups.
-func Fieldset(a Attributes, c ...Builder) Builder { return tag("fieldset", a, c) }
+func Fieldset(args ...TagArg) Builder { return tag("fieldset", args...) }
 
 // Form creates a <form> element for user input forms.
-func Form(a Attributes, c ...Builder) Builder { return tag("form", a, c) }
+func Form(args ...TagArg) Builder { return tag("form", args...) }
 
 // Input creates an <input> element for form inputs.
-func Input(a Attributes, c ...Builder) Builder { return stag("input", a, c) }
+func Input(args ...TagArg) Builder { return stag("input", args...) }
 
 // Label creates a <label> element for form control labels.
-func Label(a Attributes, c ...Builder) Builder { return tag("label", a, c) }
+func Label(args ...TagArg) Builder { return tag("label", args...) }
 
 // Legend creates a <legend> element for fieldset captions.
-func Legend(a Attributes, c ...Builder) Builder { return tag("legend", a, c) }
+func Legend(args ...TagArg) Builder { return tag("legend", args...) }
 
 // Meter creates a <meter> element for scalar measurements.
-func Meter(a Attributes, c ...Builder) Builder { return tag("meter", a, c) }
+func Meter(args ...TagArg) Builder { return tag("meter", args...) }
 
 // Optgroup creates an <optgroup> element for option groups.
-func Optgroup(a Attributes, c ...Builder) Builder { return tag("optgroup", a, c) }
+func Optgroup(args ...TagArg) Builder { return tag("optgroup", args...) }
 
 // Option creates an <option> element for select options.
-func Option(a Attributes, c ...Builder) Builder { return tag("option", a, c) }
+func Option(args ...TagArg) Builder { return tag("option", args...) }
 
 // Output creates an <output> element for calculation results.
-func Output(a Attributes, c ...Builder) Builder { return tag("output", a, c) }
+func Output(args ...TagArg) Builder { return tag("output", args...) }
 
 // Progress creates a <progress> element for progress indicators.
-func Progress(a Attributes, c ...Builder) Builder { return tag("progress", a, c) }
+func Progress(args ...TagArg) Builder { return tag("progress", args...) }
 
 // Select creates a <select> element for dropdown lists.
-func Select(a Attributes, c ...Builder) Builder { return tag("select", a, c) }
+func Select(args ...TagArg) Builder { return tag("select", args...) }
 
 // Textarea creates a <textarea> element for multi-line text input.
-func Textarea(a Attributes, c ...Builder) Builder { return tag("textarea", a, c) }
+func Textarea(args ...TagArg) Builder { return tag("textarea", args...) }
 
 // Details creates a <details> element for disclosure widgets.
-func Details(a Attributes, c ...Builder) Builder { return tag("details", a, c) }
+func Details(args ...TagArg) Builder { return tag("details", args...) }
 
 // Dialog creates a <dialog> element for modal dialogs.
-func Dialog(a Attributes, c ...Builder) Builder { return tag("dialog", a, c) }
+func Dialog(args ...TagArg) Builder { return tag("dialog", args...) }
 
 // Summary creates a <summary> element for details disclosure.
-func Summary(a Attributes, c ...Builder) Builder { return tag("summary", a, c) }
+func Summary(args ...TagArg) Builder { return tag("summary", args...) }
 
 // CustomElement creates a custom HTML element with the given tag name.
-func CustomElement(name string, a Attributes, c ...Builder) Builder { return tag(name, a, c) }
+func CustomElement(name string, args ...TagArg) Builder { return tag(name, args...) }

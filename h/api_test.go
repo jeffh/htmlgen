@@ -47,10 +47,10 @@ func TestHtmlWriting(t *testing.T) {
 <html lang="en"><head><link rel="stylesheet" href="style.css" rel="preload"/></head><body><script src="script.js" defer></script></body></html>`,
 			func(w *Writer) {
 				b := Html(Attrs("lang", "en"),
-					Head(nil,
+					Head(
 						Link(Attrs("rel", "stylesheet", "href", "style.css", "rel", "preload")),
 					),
-					Body(nil,
+					Body(
 						Script(Attrs("src", "script.js", "defer", "")),
 					),
 				)
@@ -73,10 +73,10 @@ func TestHtmlWriting(t *testing.T) {
 			func(w *Writer) {
 				w.SetIndent("  ")
 				b := Html(Attrs("lang", "en"),
-					Head(nil,
+					Head(
 						Link(Attrs("rel", "stylesheet", "href", "style.css", "rel", "preload")),
 					),
-					Body(nil,
+					Body(
 						Script(Attrs("src", "script.js", "defer", "")),
 					),
 				)
@@ -348,7 +348,7 @@ func TestRenderPrettyNil(t *testing.T) {
 
 func TestRenderPretty(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	b := Div(nil, P(nil, Text("hello")))
+	b := Div(P(Text("hello")))
 	RenderIndent(buf, "  ", b)
 	// Text content is not indented - only tags get indentation
 	expected := "<div>\n  <p>\nhello  </p>\n</div>\n"
@@ -400,7 +400,7 @@ func TestBooleanAttribute(t *testing.T) {
 
 func TestHtmlDefaultLang(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	b := Html(nil)
+	b := Html()
 	Render(buf, b)
 	expected := "<!DOCTYPE html>\n<html lang=\"en\"></html>"
 	if buf.String() != expected {
@@ -420,7 +420,7 @@ func TestHtmlCustomLang(t *testing.T) {
 
 func TestTagWithNilChildren(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	b := Div(nil, nil, Text("hello"), nil, Text("world"), nil)
+	b := Div(Text("hello"), Text("world"))
 	Render(buf, b)
 	expected := "<div>helloworld</div>"
 	if buf.String() != expected {
@@ -485,30 +485,6 @@ func TestCloseOnEmptyWriter(t *testing.T) {
 	}
 }
 
-func TestServerClientConstants(t *testing.T) {
-	// On server (non-js build), Server should be true and Client should be false
-	if !Server {
-		t.Error("expected Server to be true")
-	}
-	if Client {
-		t.Error("expected Client to be false")
-	}
-}
-
-func TestChan(t *testing.T) {
-	ch := Chan[int]("test")
-	if ch == nil {
-		t.Error("expected non-nil channel")
-	}
-	// Test that channel has buffer of 1
-	select {
-	case ch <- 42:
-		// success
-	default:
-		t.Error("expected to be able to send on buffered channel")
-	}
-}
-
 func TestAttrsMapEmpty(t *testing.T) {
 	attrs := AttrsMap(map[string]string{})
 	if len(attrs) != 0 {
@@ -523,17 +499,17 @@ func TestVariousHtmlTags(t *testing.T) {
 		builder  Builder
 		expected string
 	}{
-		{"Div", Div(nil), "<div></div>"},
-		{"Span", Span(nil, Text("text")), "<span>text</span>"},
+		{"Div", Div(), "<div></div>"},
+		{"Span", Span(Text("text")), "<span>text</span>"},
 		{"A", A(Attrs("href", "/")), "<a href=\"/\"></a>"},
-		{"P", P(nil), "<p></p>"},
-		{"Ul/Li", Ul(nil, Li(nil, Text("item"))), "<ul><li>item</li></ul>"},
-		{"Table", Table(nil, Tr(nil, Td(nil))), "<table><tr><td></td></tr></table>"},
+		{"P", P(), "<p></p>"},
+		{"Ul/Li", Ul(Li(Text("item"))), "<ul><li>item</li></ul>"},
+		{"Table", Table(Tr(Td())), "<table><tr><td></td></tr></table>"},
 		{"Form", Form(Attrs("method", "post")), "<form method=\"post\"></form>"},
 		{"Button", Button(Attrs("type", "submit"), Text("Submit")), "<button type=\"submit\">Submit</button>"},
 		{"Img", Img(Attrs("src", "test.png", "alt", "test")), "<img src=\"test.png\" alt=\"test\"/>"},
-		{"Br", Br(nil), "<br/>"},
-		{"Hr", Hr(nil), "<hr/>"},
+		{"Br", Br(), "<br/>"},
+		{"Hr", Hr(), "<hr/>"},
 		{"Meta", Meta(Attrs("charset", "utf-8")), "<meta charset=\"utf-8\"/>"},
 		{"Link", Link(Attrs("rel", "stylesheet")), "<link rel=\"stylesheet\"/>"},
 	}
@@ -552,7 +528,7 @@ func TestVariousHtmlTags(t *testing.T) {
 // Test Render function return value
 func TestRenderReturnsError(t *testing.T) {
 	ew := &errorWriter{}
-	b := Div(nil, Text("hello"))
+	b := Div(Text("hello"))
 	err := Render(ew, b)
 	if err == nil {
 		t.Error("expected error from Render")
@@ -562,7 +538,7 @@ func TestRenderReturnsError(t *testing.T) {
 // Test RenderPretty function return value
 func TestRenderPrettyReturnsError(t *testing.T) {
 	ew := &errorWriter{}
-	b := Div(nil, Text("hello"))
+	b := Div(Text("hello"))
 	err := RenderIndent(ew, "  ", b)
 	if err == nil {
 		t.Error("expected error from RenderPretty")
@@ -682,7 +658,7 @@ func TestHtmlTagBuilderChildError(t *testing.T) {
 	w := NewWriter(buf)
 
 	// Create an html tag with a child that will error
-	html := Html(nil, Div(nil, Text("test")))
+	html := Html(Div(Text("test")))
 
 	// Replace the writer after doctype to force child error
 	html.Build(w) // Ignore first error
@@ -692,7 +668,7 @@ func TestHtmlTagBuilderChildError(t *testing.T) {
 	w2.openTags = append(w2.openTags, "html") // simulate opened tag
 
 	// Test that child error propagates through tagBuilder
-	div := Div(nil, Text("test"))
+	div := Div(Text("test"))
 	if err := div.Build(w2); err == nil {
 		t.Error("expected error from child build")
 	}
@@ -711,7 +687,7 @@ func TestTagBuilderSelfCloseError(t *testing.T) {
 
 func TestHtmlTagBuilderWithNilChildren(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	b := Html(nil, nil, Div(nil), nil)
+	b := Html(Div())
 	Render(buf, b)
 	expected := "<!DOCTYPE html>\n<html lang=\"en\"><div></div></html>"
 	if buf.String() != expected {
@@ -900,7 +876,7 @@ func TestHtmlBuilderCloseError(t *testing.T) {
 	w := NewWriter(pw)
 
 	// Create Html with content, then limit remaining bytes
-	html := Html(nil, Div(nil, Text("content")))
+	html := Html(Div(Text("content")))
 	pw.remaining = 50 // enough to open but not fully close
 	err := html.Build(w)
 	// Error may or may not occur depending on exact byte counts
@@ -911,7 +887,7 @@ func TestFragmentBuilderError(t *testing.T) {
 	ew := &errorWriter{}
 	w := NewWriter(ew)
 
-	frag := Fragment(Div(nil, Text("test")))
+	frag := Fragment(Div(Text("test")))
 	err := frag.Build(w)
 	if err == nil {
 		t.Error("expected error from fragment builder")
