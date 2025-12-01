@@ -18,8 +18,8 @@ func Animate(options ...AttrMutator) h.Attribute {
 // CustomValidity adds custom validation messages to form inputs.
 // Empty strings indicate valid; non-empty strings are shown as validation errors.
 // Requires Datastar Pro license.
-// Example: CustomValidity(Raw("$password === $confirmPassword ? '' : 'Passwords must match'"))
-// Produces: data-custom-validity="$password === $confirmPassword ? '' : 'Passwords must match'"
+// Example: CustomValidity(Raw("$password === $confirmPassword ? ” : 'Passwords must match'"))
+// Produces: data-custom-validity="$password === $confirmPassword ? ” : 'Passwords must match'"
 func CustomValidity(expression ...AttrMutator) h.Attribute {
 	return exprAttr("data-custom-validity", expression...)
 }
