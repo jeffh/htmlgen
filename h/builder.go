@@ -1,11 +1,5 @@
 package h
 
-import (
-	"maps"
-	"slices"
-	"sort"
-)
-
 // TagArg is a marker interface for types that can be passed to tag functions.
 // Valid types are: Attributes, Attribute, and Builder.
 type TagArg interface {
@@ -17,16 +11,6 @@ type TagArg interface {
 type Builder interface {
 	TagArg
 	Build(w *Writer) error
-}
-
-func attrsMapToSlice(attrs map[string]string) []string {
-	result := make([]string, 0, len(attrs)*2)
-	keys := slices.Collect(maps.Keys(attrs))
-	sort.Strings(keys)
-	for _, k := range keys {
-		result = append(result, k, attrs[k])
-	}
-	return result
 }
 
 type htmlTagBuilder struct {
