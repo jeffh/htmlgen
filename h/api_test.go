@@ -238,6 +238,47 @@ func TestAttributesDelete(t *testing.T) {
 	}
 }
 
+func TestAttributesMerge(t *testing.T) {
+	// Test merging with override
+	attrs := Attrs("class", "foo", "id", "bar")
+	attrs.Merge(Attrs("id", "newbar", "href", "/home"))
+	if val, _ := attrs.Get("class"); val != "foo" {
+		t.Errorf("expected class=foo, got %s", val)
+	}
+	if val, _ := attrs.Get("id"); val != "newbar" {
+		t.Errorf("expected id=newbar, got %s", val)
+	}
+	if val, _ := attrs.Get("href"); val != "/home" {
+		t.Errorf("expected href=/home, got %s", val)
+	}
+	if len(attrs) != 3 {
+		t.Errorf("expected 3 attrs, got %d", len(attrs))
+	}
+}
+
+func TestAttributesMergeEmpty(t *testing.T) {
+	attrs := Attrs("class", "foo")
+	attrs.Merge(nil)
+	if len(attrs) != 1 {
+		t.Errorf("expected 1 attr after merging nil, got %d", len(attrs))
+	}
+	attrs.Merge(Attrs())
+	if len(attrs) != 1 {
+		t.Errorf("expected 1 attr after merging empty, got %d", len(attrs))
+	}
+}
+
+func TestAttributesMergeIntoEmpty(t *testing.T) {
+	var attrs Attributes
+	attrs.Merge(Attrs("class", "foo", "id", "bar"))
+	if len(attrs) != 2 {
+		t.Errorf("expected 2 attrs, got %d", len(attrs))
+	}
+	if val, _ := attrs.Get("class"); val != "foo" {
+		t.Errorf("expected class=foo, got %s", val)
+	}
+}
+
 func TestCloseOneTagError(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	w := NewWriter(buf)

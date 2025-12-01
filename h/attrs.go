@@ -112,3 +112,32 @@ func (a *Attributes) Delete(key string) {
 		*a = slices.Delete(*a, idx, idx+1)
 	}
 }
+
+// Merge merges attributes from b into a. Values from b take precedence
+// over existing values in a for attributes with the same name.
+func (a *Attributes) Merge(b Attributes) {
+	if len(b) == 0 {
+		return
+	}
+	if len(b) <= 4 {
+		// For small b, use linear search
+		for _, attr := range b {
+			a.Set(attr.Name, attr.Value)
+		}
+		return
+	}
+	// Build index map of existing attribute positions
+	index := make(map[string]int, len(*a))
+	for i, attr := range *a {
+		index[attr.Name] = i
+	}
+	// Merge attributes from b
+	for _, attr := range b {
+		if idx, exists := index[attr.Name]; exists {
+			(*a)[idx].Value = attr.Value
+		} else {
+			*a = append(*a, attr)
+			index[attr.Name] = len(*a) - 1
+		}
+	}
+}

@@ -70,9 +70,7 @@ func parseTagArgs(args []TagArg) (Attributes, []Builder) {
 			if attrs == nil {
 				attrs = v
 			} else {
-				for _, attr := range v {
-					attrs.Set(attr.Name, attr.Value)
-				}
+				attrs.Merge(v)
 			}
 		case Attribute:
 			if attrs == nil {
