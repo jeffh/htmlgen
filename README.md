@@ -40,8 +40,8 @@ page := h.Html(nil,
 // Render to any io.Writer
 h.Render(os.Stdout, page)
 
-// Or render with pretty-printed indentation
-h.RenderPretty(os.Stdout, page)
+// Or render with pretty-printed indentation (using two spaces)
+h.RenderPretty(os.Stdout, "  ", page)
 ```
 
 ### Attributes

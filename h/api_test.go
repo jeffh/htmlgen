@@ -337,7 +337,7 @@ func TestRenderNil(t *testing.T) {
 
 func TestRenderPrettyNil(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	err := RenderPretty(buf, nil)
+	err := RenderIndent(buf, "  ", nil)
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -349,7 +349,7 @@ func TestRenderPrettyNil(t *testing.T) {
 func TestRenderPretty(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	b := Div(nil, P(nil, Text("hello")))
-	RenderPretty(buf, b)
+	RenderIndent(buf, "  ", b)
 	// Text content is not indented - only tags get indentation
 	expected := "<div>\n  <p>\nhello  </p>\n</div>\n"
 	if buf.String() != expected {
@@ -563,7 +563,7 @@ func TestRenderReturnsError(t *testing.T) {
 func TestRenderPrettyReturnsError(t *testing.T) {
 	ew := &errorWriter{}
 	b := Div(nil, Text("hello"))
-	err := RenderPretty(ew, b)
+	err := RenderIndent(ew, "  ", b)
 	if err == nil {
 		t.Error("expected error from RenderPretty")
 	}
