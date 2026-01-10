@@ -21,7 +21,7 @@ This guide covers [Datastar](https://data-star.dev/), a lightweight hypermedia f
 Include via CDN:
 
 ```html
-<script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/[email protected]/bundles/datastar.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.7/bundles/datastar.js"></script>
 ```
 
 Or install via package manager and self-host the bundle.
