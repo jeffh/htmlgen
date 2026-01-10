@@ -409,6 +409,32 @@ func BenchmarkDeepNesting_Template(b *testing.B) {
 	}
 }
 
+// buildNestedDivs creates a nested div structure of the specified depth
+func buildNestedDivs(depth int) Builder {
+	if depth <= 0 {
+		return Text("Nested")
+	}
+	return Div(buildNestedDivs(depth - 1))
+}
+
+func BenchmarkDeepNesting20_HtmlGen(b *testing.B) {
+	tree := buildNestedDivs(20)
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		Render(&buf, tree)
+	}
+}
+
+func BenchmarkDeepNesting50_HtmlGen(b *testing.B) {
+	tree := buildNestedDivs(50)
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		Render(&buf, tree)
+	}
+}
+
 // ============================================================================
 // Form Benchmarks
 // ============================================================================
