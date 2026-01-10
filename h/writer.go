@@ -7,10 +7,51 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"sync"
 )
 
 // ErrUnknownTagToClose is returned when attempting to close a tag that was not opened.
 var ErrUnknownTagToClose = errors.New("attempted to close tag not opened")
+
+// writerPool pools Writer objects to reduce allocations.
+var writerPool = sync.Pool{
+	New: func() any {
+		return &Writer{openTags: make([]string, 0, 32)}
+	},
+}
+
+// getPooledWriter returns a Writer from the pool, configured to write to w.
+func getPooledWriter(w io.Writer) *Writer {
+	writer := writerPool.Get().(*Writer)
+	writer.w = w
+	return writer
+}
+
+// putPooledWriter returns a Writer to the pool after resetting it.
+func putPooledWriter(w *Writer) {
+	w.w = nil
+	w.indent = ""
+	w.indentCache = nil
+	w.openTags = w.openTags[:0]
+	writerPool.Put(w)
+}
+
+// writeEscapedString writes s to w with HTML escaping, avoiding allocations
+// when no escaping is needed.
+func writeEscapedString(w io.Writer, s string) error {
+	// Fast path: check if escaping is needed
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '&', '<', '>', '"', '\'':
+			// Slow path: use template.HTMLEscape which writes directly to w
+			template.HTMLEscape(w, []byte(s))
+			return nil
+		}
+	}
+	// No escaping needed
+	_, err := io.WriteString(w, s)
+	return err
+}
 
 // NewWriter creates a new Writer that wraps the provided io.Writer.
 // The Writer tracks open tags and provides methods for writing HTML elements.
@@ -108,7 +149,7 @@ func (w *Writer) SelfClosingTag(name string, as Attributes) error {
 			if _, err := io.WriteString(w.w, "=\""); err != nil {
 				return err
 			}
-			if _, err := io.WriteString(w.w, template.HTMLEscapeString(attr.Value)); err != nil {
+			if err := writeEscapedString(w.w, attr.Value); err != nil {
 				return err
 			}
 			if _, err := io.WriteString(w.w, "\""); err != nil {
@@ -149,7 +190,7 @@ func (w *Writer) OpenTag(name string, as Attributes) error {
 			if _, err := io.WriteString(w.w, "=\""); err != nil {
 				return err
 			}
-			if _, err := io.WriteString(w.w, template.HTMLEscapeString(attr.Value)); err != nil {
+			if err := writeEscapedString(w.w, attr.Value); err != nil {
 				return err
 			}
 			if _, err := io.WriteString(w.w, "\""); err != nil {
@@ -168,7 +209,7 @@ func (w *Writer) OpenTag(name string, as Attributes) error {
 }
 
 // Text writes HTML-escaped text content.
-func (w *Writer) Text(txt string) error { return w.write(template.HTMLEscapeString(txt)) }
+func (w *Writer) Text(txt string) error { return writeEscapedString(w.w, txt) }
 
 // Raw writes unescaped HTML content. Use with caution as this can introduce
 // XSS vulnerabilities if the content is not properly sanitized.

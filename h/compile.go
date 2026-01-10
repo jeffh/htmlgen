@@ -3,7 +3,16 @@ package h
 import (
 	"bytes"
 	"io"
+	"slices"
+	"sync"
 )
+
+// bufPool pools bytes.Buffer objects for Compile operations.
+var bufPool = sync.Pool{
+	New: func() any {
+		return new(bytes.Buffer)
+	},
+}
 
 // compiledBuilder stores pre-rendered HTML bytes for fast rendering.
 type compiledBuilder struct {
@@ -36,9 +45,12 @@ func Compile(b Builder) Builder {
 	if b == nil {
 		return nil
 	}
-	var buf bytes.Buffer
-	Render(&buf, b)
-	return &compiledBuilder{html: buf.Bytes()}
+	buf := bufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	Render(buf, b)
+	result := &compiledBuilder{html: slices.Clone(buf.Bytes())}
+	bufPool.Put(buf)
+	return result
 }
 
 // Param is a placeholder for dynamic content in a parameterized template.

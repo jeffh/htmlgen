@@ -8,7 +8,10 @@ func Render(w io.Writer, b Builder) error {
 	if b == nil {
 		return nil
 	}
-	return b.Build(NewWriter(w))
+	writer := getPooledWriter(w)
+	err := b.Build(writer)
+	putPooledWriter(writer)
+	return err
 }
 
 // RenderIndent writes the HTML representation of the given Builder to w
@@ -19,7 +22,9 @@ func RenderIndent(w io.Writer, indent string, b Builder) error {
 	if b == nil {
 		return nil
 	}
-	writer := NewWriter(w)
+	writer := getPooledWriter(w)
 	writer.SetIndent(indent)
-	return b.Build(writer)
+	err := b.Build(writer)
+	putPooledWriter(writer)
+	return err
 }
