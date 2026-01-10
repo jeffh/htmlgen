@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 )
 
@@ -563,6 +564,487 @@ func TestVariousHtmlTags(t *testing.T) {
 				t.Errorf("expected %q, got %q", tt.expected, buf.String())
 			}
 		})
+	}
+}
+
+func TestAllHeadingTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"H1", H1(Text("Title")), "<h1>Title</h1>"},
+		{"H2", H2(Text("Subtitle")), "<h2>Subtitle</h2>"},
+		{"H3", H3(Text("Section")), "<h3>Section</h3>"},
+		{"H4", H4(Text("Subsection")), "<h4>Subsection</h4>"},
+		{"H5", H5(Text("Minor")), "<h5>Minor</h5>"},
+		{"H6", H6(Text("Smallest")), "<h6>Smallest</h6>"},
+		{"Hgroup", Hgroup(H1(Text("Main")), P(Text("Tagline"))), "<hgroup><h1>Main</h1><p>Tagline</p></hgroup>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestStructuralTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"Header", Header(Text("Header")), "<header>Header</header>"},
+		{"Footer", Footer(Text("Footer")), "<footer>Footer</footer>"},
+		{"Main", Main(Text("Main")), "<main>Main</main>"},
+		{"Nav", Nav(A(Attrs("href", "/"), Text("Home"))), "<nav><a href=\"/\">Home</a></nav>"},
+		{"Section", Section(Text("Section")), "<section>Section</section>"},
+		{"Article", Article(Text("Article")), "<article>Article</article>"},
+		{"Aside", Aside(Text("Sidebar")), "<aside>Sidebar</aside>"},
+		{"Address", Address(Text("123 Main St")), "<address>123 Main St</address>"},
+		{"Search", Search(Input(Attrs("type", "search"))), "<search><input type=\"search\"/></search>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestContentGroupingTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"Blockquote", Blockquote(Text("Quote")), "<blockquote>Quote</blockquote>"},
+		{"Pre", Pre(Text("Preformatted")), "<pre>Preformatted</pre>"},
+		{"Figure", Figure(Img(Attrs("src", "img.png", "alt", "Alt"))), "<figure><img src=\"img.png\" alt=\"Alt\"/></figure>"},
+		{"Figcaption", Figcaption(Text("Caption")), "<figcaption>Caption</figcaption>"},
+		{"Ol", Ol(Li(Text("One")), Li(Text("Two"))), "<ol><li>One</li><li>Two</li></ol>"},
+		{"Ul", Ul(Li(Text("Item"))), "<ul><li>Item</li></ul>"},
+		{"Li", Li(Text("List item")), "<li>List item</li>"},
+		{"Dl", Dl(Dt(Text("Term")), Dd(Text("Definition"))), "<dl><dt>Term</dt><dd>Definition</dd></dl>"},
+		{"Dt", Dt(Text("Term")), "<dt>Term</dt>"},
+		{"Dd", Dd(Text("Definition")), "<dd>Definition</dd>"},
+		{"Menu", Menu(Li(Button(Text("Action")))), "<menu><li><button>Action</button></li></menu>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestTextFormattingTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"B", B(Text("Bold")), "<b>Bold</b>"},
+		{"Strong", Strong(Text("Strong")), "<strong>Strong</strong>"},
+		{"I", I(Text("Italic")), "<i>Italic</i>"},
+		{"Em", Em(Text("Emphasis")), "<em>Emphasis</em>"},
+		{"U", U(Text("Underline")), "<u>Underline</u>"},
+		{"Mark", Mark(Text("Highlight")), "<mark>Highlight</mark>"},
+		{"Small", Small(Text("Small")), "<small>Small</small>"},
+		{"Sub", Sub(Text("2")), "<sub>2</sub>"},
+		{"Sup", Sup(Text("2")), "<sup>2</sup>"},
+		{"Code", Code(Text("code")), "<code>code</code>"},
+		{"Kbd", Kbd(Text("Enter")), "<kbd>Enter</kbd>"},
+		{"Samp", Samp(Text("Output")), "<samp>Output</samp>"},
+		{"Var", Var(Text("x")), "<var>x</var>"},
+		{"Cite", Cite(Text("Book Title")), "<cite>Book Title</cite>"},
+		{"Abbr", Abbr(Attrs("title", "Abbreviation"), Text("Abbr")), "<abbr title=\"Abbreviation\">Abbr</abbr>"},
+		{"Dfn", Dfn(Text("Definition")), "<dfn>Definition</dfn>"},
+		{"Q", Q(Text("Quote")), "<q>Quote</q>"},
+		{"S", S(Text("Strikethrough")), "<s>Strikethrough</s>"},
+		{"Del", Del(Text("Deleted")), "<del>Deleted</del>"},
+		{"Ins", Ins(Text("Inserted")), "<ins>Inserted</ins>"},
+		{"Time", Time(Attrs("datetime", "2024-01-01"), Text("Jan 1")), "<time datetime=\"2024-01-01\">Jan 1</time>"},
+		{"Data", Data(Attrs("value", "123"), Text("One Two Three")), "<data value=\"123\">One Two Three</data>"},
+		{"Wbr", Wbr(), "<wbr/>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestRubyAnnotationTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"Ruby", Ruby(Text("漢"), Rp(Text("(")), Rt(Text("kan")), Rp(Text(")"))), "<ruby>漢<rp>(</rp><rt>kan</rt><rp>)</rp></ruby>"},
+		{"Rt", Rt(Text("annotation")), "<rt>annotation</rt>"},
+		{"Rp", Rp(Text("(")), "<rp>(</rp>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestBidirectionalTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"Bdi", Bdi(Text("مرحبا")), "<bdi>مرحبا</bdi>"},
+		{"Bdo", Bdo(Attrs("dir", "rtl"), Text("Right to left")), "<bdo dir=\"rtl\">Right to left</bdo>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestMediaTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"Audio", Audio(Attrs("controls", ""), Source(Attrs("src", "audio.mp3", "type", "audio/mpeg"))), "<audio controls><source src=\"audio.mp3\" type=\"audio/mpeg\"/></audio>"},
+		{"Video", Video(Attrs("controls", ""), Source(Attrs("src", "video.mp4", "type", "video/mp4"))), "<video controls><source src=\"video.mp4\" type=\"video/mp4\"/></video>"},
+		{"Picture", Picture(Source(Attrs("srcset", "img.webp", "type", "image/webp")), Img(Attrs("src", "img.png", "alt", "Image"))), "<picture><source srcset=\"img.webp\" type=\"image/webp\"/><img src=\"img.png\" alt=\"Image\"/></picture>"},
+		{"Source", Source(Attrs("src", "media.mp4")), "<source src=\"media.mp4\"/>"},
+		{"Track", Track(Attrs("src", "subs.vtt", "kind", "subtitles")), "<track src=\"subs.vtt\" kind=\"subtitles\"/>"},
+		{"Map", Map(Attrs("name", "imagemap"), Area(Attrs("shape", "rect", "coords", "0,0,50,50", "href", "/"))), "<map name=\"imagemap\"><area shape=\"rect\" coords=\"0,0,50,50\" href=\"/\"/></map>"},
+		{"Area", Area(Attrs("shape", "circle", "coords", "25,25,25", "href", "/")), "<area shape=\"circle\" coords=\"25,25,25\" href=\"/\"/>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestEmbeddedContentTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"Iframe", Iframe(Attrs("src", "https://example.com")), "<iframe src=\"https://example.com\"></iframe>"},
+		{"Embed", Embed(Attrs("src", "plugin.swf", "type", "application/x-shockwave-flash")), "<embed src=\"plugin.swf\" type=\"application/x-shockwave-flash\"/>"},
+		{"Object", Object(Attrs("data", "file.pdf", "type", "application/pdf")), "<object data=\"file.pdf\" type=\"application/pdf\"></object>"},
+		{"Portal", Portal(Attrs("src", "https://example.com")), "<portal src=\"https://example.com\"></portal>"},
+		{"Svg", Svg(Attrs("width", "100", "height", "100")), "<svg width=\"100\" height=\"100\"></svg>"},
+		{"Math", Math(Text("x = 5")), "<math>x = 5</math>"},
+		{"Canvas", Canvas(Attrs("width", "300", "height", "150")), "<canvas width=\"300\" height=\"150\"></canvas>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestTableTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"Table", Table(), "<table></table>"},
+		{"Caption", Caption(Text("Table Caption")), "<caption>Table Caption</caption>"},
+		{"Thead", Thead(Tr(Th(Text("Header")))), "<thead><tr><th>Header</th></tr></thead>"},
+		{"Tbody", Tbody(Tr(Td(Text("Data")))), "<tbody><tr><td>Data</td></tr></tbody>"},
+		{"Tfoot", Tfoot(Tr(Td(Text("Footer")))), "<tfoot><tr><td>Footer</td></tr></tfoot>"},
+		{"Tr", Tr(Td(Text("Cell"))), "<tr><td>Cell</td></tr>"},
+		{"Th", Th(Text("Header")), "<th>Header</th>"},
+		{"Td", Td(Text("Data")), "<td>Data</td>"},
+		{"Colgroup", Colgroup(Col(Attrs("span", "2"))), "<colgroup><col span=\"2\"/></colgroup>"},
+		{"Col", Col(Attrs("style", "background-color: yellow")), "<col style=\"background-color: yellow\"/>"},
+		{"FullTable", Table(
+			Caption(Text("Users")),
+			Colgroup(Col(), Col()),
+			Thead(Tr(Th(Text("Name")), Th(Text("Age")))),
+			Tbody(Tr(Td(Text("Alice")), Td(Text("30")))),
+			Tfoot(Tr(Td(Attrs("colspan", "2"), Text("Total: 1")))),
+		), "<table><caption>Users</caption><colgroup><col/><col/></colgroup><thead><tr><th>Name</th><th>Age</th></tr></thead><tbody><tr><td>Alice</td><td>30</td></tr></tbody><tfoot><tr><td colspan=\"2\">Total: 1</td></tr></tfoot></table>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestFormTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"Form", Form(Attrs("action", "/submit", "method", "post")), "<form action=\"/submit\" method=\"post\"></form>"},
+		{"Fieldset", Fieldset(Legend(Text("Personal Info")), Input(Attrs("type", "text"))), "<fieldset><legend>Personal Info</legend><input type=\"text\"/></fieldset>"},
+		{"Legend", Legend(Text("Section")), "<legend>Section</legend>"},
+		{"Label", Label(Attrs("for", "name"), Text("Name:")), "<label for=\"name\">Name:</label>"},
+		{"Input", Input(Attrs("type", "text", "name", "username")), "<input type=\"text\" name=\"username\"/>"},
+		{"Button", Button(Attrs("type", "button"), Text("Click")), "<button type=\"button\">Click</button>"},
+		{"Select", Select(Attrs("name", "country"), Option(Attrs("value", "us"), Text("USA"))), "<select name=\"country\"><option value=\"us\">USA</option></select>"},
+		{"Optgroup", Optgroup(Attrs("label", "Group"), Option(Text("Item"))), "<optgroup label=\"Group\"><option>Item</option></optgroup>"},
+		{"Option", Option(Attrs("value", "1"), Text("One")), "<option value=\"1\">One</option>"},
+		{"Datalist", Datalist(Attrs("id", "browsers"), Option(Attrs("value", "Chrome"))), "<datalist id=\"browsers\"><option value=\"Chrome\"></option></datalist>"},
+		{"Textarea", Textarea(Attrs("name", "message", "rows", "4", "cols", "50")), "<textarea name=\"message\" rows=\"4\" cols=\"50\"></textarea>"},
+		{"Output", Output(Attrs("for", "a b"), Text("Result")), "<output for=\"a b\">Result</output>"},
+		{"Progress", Progress(Attrs("value", "70", "max", "100")), "<progress value=\"70\" max=\"100\"></progress>"},
+		{"Meter", Meter(Attrs("value", "0.6", "min", "0", "max", "1")), "<meter value=\"0.6\" min=\"0\" max=\"1\"></meter>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestInteractiveTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"Details", Details(Summary(Text("More info")), P(Text("Hidden content"))), "<details><summary>More info</summary><p>Hidden content</p></details>"},
+		{"Summary", Summary(Text("Click to expand")), "<summary>Click to expand</summary>"},
+		{"Dialog", Dialog(Attrs("open", ""), P(Text("Dialog content"))), "<dialog open><p>Dialog content</p></dialog>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestDocumentMetadataTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"Head", Head(Title(Text("Page Title"))), "<head><title>Page Title</title></head>"},
+		{"Title", Title(Text("My Page")), "<title>My Page</title>"},
+		{"Meta", Meta(Attrs("name", "description", "content", "A description")), "<meta name=\"description\" content=\"A description\"/>"},
+		{"Link", Link(Attrs("rel", "icon", "href", "favicon.ico")), "<link rel=\"icon\" href=\"favicon.ico\"/>"},
+		{"Style", Style(Raw("body { margin: 0; }")), "<style>body { margin: 0; }</style>"},
+		{"Base", Base(Attrs("href", "https://example.com/")), "<base href=\"https://example.com/\"/>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestScriptingTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"Script", Script(Attrs("src", "app.js")), "<script src=\"app.js\"></script>"},
+		{"ScriptInline", Script(Raw("console.log('Hello');")), "<script>console.log('Hello');</script>"},
+		{"Noscript", Noscript(Text("JavaScript is required")), "<noscript>JavaScript is required</noscript>"},
+		{"Template", Template(Attrs("id", "my-template"), Div(Text("Template content"))), "<template id=\"my-template\"><div>Template content</div></template>"},
+		{"Slot", Slot(Attrs("name", "header")), "<slot name=\"header\"></slot>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, tt.builder)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestBodyTag(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	b := Body(Attrs("class", "dark-mode"), Div(Text("Content")))
+	Render(buf, b)
+	expected := "<body class=\"dark-mode\"><div>Content</div></body>"
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
+func TestDeepNesting(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	b := Div(
+		Div(
+			Div(
+				Div(
+					Div(
+						Div(
+							Div(
+								Span(Text("Deeply nested")),
+							),
+						),
+					),
+				),
+			),
+		),
+	)
+	Render(buf, b)
+	expected := "<div><div><div><div><div><div><div><span>Deeply nested</span></div></div></div></div></div></div></div>"
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
+func TestDeepNestingWithIndent(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	b := Div(
+		Div(
+			Div(
+				Span(Text("Nested")),
+			),
+		),
+	)
+	RenderIndent(buf, "\t", b)
+	expected := "<div>\n\t<div>\n\t\t<div>\n\t\t\t<span>\nNested\t\t\t</span>\n\t\t</div>\n\t</div>\n</div>\n"
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
+func TestManyAttributes(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	b := Div(Attrs(
+		"id", "myDiv",
+		"class", "container fluid",
+		"data-value", "123",
+		"data-name", "test",
+		"aria-label", "Main container",
+		"role", "main",
+		"tabindex", "0",
+		"title", "A div with many attributes",
+	))
+	Render(buf, b)
+	expected := `<div id="myDiv" class="container fluid" data-value="123" data-name="test" aria-label="Main container" role="main" tabindex="0" title="A div with many attributes"></div>`
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
+func TestManyChildren(t *testing.T) {
+	children := make([]TagArg, 20)
+	for i := range 20 {
+		children[i] = Li(Text("Item"))
+	}
+	buf := bytes.NewBuffer(nil)
+	b := Ul(children...)
+	Render(buf, b)
+
+	expected := "<ul>" + strings.Repeat("<li>Item</li>", 20) + "</ul>"
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
+func TestComplexDocument(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	b := Html(
+		Head(
+			Meta(Attrs("charset", "utf-8")),
+			Title(Text("Test Page")),
+			Link(Attrs("rel", "stylesheet", "href", "style.css")),
+		),
+		Body(
+			Header(
+				Nav(
+					Ul(
+						Li(A(Attrs("href", "/"), Text("Home"))),
+						Li(A(Attrs("href", "/about"), Text("About"))),
+					),
+				),
+			),
+			Main(
+				Article(
+					H1(Text("Welcome")),
+					P(Text("This is a test page.")),
+				),
+			),
+			Footer(
+				P(Text("Copyright 2024")),
+			),
+		),
+	)
+	Render(buf, b)
+	expected := `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><title>Test Page</title><link rel="stylesheet" href="style.css"/></head><body><header><nav><ul><li><a href="/">Home</a></li><li><a href="/about">About</a></li></ul></nav></header><main><article><h1>Welcome</h1><p>This is a test page.</p></article></main><footer><p>Copyright 2024</p></footer></body></html>`
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
 	}
 }
 
