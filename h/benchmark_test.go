@@ -709,3 +709,77 @@ func BenchmarkBakedDeepNesting50_HtmlGen(b *testing.B) {
 		Render(&buf, baked)
 	}
 }
+
+// ============================================================================
+// Parameterized Bake Benchmarks
+// ============================================================================
+
+func BenchmarkBakedParams_HtmlGen(b *testing.B) {
+	title := NewParam("title")
+	content := NewParam("content")
+	tmpl := BakeParams(Div(
+		H1(title),
+		P(content),
+	))
+	titleVal := title.Value(Text("Hello World"))
+	contentVal := content.Value(Text("Welcome to my site"))
+
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		tmpl.Render(&buf, titleVal, contentVal)
+	}
+}
+
+func BenchmarkBakedParams_Template(b *testing.B) {
+	tmpl := template.Must(template.New("params").Parse(
+		`<div><h1>{{.Title}}</h1><p>{{.Content}}</p></div>`))
+	data := struct{ Title, Content string }{"Hello World", "Welcome to my site"}
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		tmpl.Execute(&buf, data)
+	}
+}
+
+func BenchmarkBakedParamsComplex_HtmlGen(b *testing.B) {
+	title := NewParam("title")
+	nav := NewParam("nav")
+	content := NewParam("content")
+	footer := NewParam("footer")
+
+	tmpl := BakeParams(Html(
+		Head(
+			Meta(Attrs("charset", "utf-8")),
+			Title(title),
+		),
+		Body(
+			Header(nav),
+			Main(content),
+			Footer(footer),
+		),
+	))
+
+	titleVal := title.Value(Text("My Page"))
+	navVal := nav.Value(Ul(Li(A(Attrs("href", "/"), Text("Home")))))
+	contentVal := content.Value(P(Text("Page content here")))
+	footerVal := footer.Value(Text("Copyright 2024"))
+
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		tmpl.Render(&buf, titleVal, navVal, contentVal, footerVal)
+	}
+}
+
+func BenchmarkDynamicEquivalent_HtmlGen(b *testing.B) {
+	// Equivalent to BakedParams but rebuilding each time
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		Render(&buf, Div(
+			H1(Text("Hello World")),
+			P(Text("Welcome to my site")),
+		))
+	}
+}
