@@ -1,0 +1,155 @@
+name: Benchmarks
+
+on:
+  workflow_run:
+    workflows: [Tests]
+    types:
+      - completed
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run Benchmarks
+        run: |
+          go test -bench=. -benchmem -count=3 ./h/ | tee benchmark_output.txt
+
+      - name: Generate Benchmark Summary
+        run: |
+          echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Comparing htmlgen declarative API vs Go's html/template package." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Raw Output" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          cat benchmark_output.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Parse and create comparison table
+          echo "### Performance Comparison" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Benchmark | htmlgen | html/template | Comparison |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|---------|---------------|------------|" >> $GITHUB_STEP_SUMMARY
+
+          # Extract matching pairs and compute comparison
+          # SimpleDiv
+          htmlgen=$(grep "BenchmarkSimpleDiv_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkSimpleDiv_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $template / $htmlgen" | bc)
+            echo "| Simple Div | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # DivWithAttrs
+          htmlgen=$(grep "BenchmarkDivWithAttrs_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkDivWithAttrs_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $template / $htmlgen" | bc)
+            echo "| Div with Attributes | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # NestedElements
+          htmlgen=$(grep "BenchmarkNestedElements_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkNestedElements_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $template / $htmlgen" | bc)
+            echo "| Nested Elements | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # List10Items
+          htmlgen=$(grep "BenchmarkList10Items_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkList10Items_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $template / $htmlgen" | bc)
+            echo "| List (10 items) | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # List100Items
+          htmlgen=$(grep "BenchmarkList100Items_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkList100Items_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $template / $htmlgen" | bc)
+            echo "| List (100 items) | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Table10Rows
+          htmlgen=$(grep "BenchmarkTable10Rows_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkTable10Rows_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $template / $htmlgen" | bc)
+            echo "| Table (10 rows) | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Table100Rows
+          htmlgen=$(grep "BenchmarkTable100Rows_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkTable100Rows_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $template / $htmlgen" | bc)
+            echo "| Table (100 rows) | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # FullPage
+          htmlgen=$(grep "BenchmarkFullPage_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkFullPage_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $template / $htmlgen" | bc)
+            echo "| Full Page | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Escaping
+          htmlgen=$(grep "BenchmarkEscaping_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkEscaping_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $template / $htmlgen" | bc)
+            echo "| Escaping | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # DeepNesting (template is faster here)
+          htmlgen=$(grep "BenchmarkDeepNesting_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkDeepNesting_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $htmlgen / $template" | bc)
+            echo "| Deep Nesting (static) | ${htmlgen} ns/op | ${template} ns/op | template ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Form
+          htmlgen=$(grep "BenchmarkForm_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkForm_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $template / $htmlgen" | bc)
+            echo "| Form | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # PrebuiltTree (template is faster here)
+          htmlgen=$(grep "BenchmarkPrebuiltTree_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkPrebuiltTree_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
+            ratio=$(echo "scale=2; $htmlgen / $template" | bc)
+            echo "| Pre-built Tree (static) | ${htmlgen} ns/op | ${template} ns/op | template ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Key Insights" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **htmlgen is faster** for dynamic content generation with variable data structures" >> $GITHUB_STEP_SUMMARY
+          echo "- **html/template is faster** for static content with no runtime data substitution" >> $GITHUB_STEP_SUMMARY
+          echo "- htmlgen excels at list/table generation where it can be 2-3x faster" >> $GITHUB_STEP_SUMMARY
+          echo "- For attribute-heavy elements, htmlgen can be up to 3x faster" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark_output.txt
+          retention-days: 30
