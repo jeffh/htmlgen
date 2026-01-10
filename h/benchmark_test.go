@@ -667,3 +667,45 @@ func BenchmarkPrebuiltTree_Template(b *testing.B) {
 		tmpl.Execute(&buf, nil)
 	}
 }
+
+// ============================================================================
+// Baked Builder Benchmarks (pre-computed HTML bytes)
+// ============================================================================
+
+func BenchmarkBakedTree_HtmlGen(b *testing.B) {
+	tree := Div(
+		Header(H1(Text("Title"))),
+		Main(
+			P(Text("Paragraph 1")),
+			P(Text("Paragraph 2")),
+			P(Text("Paragraph 3")),
+		),
+		Footer(Span(Text("Footer"))),
+	)
+	baked := Bake(tree)
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		Render(&buf, baked)
+	}
+}
+
+func BenchmarkBakedDeepNesting_HtmlGen(b *testing.B) {
+	tree := buildNestedDivs(10)
+	baked := Bake(tree)
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		Render(&buf, baked)
+	}
+}
+
+func BenchmarkBakedDeepNesting50_HtmlGen(b *testing.B) {
+	tree := buildNestedDivs(50)
+	baked := Bake(tree)
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		Render(&buf, baked)
+	}
+}
