@@ -1,6 +1,7 @@
 package d
 
 import (
+	"strconv"
 	"strings"
 	"time"
 )
@@ -181,6 +182,25 @@ func Half() AttrMutator {
 func Full() AttrMutator {
 	return AttrFunc(func(attr *attrBuilder) {
 		attr.name.WriteString("__full")
+	})
+}
+
+// Exit triggers when element exits viewport instead of entering.
+// Used with data-on-intersect to detect when an element leaves view.
+func Exit() AttrMutator {
+	return AttrFunc(func(attr *attrBuilder) {
+		attr.name.WriteString("__exit")
+	})
+}
+
+// Threshold sets a custom visibility threshold (0.0-1.0) for intersection.
+// Use instead of Half() or Full() for precise control.
+// Example: Threshold(0.25) triggers at 25% visibility.
+func Threshold(value float64) AttrMutator {
+	return AttrFunc(func(attr *attrBuilder) {
+		valueStr := strconv.FormatFloat(value, 'f', -1, 64)
+		attr.name.WriteString("__threshold.")
+		attr.name.WriteString(valueStr)
 	})
 }
 

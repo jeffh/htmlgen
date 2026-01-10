@@ -1,6 +1,8 @@
 package d
 
 import (
+	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -238,5 +240,28 @@ func RequestCancellation(mode string) RequestOption {
 	return requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("requestCancellation: ")
 		sb.WriteString(strconv.Quote(mode))
+	})
+}
+
+// Retry sets the retry strategy for the request.
+// Values: "auto" (default, retry on network errors), "error" (retry on errors and non-2xx),
+// "always" (always retry), "never" (never retry)
+func Retry(mode string) RequestOption {
+	return requestOptionFunc(func(sb *strings.Builder) {
+		sb.WriteString("retry: ")
+		sb.WriteString(strconv.Quote(mode))
+	})
+}
+
+// Payload overrides the request body with custom JSON data.
+// Use for POST/PUT/PATCH requests when you need a custom payload.
+func Payload(data any) RequestOption {
+	return requestOptionFunc(func(sb *strings.Builder) {
+		sb.WriteString("body: ")
+		b, err := json.Marshal(data)
+		if err != nil {
+			panic(fmt.Errorf("Payload: %w: value=%#v", err, data))
+		}
+		sb.WriteString(string(b))
 	})
 }
