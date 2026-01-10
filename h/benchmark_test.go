@@ -669,10 +669,10 @@ func BenchmarkPrebuiltTree_Template(b *testing.B) {
 }
 
 // ============================================================================
-// Baked Builder Benchmarks (pre-computed HTML bytes)
+// Compiled Builder Benchmarks (pre-computed HTML bytes)
 // ============================================================================
 
-func BenchmarkBakedTree_HtmlGen(b *testing.B) {
+func BenchmarkCompiledTree_HtmlGen(b *testing.B) {
 	tree := Div(
 		Header(H1(Text("Title"))),
 		Main(
@@ -682,42 +682,42 @@ func BenchmarkBakedTree_HtmlGen(b *testing.B) {
 		),
 		Footer(Span(Text("Footer"))),
 	)
-	baked := Bake(tree)
+	compiled := Compile(tree)
 	var buf bytes.Buffer
 	for b.Loop() {
 		buf.Reset()
-		Render(&buf, baked)
+		Render(&buf, compiled)
 	}
 }
 
-func BenchmarkBakedDeepNesting_HtmlGen(b *testing.B) {
+func BenchmarkCompiledDeepNesting_HtmlGen(b *testing.B) {
 	tree := buildNestedDivs(10)
-	baked := Bake(tree)
+	compiled := Compile(tree)
 	var buf bytes.Buffer
 	for b.Loop() {
 		buf.Reset()
-		Render(&buf, baked)
+		Render(&buf, compiled)
 	}
 }
 
-func BenchmarkBakedDeepNesting50_HtmlGen(b *testing.B) {
+func BenchmarkCompiledDeepNesting50_HtmlGen(b *testing.B) {
 	tree := buildNestedDivs(50)
-	baked := Bake(tree)
+	compiled := Compile(tree)
 	var buf bytes.Buffer
 	for b.Loop() {
 		buf.Reset()
-		Render(&buf, baked)
+		Render(&buf, compiled)
 	}
 }
 
 // ============================================================================
-// Parameterized Bake Benchmarks
+// Parameterized Compile Benchmarks
 // ============================================================================
 
-func BenchmarkBakedParams_HtmlGen(b *testing.B) {
+func BenchmarkCompiledParams_HtmlGen(b *testing.B) {
 	title := NewParam("title")
 	content := NewParam("content")
-	tmpl := BakeParams(Div(
+	tmpl := CompileParams(Div(
 		H1(title),
 		P(content),
 	))
@@ -731,7 +731,7 @@ func BenchmarkBakedParams_HtmlGen(b *testing.B) {
 	}
 }
 
-func BenchmarkBakedParams_Template(b *testing.B) {
+func BenchmarkCompiledParams_Template(b *testing.B) {
 	tmpl := template.Must(template.New("params").Parse(
 		`<div><h1>{{.Title}}</h1><p>{{.Content}}</p></div>`))
 	data := struct{ Title, Content string }{"Hello World", "Welcome to my site"}
@@ -742,13 +742,13 @@ func BenchmarkBakedParams_Template(b *testing.B) {
 	}
 }
 
-func BenchmarkBakedParamsComplex_HtmlGen(b *testing.B) {
+func BenchmarkCompiledParamsComplex_HtmlGen(b *testing.B) {
 	title := NewParam("title")
 	nav := NewParam("nav")
 	content := NewParam("content")
 	footer := NewParam("footer")
 
-	tmpl := BakeParams(Html(
+	tmpl := CompileParams(Html(
 		Head(
 			Meta(Attrs("charset", "utf-8")),
 			Title(title),
@@ -773,7 +773,7 @@ func BenchmarkBakedParamsComplex_HtmlGen(b *testing.B) {
 }
 
 func BenchmarkDynamicEquivalent_HtmlGen(b *testing.B) {
-	// Equivalent to BakedParams but rebuilding each time
+	// Equivalent to CompiledParams but rebuilding each time
 	var buf bytes.Buffer
 	for b.Loop() {
 		buf.Reset()
