@@ -5,7 +5,54 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
+
+// writeJSONString writes a JSON-encoded string directly to the builder,
+// avoiding the allocation from json.Marshal.
+func writeJSONString(sb *strings.Builder, s string) {
+	sb.WriteByte('"')
+	for i := 0; i < len(s); {
+		r, size := utf8.DecodeRuneInString(s[i:])
+		switch r {
+		case '"':
+			sb.WriteString(`\"`)
+		case '\\':
+			sb.WriteString(`\\`)
+		case '\n':
+			sb.WriteString(`\n`)
+		case '\r':
+			sb.WriteString(`\r`)
+		case '\t':
+			sb.WriteString(`\t`)
+		case '\b':
+			sb.WriteString(`\b`)
+		case '\f':
+			sb.WriteString(`\f`)
+		case '<':
+			// Match json.Marshal HTML-safe escaping
+			sb.WriteString(`\u003c`)
+		case '>':
+			sb.WriteString(`\u003e`)
+		case '&':
+			sb.WriteString(`\u0026`)
+		default:
+			if r < 0x20 {
+				// Control characters use \uXXXX format
+				sb.WriteString(`\u00`)
+				sb.WriteByte("0123456789abcdef"[r>>4])
+				sb.WriteByte("0123456789abcdef"[r&0xf])
+			} else if r == utf8.RuneError && size == 1 {
+				// Invalid UTF-8 byte
+				sb.WriteString(`\ufffd`)
+			} else {
+				sb.WriteRune(r)
+			}
+		}
+		i += size
+	}
+	sb.WriteByte('"')
+}
 
 // literal represents a JavaScript literal value.
 type literal struct {
@@ -15,10 +62,17 @@ type literal struct {
 func (l literal) js(sb *strings.Builder) { sb.WriteString(l.value) }
 func (l literal) callable()              {}
 
+// stringLiteral represents a JavaScript string literal that escapes on output.
+type stringLiteral struct {
+	value string
+}
+
+func (s stringLiteral) js(sb *strings.Builder) { writeJSONString(sb, s.value) }
+func (s stringLiteral) callable()              {}
+
 // String creates a JavaScript string literal, properly escaped using JSON encoding.
 func String(s string) Callable {
-	b, _ := json.Marshal(s)
-	return literal{string(b)}
+	return stringLiteral{s}
 }
 
 // Int creates a JavaScript number literal from an integer.
@@ -112,8 +166,7 @@ func (o objectLiteral) js(sb *strings.Builder) {
 			sb.WriteString(", ")
 		}
 		// Quote the key using JSON encoding for safety
-		b, _ := json.Marshal(kv.Key)
-		sb.WriteString(string(b))
+		writeJSONString(sb, kv.Key)
 		sb.WriteString(": ")
 		kv.Value.js(sb)
 	}

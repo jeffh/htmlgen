@@ -1,0 +1,6 @@
+github.com/hashicorp/golang-lru/v2 v2.0.7 h1:a+bsQ5rvGLjzHuww6tVxozPZFVghXaHOwFs4luLUK2k=
+github.com/hashicorp/golang-lru/v2 v2.0.7/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
+github.com/jeffh/gocheck v0.2.0 h1:NH7217tIoRnqRnb6FossweQFkyI374CM8oeeBZQoOao=
+github.com/jeffh/gocheck v0.2.0/go.mod h1:dDmlxzSUPZiHsHWeC52SHKuYAocF6+vJ77iABbS6eiA=
+golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329 h1:9kj3STMvgqy3YA4VQXBrN7925ICMxD5wzMRcgA30588=
+golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329/go.mod h1:qj5a5QZpwLU2NLQudwIN5koi3beDhSAlJwa67PuM98c=
