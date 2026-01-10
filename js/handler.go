@@ -2,9 +2,14 @@ package js
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/jeffh/htmlgen/h"
 )
+
+var builderPool = sync.Pool{
+	New: func() any { return new(strings.Builder) },
+}
 
 // Handler builds an inline JavaScript handler string from statements.
 // Statements are joined with semicolons.
@@ -12,37 +17,49 @@ func Handler(stmts ...Stmt) string {
 	if len(stmts) == 0 {
 		return ""
 	}
-	var sb strings.Builder
+	sb := builderPool.Get().(*strings.Builder)
+	sb.Reset()
 	sb.Grow(64) // Pre-allocate for typical handler size
 	for i, stmt := range stmts {
 		if i > 0 {
 			sb.WriteString("; ")
 		}
-		stmt.stmt(&sb)
+		stmt.stmt(sb)
 	}
-	return sb.String()
+	result := sb.String()
+	builderPool.Put(sb)
+	return result
 }
 
 // ExprHandler builds an inline JavaScript handler from a single expression.
 func ExprHandler(expr Expr) string {
-	var sb strings.Builder
+	sb := builderPool.Get().(*strings.Builder)
+	sb.Reset()
 	sb.Grow(64)
-	expr.js(&sb)
-	return sb.String()
+	expr.js(sb)
+	result := sb.String()
+	builderPool.Put(sb)
+	return result
 }
 
 // ToJS converts an expression to its JavaScript string representation.
 func ToJS(expr Expr) string {
-	var sb strings.Builder
-	expr.js(&sb)
-	return sb.String()
+	sb := builderPool.Get().(*strings.Builder)
+	sb.Reset()
+	expr.js(sb)
+	result := sb.String()
+	builderPool.Put(sb)
+	return result
 }
 
 // ToJSStmt converts a statement to its JavaScript string representation.
 func ToJSStmt(stmt Stmt) string {
-	var sb strings.Builder
-	stmt.stmt(&sb)
-	return sb.String()
+	sb := builderPool.Get().(*strings.Builder)
+	sb.Reset()
+	stmt.stmt(sb)
+	result := sb.String()
+	builderPool.Put(sb)
+	return result
 }
 
 // Mouse Events

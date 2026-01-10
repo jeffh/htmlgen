@@ -124,7 +124,8 @@ func Confirm(message Expr) Callable {
 
 // Prompt creates prompt(message, defaultValue)
 func Prompt(message Expr, defaultValue ...Expr) Callable {
-	args := []Expr{message}
+	args := make([]Expr, 1, 1+len(defaultValue))
+	args[0] = message
 	args = append(args, defaultValue...)
 	return Call(Ident("prompt"), args...)
 }
@@ -161,7 +162,8 @@ func CancelAnimationFrame(id Expr) Callable {
 
 // Fetch creates fetch(url, options)
 func Fetch(url Expr, options ...Expr) Callable {
-	args := []Expr{url}
+	args := make([]Expr, 1, 1+len(options))
+	args[0] = url
 	args = append(args, options...)
 	return Call(Ident("fetch"), args...)
 }
@@ -385,7 +387,8 @@ func ClassListRemove(element Callable, classes ...Expr) Callable {
 
 // ClassListToggle creates element.classList.toggle(className, force?)
 func ClassListToggle(element Callable, className Expr, force ...Expr) Callable {
-	args := []Expr{className}
+	args := make([]Expr, 1, 1+len(force))
+	args[0] = className
 	args = append(args, force...)
 	return Method(ClassList(element), "toggle", args...)
 }
@@ -438,14 +441,16 @@ func SetStyle(element Callable, property string, value Expr) Stmt {
 
 // JSONStringify creates JSON.stringify(value, replacer?, space?)
 func JSONStringify(value Expr, args ...Expr) Callable {
-	allArgs := []Expr{value}
+	allArgs := make([]Expr, 1, 1+len(args))
+	allArgs[0] = value
 	allArgs = append(allArgs, args...)
 	return Method(JSON_, "stringify", allArgs...)
 }
 
 // JSONParse creates JSON.parse(text, reviver?)
 func JSONParse(text Expr, reviver ...Expr) Callable {
-	args := []Expr{text}
+	args := make([]Expr, 1, 1+len(reviver))
+	args[0] = text
 	args = append(args, reviver...)
 	return Method(JSON_, "parse", args...)
 }
@@ -454,7 +459,8 @@ func JSONParse(text Expr, reviver ...Expr) Callable {
 
 // ParseInt creates parseInt(string, radix)
 func ParseInt(str Expr, radix ...Expr) Callable {
-	args := []Expr{str}
+	args := make([]Expr, 1, 1+len(radix))
+	args[0] = str
 	args = append(args, radix...)
 	return Call(Ident("parseInt"), args...)
 }
