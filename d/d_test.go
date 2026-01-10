@@ -399,6 +399,35 @@ func TestDuration(t *testing.T) {
 	}
 }
 
+func TestExit(t *testing.T) {
+	attrName, _ := buildTestAttr("data-on-intersect", Exit())
+	if !strings.Contains(attrName, "__exit") {
+		t.Errorf("Exit() should add __exit, got %q", attrName)
+	}
+}
+
+func TestThreshold(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    float64
+		expected string
+	}{
+		{"quarter", 0.25, "__threshold.0.25"},
+		{"three quarters", 0.75, "__threshold.0.75"},
+		{"full", 1, "__threshold.1"},
+		{"zero", 0, "__threshold.0"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attrName, _ := buildTestAttr("data-on-intersect", Threshold(tt.value))
+			if !strings.Contains(attrName, tt.expected) {
+				t.Errorf("Threshold(%v) should contain %s, got %q", tt.value, tt.expected, attrName)
+			}
+		})
+	}
+}
+
 // ============ attrs.go tests ============
 
 func TestSetSignalExpr(t *testing.T) {
@@ -1069,6 +1098,53 @@ func TestFilterSignals(t *testing.T) {
 	}).appendOption(&sb)
 	if !strings.Contains(sb.String(), "filterSignals:") {
 		t.Errorf("FilterSignals() = %q, should contain filterSignals:", sb.String())
+	}
+}
+
+func TestRetry(t *testing.T) {
+	tests := []struct {
+		name     string
+		mode     string
+		expected string
+	}{
+		{"auto", "auto", `retry: "auto"`},
+		{"error", "error", `retry: "error"`},
+		{"always", "always", `retry: "always"`},
+		{"never", "never", `retry: "never"`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opt := RequestOptions(Retry(tt.mode))
+			var sb strings.Builder
+			opt.Append(&sb)
+			if !strings.Contains(sb.String(), tt.expected) {
+				t.Errorf("Retry(%q) = %q, should contain %q", tt.mode, sb.String(), tt.expected)
+			}
+		})
+	}
+}
+
+func TestPayload(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     any
+		expected string
+	}{
+		{"map", map[string]any{"name": "John"}, `body: {"name":"John"}`},
+		{"simple value", 42, `body: 42`},
+		{"string", "hello", `body: "hello"`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opt := RequestOptions(Payload(tt.data))
+			var sb strings.Builder
+			opt.Append(&sb)
+			if !strings.Contains(sb.String(), tt.expected) {
+				t.Errorf("Payload(%v) = %q, should contain %q", tt.data, sb.String(), tt.expected)
+			}
+		})
 	}
 }
 
