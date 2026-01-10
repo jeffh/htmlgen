@@ -238,7 +238,7 @@ func main() {
     page := h.Html(nil,
         h.Head(nil,
             h.Title(nil, h.Text("Counter")),
-            h.Script(h.Attrs("type", "module", "src", "https://cdn.jsdelivr.net/npm/@starfederation/datastar")),
+            h.Script(h.Attrs("type", "module", "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.7/bundles/datastar.js")),
         ),
         h.Body(nil,
             h.Div(h.Attrs("id", "app"),
