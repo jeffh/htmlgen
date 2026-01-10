@@ -234,6 +234,52 @@ if h.Client {
 }
 ```
 
+## Benchmarks
+
+htmlgen is benchmarked against Go's standard `html/template` package. Run benchmarks locally with:
+
+```bash
+go test -bench=. -benchmem ./h/
+```
+
+### Performance Comparison
+
+| Scenario | htmlgen | html/template | Winner |
+|----------|---------|---------------|--------|
+| Simple Div | 332 ns | 515 ns | htmlgen ~1.5x faster |
+| Div with Attributes | 693 ns | 2105 ns | htmlgen ~3x faster |
+| Nested Elements | 1890 ns | 2089 ns | htmlgen ~1.1x faster |
+| List (10 items) | 1982 ns | 4732 ns | htmlgen ~2.4x faster |
+| List (100 items) | 16.5 µs | 44.9 µs | htmlgen ~2.7x faster |
+| Table (10 rows) | 11.7 µs | 16.9 µs | htmlgen ~1.4x faster |
+| Table (100 rows) | 97.9 µs | 163 µs | htmlgen ~1.7x faster |
+| Full Page | 8.3 µs | 10.8 µs | htmlgen ~1.3x faster |
+| Escaping | 1081 ns | 1421 ns | htmlgen ~1.3x faster |
+| Deep Nesting (static) | 1819 ns | 512 ns | template ~3.5x faster |
+| Form | 6.6 µs | 13.5 µs | htmlgen ~2x faster |
+| Pre-built Tree (static) | 1361 ns | 68 ns | template ~20x faster |
+
+*Benchmarks run on Apple M1 Ultra. Results may vary by hardware.*
+
+### Key Insights
+
+- **htmlgen is faster** for dynamic content generation with variable data structures
+- **html/template is faster** for static content with no runtime data substitution
+- htmlgen excels at list/table generation where it can be 2-3x faster
+- For attribute-heavy elements, htmlgen can be up to 3x faster
+- The Writer API is faster than the Builder API when you don't need declarative syntax
+
+### When to Use Each
+
+| Use Case | Recommendation |
+|----------|----------------|
+| Dynamic lists/tables | htmlgen |
+| Forms with many attributes | htmlgen |
+| Full page generation with data | htmlgen |
+| Static templates with no data | html/template |
+| Reusing same template many times | html/template |
+| Component-based UI architecture | htmlgen |
+
 ## License
 
 See LICENSE file for details.
