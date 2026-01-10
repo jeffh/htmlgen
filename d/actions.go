@@ -5,176 +5,174 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/jeffh/htmlgen/js"
 )
 
 type Stringer interface {
 	String() string
 }
 
-// Performs a GET request.
-func Get(path string, values ...AttrValueAppender) ValueMutator {
-	return request("get", path, values...)
+// Get performs a GET request.
+// Returns a Value that can be used with event handlers.
+func Get(path string, chains ...PromiseChain) Value {
+	return requestValue("get", js.String(path), chains...)
 }
 
-// Performs a PUT request.
-func Put(path string, values ...AttrValueAppender) ValueMutator {
-	return request("put", path, values...)
+// Put performs a PUT request.
+// Returns a Value that can be used with event handlers.
+func Put(path string, chains ...PromiseChain) Value {
+	return requestValue("put", js.String(path), chains...)
 }
 
-// Performs a POST request.
-func Post(path string, values ...AttrValueAppender) ValueMutator {
-	return request("post", path, values...)
+// Post performs a POST request.
+// Returns a Value that can be used with event handlers.
+func Post(path string, chains ...PromiseChain) Value {
+	return requestValue("post", js.String(path), chains...)
 }
 
-// Performs a DELETE request.
-func Delete(path string, values ...AttrValueAppender) ValueMutator {
-	return request("delete", path, values...)
+// Delete performs a DELETE request.
+// Returns a Value that can be used with event handlers.
+func Delete(path string, chains ...PromiseChain) Value {
+	return requestValue("delete", js.String(path), chains...)
 }
 
-// Performs a PATCH request.
-func Patch(path string, values ...AttrValueAppender) ValueMutator {
-	return request("patch", path, values...)
+// Patch performs a PATCH request.
+// Returns a Value that can be used with event handlers.
+func Patch(path string, chains ...PromiseChain) Value {
+	return requestValue("patch", js.String(path), chains...)
 }
 
-// Performs a GET request.
-func GetDynamic(path AttrValueAppender, values ...AttrValueAppender) ValueMutator {
-	return requestDynamicPath("get", path, values...)
+// GetDynamic performs a GET request with a dynamic path.
+// Returns a Value that can be used with event handlers.
+func GetDynamic(path Value, chains ...PromiseChain) Value {
+	return requestValue("get", path.expr, chains...)
 }
 
-// Performs a PUT request.
-func PutDynamic(path AttrValueAppender, values ...AttrValueAppender) ValueMutator {
-	return requestDynamicPath("put", path, values...)
+// PutDynamic performs a PUT request with a dynamic path.
+// Returns a Value that can be used with event handlers.
+func PutDynamic(path Value, chains ...PromiseChain) Value {
+	return requestValue("put", path.expr, chains...)
 }
 
-// Performs a POST request.
-func PostDynamic(path AttrValueAppender, values ...AttrValueAppender) ValueMutator {
-	return requestDynamicPath("post", path, values...)
+// PostDynamic performs a POST request with a dynamic path.
+// Returns a Value that can be used with event handlers.
+func PostDynamic(path Value, chains ...PromiseChain) Value {
+	return requestValue("post", path.expr, chains...)
 }
 
-// Performs a DELETE request.
-func DeleteDynamic(path AttrValueAppender, values ...AttrValueAppender) ValueMutator {
-	return requestDynamicPath("delete", path, values...)
+// DeleteDynamic performs a DELETE request with a dynamic path.
+// Returns a Value that can be used with event handlers.
+func DeleteDynamic(path Value, chains ...PromiseChain) Value {
+	return requestValue("delete", path.expr, chains...)
 }
 
-// Performs a PATCH request with a dynamic path.
-func PatchDynamic(path AttrValueAppender, values ...AttrValueAppender) ValueMutator {
-	return requestDynamicPath("patch", path, values...)
+// PatchDynamic performs a PATCH request with a dynamic path.
+// Returns a Value that can be used with event handlers.
+func PatchDynamic(path Value, chains ...PromiseChain) Value {
+	return requestValue("patch", path.expr, chains...)
 }
 
-func request(method string, path string, options ...AttrValueAppender) ValueMutator {
-	return ValueMutator{
-		AttrMutator: AttrFunc(func(attr *attrBuilder) {
-			sb := strings.Builder{}
-			sb.Grow(5 + len(method) + len(path) + 30) // 30 for small strings
-			sb.WriteString("@")
-			sb.WriteString(method)
-			sb.WriteString("(")
-			sb.WriteString(strconv.Quote(path))
-			sb.WriteString(")")
-			for _, opt := range options {
-				opt.Append(&sb)
-			}
-			attr.AppendStatement(sb.String())
-		}),
-		AttrValueAppender: AttrValueFunc(func(sb *strings.Builder) {
-			sb.Grow(5 + len(method) + len(path) + 30) // 30 for small strings
-			sb.WriteString("@")
-			sb.WriteString(method)
-			sb.WriteString("(")
-			sb.WriteString(strconv.Quote(path))
-			sb.WriteString(")")
-			for _, opt := range options {
-				opt.Append(sb)
-			}
-		}),
+func requestValue(method string, path js.Expr, chains ...PromiseChain) Value {
+	action := DatastarAction(method, path)
+	if len(chains) > 0 {
+		return Value{expr: WithChains(action, chains...)}
 	}
+	return Value{expr: action}
 }
 
-func requestDynamicPath(method string, path AttrValueAppender, options ...AttrValueAppender) ValueMutator {
-	return ValueMutator{
-		AttrMutator: AttrFunc(func(attr *attrBuilder) {
-			sb := strings.Builder{}
-			sb.Grow(5 + len(method) + 30) // 30 for small strings
-			sb.WriteString("@")
-			sb.WriteString(method)
-			sb.WriteString("(")
-			path.Append(&sb)
-			for _, opt := range options {
-				opt.Append(&sb)
-			}
-			sb.WriteString(")")
-			attr.AppendStatement(sb.String())
-		}),
-		AttrValueAppender: AttrValueFunc(func(sb *strings.Builder) {
-			sb.Grow(5 + len(method) + 30) // 30 for small strings
-			sb.WriteString("@")
-			sb.WriteString(method)
-			sb.WriteString("(")
-			path.Append(sb)
-			for _, opt := range options {
-				opt.Append(sb)
-			}
-			sb.WriteString(")")
-		}),
-	}
+// GetWithOptions performs a GET request with options.
+func GetWithOptions(path string, opts RequestOptionsBuilder, chains ...PromiseChain) Value {
+	return requestValueWithOptions("get", js.String(path), opts, chains...)
 }
 
-// RequestOptions builds an options object for HTTP request actions.
-// Use with Get, Post, Put, Delete, Patch to configure request behavior.
-// Example: Get("/api", RequestOptions(ContentType("form"), OpenWhenHidden(true)))
-func RequestOptions(opts ...RequestOption) AttrValueAppender {
-	return AttrValueFunc(func(sb *strings.Builder) {
-		if len(opts) == 0 {
-			return
-		}
+// PostWithOptions performs a POST request with options.
+func PostWithOptions(path string, opts RequestOptionsBuilder, chains ...PromiseChain) Value {
+	return requestValueWithOptions("post", js.String(path), opts, chains...)
+}
+
+// PutWithOptions performs a PUT request with options.
+func PutWithOptions(path string, opts RequestOptionsBuilder, chains ...PromiseChain) Value {
+	return requestValueWithOptions("put", js.String(path), opts, chains...)
+}
+
+// DeleteWithOptions performs a DELETE request with options.
+func DeleteWithOptions(path string, opts RequestOptionsBuilder, chains ...PromiseChain) Value {
+	return requestValueWithOptions("delete", js.String(path), opts, chains...)
+}
+
+// PatchWithOptions performs a PATCH request with options.
+func PatchWithOptions(path string, opts RequestOptionsBuilder, chains ...PromiseChain) Value {
+	return requestValueWithOptions("patch", js.String(path), opts, chains...)
+}
+
+func requestValueWithOptions(method string, path js.Expr, opts RequestOptionsBuilder, chains ...PromiseChain) Value {
+	var sb strings.Builder
+	sb.WriteString("@")
+	sb.WriteString(method)
+	sb.WriteString("(")
+	sb.WriteString(js.ToJS(path))
+	if len(opts.options) > 0 {
 		sb.WriteString(", {")
-		for i, opt := range opts {
+		for i, opt := range opts.options {
 			if i > 0 {
 				sb.WriteString(", ")
 			}
-			opt.appendOption(sb)
+			opt.appendOption(&sb)
 		}
 		sb.WriteString("}")
-	})
+	}
+	sb.WriteString(")")
+	action := js.Raw(sb.String())
+	if len(chains) > 0 {
+		return Value{expr: WithChains(action, chains...)}
+	}
+	return Value{expr: action}
 }
 
-// RequestOption is an option for HTTP request actions.
-type RequestOption interface {
-	appendOption(*strings.Builder)
+// RequestOptionsBuilder collects request options.
+type RequestOptionsBuilder struct {
+	options []RequestOption
 }
 
-type requestOptionFunc func(*strings.Builder)
-
-func (f requestOptionFunc) appendOption(sb *strings.Builder) { f(sb) }
+// RequestOptions creates a builder for HTTP request options.
+// Use with GetWithOptions, PostWithOptions, etc.
+// Example: GetWithOptions("/api", RequestOptions().ContentType("form").OpenWhenHidden(true))
+func RequestOptions() RequestOptionsBuilder {
+	return RequestOptionsBuilder{}
+}
 
 // ContentType sets the request content type.
 // Values: "json" (default) or "form"
-func ContentType(ct string) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) ContentType(ct string) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("contentType: ")
 		sb.WriteString(strconv.Quote(ct))
-	})
+	}))
+	return b
 }
 
 // FilterSignals filters which signals are sent with the request.
-func FilterSignals(filter *FilterOptions) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) FilterSignals(filter *FilterOptions) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("filterSignals: ")
 		filter.appendJS(sb)
-	})
+	}))
+	return b
 }
 
 // Selector specifies a CSS selector for form elements (when contentType is 'form').
-func Selector(sel string) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) Selector(sel string) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("selector: ")
 		sb.WriteString(strconv.Quote(sel))
-	})
+	}))
+	return b
 }
 
 // Headers sets custom HTTP headers for the request.
-func Headers(headers map[string]string) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) Headers(headers map[string]string) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("headers: {")
 		i := 0
 		for k, v := range headers {
@@ -187,81 +185,111 @@ func Headers(headers map[string]string) RequestOption {
 			i++
 		}
 		sb.WriteString("}")
-	})
+	}))
+	return b
 }
 
 // OpenWhenHidden keeps the connection alive when the tab is hidden.
-func OpenWhenHidden(open bool) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) OpenWhenHidden(open bool) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("openWhenHidden: ")
 		if open {
 			sb.WriteString("true")
 		} else {
 			sb.WriteString("false")
 		}
-	})
+	}))
+	return b
 }
 
 // RetryInterval sets the retry interval in milliseconds (default: 1000).
-func RetryInterval(ms int) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) RetryInterval(ms int) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("retryInterval: ")
 		sb.WriteString(strconv.Itoa(ms))
-	})
+	}))
+	return b
 }
 
 // RetryScaler sets the exponential backoff multiplier (default: 2).
-func RetryScaler(scaler float64) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) RetryScaler(scaler float64) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("retryScaler: ")
 		sb.WriteString(strconv.FormatFloat(scaler, 'f', -1, 64))
-	})
+	}))
+	return b
 }
 
 // RetryMaxWaitMs sets the maximum wait between retries in milliseconds (default: 30000).
-func RetryMaxWaitMs(ms int) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) RetryMaxWaitMs(ms int) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("retryMaxWaitMs: ")
 		sb.WriteString(strconv.Itoa(ms))
-	})
+	}))
+	return b
 }
 
 // RetryMaxCount sets the maximum number of retry attempts (default: 10).
-func RetryMaxCount(count int) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) RetryMaxCount(count int) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("retryMaxCount: ")
 		sb.WriteString(strconv.Itoa(count))
-	})
+	}))
+	return b
 }
 
 // RequestCancellation sets the request cancellation mode.
 // Values: "auto" (default), "disabled"
-func RequestCancellation(mode string) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) RequestCancellation(mode string) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("requestCancellation: ")
 		sb.WriteString(strconv.Quote(mode))
-	})
+	}))
+	return b
 }
 
 // Retry sets the retry strategy for the request.
 // Values: "auto" (default, retry on network errors), "error" (retry on errors and non-2xx),
 // "always" (always retry), "never" (never retry)
-func Retry(mode string) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) Retry(mode string) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("retry: ")
 		sb.WriteString(strconv.Quote(mode))
-	})
+	}))
+	return b
 }
 
 // Payload overrides the request body with custom JSON data.
 // Use for POST/PUT/PATCH requests when you need a custom payload.
-func Payload(data any) RequestOption {
-	return requestOptionFunc(func(sb *strings.Builder) {
+func (b RequestOptionsBuilder) Payload(data any) RequestOptionsBuilder {
+	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("body: ")
-		b, err := json.Marshal(data)
+		bytes, err := json.Marshal(data)
 		if err != nil {
 			panic(fmt.Errorf("Payload: %w: value=%#v", err, data))
 		}
-		sb.WriteString(string(b))
-	})
+		sb.WriteString(string(bytes))
+	}))
+	return b
+}
+
+// RequestOption is an option for HTTP request actions.
+type RequestOption interface {
+	appendOption(*strings.Builder)
+}
+
+type requestOptionFunc func(*strings.Builder)
+
+func (f requestOptionFunc) appendOption(sb *strings.Builder) { f(sb) }
+
+// OnSuccess creates a .then() chain for successful request handling.
+// This is an alias for ThenChain for backward compatibility.
+func OnSuccess(expr Value) PromiseChain {
+	return ThenChain(expr.expr)
+}
+
+// OnFailure creates a .catch() chain for error handling.
+// This is an alias for CatchChain for backward compatibility.
+func OnFailure(expr Value) PromiseChain {
+	return CatchChain(expr.expr)
 }

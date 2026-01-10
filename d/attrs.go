@@ -4,13 +4,14 @@ import (
 	"strings"
 
 	"github.com/jeffh/htmlgen/h"
+	"github.com/jeffh/htmlgen/js"
 )
 
-// Sets a signal to an arbitrary JavaScript expression.
+// SetSignalExpr creates an AttrMutator that sets a signal to an expression.
 // The signalName will automatically be prefixed with "$".
-func SetSignalExpr(signalName string, expression AttrValueAppender) AttrMutator {
+func SetSignalExpr(signalName string, expression js.Expr) AttrMutator {
 	return AttrFunc(func(attr *attrBuilder) {
-		sb := strings.Builder{}
+		var sb strings.Builder
 		sb.Grow(len(signalName) + 10)
 		if strings.HasPrefix(signalName, "$") {
 			sb.WriteString(signalName)
@@ -19,19 +20,23 @@ func SetSignalExpr(signalName string, expression AttrValueAppender) AttrMutator 
 			sb.WriteString(signalName)
 		}
 		sb.WriteString(" = ")
-		expression.Append(&sb)
+		sb.WriteString(js.ToJS(expression))
 		attr.AppendStatement(sb.String())
 	})
 }
 
-// Sets a signal to a value that is encoded as JSON.
+// SetSignal creates an AttrMutator that sets a signal to a value.
 // Use SetSignalExpr if you need to set the signal to a more complex expression.
 // The signalName will automatically be prefixed with "$".
 func SetSignal(signalName string, jsValue any) AttrMutator {
-	if expr, ok := jsValue.(AttrValueAppender); ok {
-		return SetSignalExpr(signalName, expr)
+	switch v := jsValue.(type) {
+	case js.Expr:
+		return SetSignalExpr(signalName, v)
+	case Value:
+		return SetSignalExpr(signalName, v.expr)
+	default:
+		return SetSignalExpr(signalName, js.JSON(jsValue))
 	}
-	return SetSignalExpr(signalName, JsonValue(jsValue))
 }
 
 // Sets an action to be executed when the form is submitted.
@@ -95,16 +100,16 @@ func OnSignalPatchFilter(options *FilterOptions) h.Attribute {
 	return exprAttr("data-on-signal-patch-filter", FilterOptionsValue(options))
 }
 
-// Sets a signal to an arbitrary JavaScript expression.
-// The signal's default value will be encoded as a JavaScript expression.
+// SignalExpr sets a signal to an arbitrary JavaScript expression.
+// The signal's default value will be appended to the attribute name.
 // The signal name will automatically be prefixed with "$".
-func SignalExpr(name string, defaultExpression AttrValueAppender) h.Attribute {
+func SignalExpr(name string, defaultExpression Value) h.Attribute {
 	return exprAttr("data-signals:", appendName(name), AttrFunc(func(attr *attrBuilder) {
-		defaultExpression.Append(&attr.name)
+		attr.name.WriteString(js.ToJS(defaultExpression.expr))
 	}))
 }
 
-// Defines a signal with a default value.
+// Signal defines a signal with a default value.
 // The signal's default value will be encoded as a JSON value.
 // The signal name will automatically be prefixed with "$".
 func Signal(name string, defaultJsValue any) h.Attribute {
@@ -119,24 +124,27 @@ func Signals(signals map[string]any) h.Attribute {
 	return exprAttr("data-signals", JsonValue(signals))
 }
 
-// Sets a signal to be used as the value of the element. Updates to the element will be reflected in the signal.
+// Bind sets a signal to be used as the value of the element.
+// Updates to the element will be reflected in the signal.
 // The signal name will automatically be prefixed with "$".
 func Bind(signalName string) h.Attribute {
 	return exprAttr("data-bind", Raw(signalName))
 }
 
-// Sets a class to be used as the value of the element. Updates to the class will be reflected in the element.
+// Class sets a class to be used as the value of the element.
+// Updates to the class will be reflected in the element.
 func Class(clsName string, value ...AttrMutator) h.Attribute {
 	value = append(value, appendName(clsName))
 	return exprAttr("data-class", value...)
 }
 
-// Sets the text of the element to be the value of the signal. Updates to the signal will be reflected in the element.
-// The signal name will automatically be prefixed with "$".
+// Text sets the text of the element to be the value of the signal.
+// Updates to the signal will be reflected in the element.
 func Text(value ...AttrMutator) h.Attribute {
 	return exprAttr("data-text", value...)
 }
 
+// Show conditionally shows/hides the element based on a signal.
 func Show(value ...AttrMutator) h.Attribute {
 	return exprAttr("data-show", value...)
 }
@@ -154,34 +162,35 @@ func Attribute(name string, value ...AttrMutator) h.Attribute {
 	return exprAttr("data-attr:"+name, value...)
 }
 
+// Indicator creates a fetch indicator signal.
 func Indicator(signalName string) h.Attribute {
 	signalName = strings.TrimLeft(signalName, "$")
 	return h.Attr("data-indicator", signalName)
 }
 
+// Ignore marks an element to be ignored by Datastar.
 func Ignore() h.Attribute {
 	return h.Attr("data-ignore", "")
 }
 
+// Effect runs an expression reactively whenever dependencies change.
 func Effect(values ...AttrMutator) h.Attribute {
 	return exprAttr("data-effect", values...)
 }
 
-func Peek(action AttrValueAppender) ValueMutator {
-	return ValueMutatorFunc(func(sb *strings.Builder) {
-		sb.WriteString("@peek(() => ")
-		action.Append(sb)
-		sb.WriteString(")")
-	})
+// Peek creates a @peek(() => expr) Datastar action for debugging.
+// Returns a Value that can be used with event handlers.
+func Peek(action Value) Value {
+	return V(DSPeek(action.expr))
 }
 
 // Computed creates a read-only signal computed from an expression.
 // The signal auto-updates when dependencies change.
 // Example: Computed("total", Raw("$price * $quantity"))
 // Produces: data-computed:total="$price * $quantity"
-func Computed(name string, expression AttrValueAppender) h.Attribute {
+func Computed(name string, expression Value) h.Attribute {
 	return exprAttr("data-computed:", appendName(name), AttrFunc(func(attr *attrBuilder) {
-		expression.Append(&attr.name)
+		attr.name.WriteString(js.ToJS(expression.expr))
 	}))
 }
 
@@ -283,17 +292,10 @@ func IgnoreSelf() h.Attribute {
 	return h.Attr("data-ignore__self", "")
 }
 
+// FilterOptions specifies regex patterns for filtering signals.
 type FilterOptions struct {
 	IncludeReg *string
 	ExcludeReg *string
-}
-
-func (o *FilterOptions) append(sb *strings.Builder, prefix string) {
-	if o.IncludeReg == nil && o.ExcludeReg == nil {
-		return
-	}
-	sb.WriteString(prefix)
-	o.appendJS(sb)
 }
 
 // appendJS writes the FilterOptions as a JavaScript object with regex literals.
@@ -318,35 +320,23 @@ func (o *FilterOptions) appendJS(sb *strings.Builder) {
 	sb.WriteString("}")
 }
 
-// FilterOptionsValue returns a ValueMutator that outputs FilterOptions as a JS object with regex literals.
-func FilterOptionsValue(o *FilterOptions) ValueMutator {
-	return ValueMutator{
-		AttrMutator: AttrFunc(func(attr *attrBuilder) {
-			var sb strings.Builder
-			o.appendJS(&sb)
-			attr.AppendStatement(sb.String())
-		}),
-		AttrValueAppender: AttrValueFunc(func(sb *strings.Builder) {
-			o.appendJS(sb)
-		}),
-	}
-}
-
-func SetAll(value ValueMutator, options FilterOptions) ValueMutator {
-	return ValueMutatorFunc(func(sb *strings.Builder) {
-		sb.Grow(len(sb.String()) + 10)
-		sb.WriteString("@setAll(")
-		value.Append(sb)
-		options.append(sb, ", ")
-		sb.WriteString(")")
+// FilterOptionsValue returns an AttrMutator that outputs FilterOptions as a JS object with regex literals.
+func FilterOptionsValue(o *FilterOptions) AttrMutator {
+	return AttrFunc(func(attr *attrBuilder) {
+		var sb strings.Builder
+		o.appendJS(&sb)
+		attr.AppendStatement(sb.String())
 	})
 }
 
-func ToggleAll(options FilterOptions) ValueMutator {
-	return ValueMutatorFunc(func(sb *strings.Builder) {
-		sb.Grow(len(sb.String()) + 10)
-		sb.WriteString("@toggleAll(")
-		options.append(sb, "")
-		sb.WriteString(")")
-	})
+// SetAll creates a @setAll(value, filter) Datastar action.
+// Returns a Value that can be used with event handlers.
+func SetAll(value Value, options *FilterOptions) Value {
+	return V(DSSetAll(value.expr, options))
+}
+
+// ToggleAll creates a @toggleAll(filter) Datastar action.
+// Returns a Value that can be used with event handlers.
+func ToggleAll(options *FilterOptions) Value {
+	return V(DSToggleAll(options))
 }
