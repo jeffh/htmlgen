@@ -246,18 +246,18 @@ go test -bench=. -benchmem ./h/
 
 | Scenario | htmlgen | html/template | Winner |
 |----------|---------|---------------|--------|
-| Simple Div | 332 ns | 515 ns | htmlgen ~1.5x faster |
-| Div with Attributes | 693 ns | 2105 ns | htmlgen ~3x faster |
-| Nested Elements | 1890 ns | 2089 ns | htmlgen ~1.1x faster |
-| List (10 items) | 1982 ns | 4732 ns | htmlgen ~2.4x faster |
-| List (100 items) | 16.5 µs | 44.9 µs | htmlgen ~2.7x faster |
-| Table (10 rows) | 11.7 µs | 16.9 µs | htmlgen ~1.4x faster |
-| Table (100 rows) | 97.9 µs | 163 µs | htmlgen ~1.7x faster |
-| Full Page | 8.3 µs | 10.8 µs | htmlgen ~1.3x faster |
-| Escaping | 1081 ns | 1421 ns | htmlgen ~1.3x faster |
-| Deep Nesting (static) | 1819 ns | 512 ns | template ~3.5x faster |
-| Form | 6.6 µs | 13.5 µs | htmlgen ~2x faster |
-| Pre-built Tree (static) | 1361 ns | 68 ns | template ~20x faster |
+| Simple Div | 294 ns | 518 ns | htmlgen ~1.8x faster |
+| Div with Attributes | 486 ns | 2093 ns | htmlgen ~4.3x faster |
+| Nested Elements | 1206 ns | 2103 ns | htmlgen ~1.7x faster |
+| List (10 items) | 1187 ns | 4737 ns | htmlgen ~4x faster |
+| List (100 items) | 8.4 µs | 45.3 µs | htmlgen ~5.4x faster |
+| Table (10 rows) | 7.6 µs | 17.1 µs | htmlgen ~2.2x faster |
+| Table (100 rows) | 66.2 µs | 166.6 µs | htmlgen ~2.5x faster |
+| Full Page | 5.0 µs | 10.9 µs | htmlgen ~2.2x faster |
+| Escaping | 909 ns | 1402 ns | htmlgen ~1.5x faster |
+| Deep Nesting (10 levels) | 1089 ns | 508 ns | template ~2.1x faster |
+| Form | 4.0 µs | 13.5 µs | htmlgen ~3.4x faster |
+| Pre-built Tree (static) | 730 ns | 74 ns | template ~10x faster |
 
 *Benchmarks run on Apple M1 Ultra. Results may vary by hardware.*
 

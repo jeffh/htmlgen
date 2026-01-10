@@ -15,16 +15,17 @@ var ErrUnknownTagToClose = errors.New("attempted to close tag not opened")
 // NewWriter creates a new Writer that wraps the provided io.Writer.
 // The Writer tracks open tags and provides methods for writing HTML elements.
 func NewWriter(w io.Writer) *Writer {
-	return &Writer{w, "", make([]string, 0, 16)}
+	return &Writer{w, "", nil, make([]string, 0, 32)}
 }
 
 // Writer is a low-level streaming HTML writer that wraps an io.Writer.
 // It tracks open tags and provides methods for writing HTML elements,
 // attributes, and content. Attribute values are automatically HTML-escaped.
 type Writer struct {
-	w        io.Writer
-	indent   string
-	openTags []string
+	w           io.Writer
+	indent      string
+	indentCache []string // Cached indentation strings by depth
+	openTags    []string
 }
 
 // SetIndent sets the indentation prefix used for pretty-printing.
@@ -38,7 +39,7 @@ func (w *Writer) isIndenting() bool { return len(w.indent) != 0 }
 
 func (w *Writer) write(values ...string) error {
 	for _, v := range values {
-		_, err := w.w.Write([]byte(v))
+		_, err := io.WriteString(w.w, v)
 		if err != nil {
 			return err
 		}
@@ -57,15 +58,31 @@ func (w *Writer) writeIndentNewline() error {
 }
 
 func (w *Writer) writeIndent(modifier int) error {
-	if w.isIndenting() {
-		L := len(w.openTags) + modifier
-		for i := 0; i < L; i++ {
-			if err := w.write(w.indent); err != nil {
-				return err
-			}
-		}
+	if !w.isIndenting() {
+		return nil
 	}
-	return nil
+	depth := len(w.openTags) + modifier
+	if depth <= 0 {
+		return nil
+	}
+	// Grow cache if needed
+	if depth > len(w.indentCache) {
+		w.growIndentCache(depth)
+	}
+	_, err := io.WriteString(w.w, w.indentCache[depth-1])
+	return err
+}
+
+func (w *Writer) growIndentCache(depth int) {
+	for len(w.indentCache) < depth {
+		var s string
+		if len(w.indentCache) == 0 {
+			s = w.indent
+		} else {
+			s = w.indentCache[len(w.indentCache)-1] + w.indent
+		}
+		w.indentCache = append(w.indentCache, s)
+	}
 }
 
 // SelfClosingTag writes a self-closing HTML tag with the given name and attributes.
@@ -74,22 +91,32 @@ func (w *Writer) SelfClosingTag(name string, as Attributes) error {
 	if err := w.writeIndent(0); err != nil {
 		return err
 	}
-	if err := w.write("<", name); err != nil {
+	if _, err := io.WriteString(w.w, "<"); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w.w, name); err != nil {
 		return err
 	}
 	for _, attr := range as {
-		val := attr.Value
-		if val == "" {
-			if err := w.write(" ", attr.Name); err != nil {
+		if _, err := io.WriteString(w.w, " "); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w.w, attr.Name); err != nil {
+			return err
+		}
+		if attr.Value != "" {
+			if _, err := io.WriteString(w.w, "=\""); err != nil {
 				return err
 			}
-		} else {
-			if err := w.write(" ", attr.Name, "=\"", template.HTMLEscapeString(val), "\""); err != nil {
+			if _, err := io.WriteString(w.w, template.HTMLEscapeString(attr.Value)); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w.w, "\""); err != nil {
 				return err
 			}
 		}
 	}
-	if err := w.write("/>"); err != nil {
+	if _, err := io.WriteString(w.w, "/>"); err != nil {
 		return err
 	}
 	if err := w.writeIndentNewline(); err != nil {
@@ -105,22 +132,32 @@ func (w *Writer) OpenTag(name string, as Attributes) error {
 	if err := w.writeIndent(0); err != nil {
 		return err
 	}
-	if err := w.write("<", name); err != nil {
+	if _, err := io.WriteString(w.w, "<"); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w.w, name); err != nil {
 		return err
 	}
 	for _, attr := range as {
-		val := attr.Value
-		if val == "" {
-			if err := w.write(" ", attr.Name); err != nil {
+		if _, err := io.WriteString(w.w, " "); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w.w, attr.Name); err != nil {
+			return err
+		}
+		if attr.Value != "" {
+			if _, err := io.WriteString(w.w, "=\""); err != nil {
 				return err
 			}
-		} else {
-			if err := w.write(" ", attr.Name, "=\"", template.HTMLEscapeString(val), "\""); err != nil {
+			if _, err := io.WriteString(w.w, template.HTMLEscapeString(attr.Value)); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w.w, "\""); err != nil {
 				return err
 			}
 		}
 	}
-	if err := w.write(">"); err != nil {
+	if _, err := io.WriteString(w.w, ">"); err != nil {
 		return err
 	}
 	if err := w.writeIndentNewline(); err != nil {
@@ -150,7 +187,13 @@ func (w *Writer) CloseTag(name string) error {
 	for i := size - 1; i >= 0; i-- {
 		if w.openTags[i] == name {
 			for j := size - 1; j >= i; j-- {
-				if err := w.write("</", w.openTags[j], ">"); err != nil {
+				if _, err := io.WriteString(w.w, "</"); err != nil {
+					return err
+				}
+				if _, err := io.WriteString(w.w, w.openTags[j]); err != nil {
+					return err
+				}
+				if _, err := io.WriteString(w.w, ">"); err != nil {
 					return err
 				}
 			}
@@ -174,8 +217,13 @@ func (w *Writer) CloseOneTag() error {
 	if err := w.writeIndent(-1); err != nil {
 		return err
 	}
-	err := w.write("</", w.openTags[size-1], ">")
-	if err != nil {
+	if _, err := io.WriteString(w.w, "</"); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w.w, w.openTags[size-1]); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w.w, ">"); err != nil {
 		return err
 	}
 	if err := w.writeIndentNewline(); err != nil {
@@ -191,7 +239,13 @@ func (w *Writer) Close() error {
 		if err := w.writeIndent(-1); err != nil {
 			return err
 		}
-		if err := w.write("</", w.openTags[i], ">"); err != nil {
+		if _, err := io.WriteString(w.w, "</"); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w.w, w.openTags[i]); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w.w, ">"); err != nil {
 			return err
 		}
 		if err := w.writeIndentNewline(); err != nil {
