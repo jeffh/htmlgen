@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: "github.com/jeffh/*"
 
     steps:
       - uses: actions/checkout@v4
@@ -17,6 +19,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - name: Configure git for private modules
+        env:
+          TOKEN: ${{ secrets.GH_PAT }}
+        run: git config --global url."https://$TOKEN@github.com".insteadOf "https://github.com"
+
+      - name: Download modules
+        run: go mod download
 
       - name: Build
         run: go build ./...
