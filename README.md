@@ -92,6 +92,55 @@ w.Text("Hello, World!")
 w.Close()  // Closes all open tags
 ```
 
+### Pre-compiled Templates
+
+For frequently rendered content, use `Compile` to pre-render HTML to bytes for faster subsequent renders:
+
+```go
+// Compile once at startup
+header := h.Compile(h.Header(nil,
+    h.Nav(nil,
+        h.A(h.Attrs("href", "/"), h.Text("Home")),
+        h.A(h.Attrs("href", "/about"), h.Text("About")),
+    ),
+))
+
+// Fast renders afterward - just writes pre-computed bytes
+h.Render(w, header)
+```
+
+For templates with dynamic content, use `CompileParams` with parameter placeholders:
+
+```go
+// Define parameters
+title := h.NewParam("title")
+content := h.NewParam("content")
+
+// Compile template with parameter slots
+tmpl := h.CompileParams(h.Html(nil,
+    h.Head(nil, h.Title(nil, title)),
+    h.Body(nil,
+        h.H1(nil, title),
+        h.Main(nil, content),
+    ),
+))
+
+// Render with values
+tmpl.Render(w,
+    title.Value(h.Text("Welcome")),
+    content.Value(h.P(nil, h.Text("Hello, World!"))),
+)
+
+// Or create a reusable Builder
+page := tmpl.With(
+    title.Value(h.Text("Welcome")),
+    content.Value(h.P(nil, h.Text("Hello, World!"))),
+)
+h.Render(w, page)
+```
+
+Compiled templates are ~3.7x faster than `html/template` for parameterized content.
+
 ## Package `d` - Datastar Integration
 
 Build reactive attributes for [Datastar](https://data-star.dev/) applications:
@@ -246,18 +295,20 @@ go test -bench=. -benchmem ./h/
 
 | Scenario | htmlgen | html/template | Winner |
 |----------|---------|---------------|--------|
-| Simple Div | 294 ns | 518 ns | htmlgen ~1.8x faster |
-| Div with Attributes | 486 ns | 2093 ns | htmlgen ~4.3x faster |
-| Nested Elements | 1206 ns | 2103 ns | htmlgen ~1.7x faster |
-| List (10 items) | 1187 ns | 4737 ns | htmlgen ~4x faster |
-| List (100 items) | 8.4 µs | 45.3 µs | htmlgen ~5.4x faster |
-| Table (10 rows) | 7.6 µs | 17.1 µs | htmlgen ~2.2x faster |
-| Table (100 rows) | 66.2 µs | 166.6 µs | htmlgen ~2.5x faster |
-| Full Page | 5.0 µs | 10.9 µs | htmlgen ~2.2x faster |
-| Escaping | 909 ns | 1402 ns | htmlgen ~1.5x faster |
-| Deep Nesting (10 levels) | 1089 ns | 508 ns | template ~2.1x faster |
-| Form | 4.0 µs | 13.5 µs | htmlgen ~3.4x faster |
-| Pre-built Tree (static) | 730 ns | 74 ns | template ~10x faster |
+| Simple Div | 281 ns | 508 ns | htmlgen ~1.8x faster |
+| Div with Attributes | 470 ns | 2045 ns | htmlgen ~4.4x faster |
+| Nested Elements | 1155 ns | 2066 ns | htmlgen ~1.8x faster |
+| List (10 items) | 1132 ns | 4676 ns | htmlgen ~4.1x faster |
+| List (100 items) | 8.5 µs | 44.2 µs | htmlgen ~5.2x faster |
+| Table (10 rows) | 7.3 µs | 16.7 µs | htmlgen ~2.3x faster |
+| Table (100 rows) | 62.7 µs | 163.0 µs | htmlgen ~2.6x faster |
+| Full Page | 4.9 µs | 10.6 µs | htmlgen ~2.2x faster |
+| Escaping | 893 ns | 1396 ns | htmlgen ~1.6x faster |
+| Deep Nesting (10 levels) | 1063 ns | 503 ns | template ~2.1x faster |
+| Form | 3.9 µs | 13.2 µs | htmlgen ~3.4x faster |
+| Pre-built Tree (static) | 704 ns | 64 ns | template ~11x faster |
+| Compiled Tree (static) | 164 ns | 64 ns | template ~2.6x faster |
+| Compiled Params | 294 ns | 1081 ns | htmlgen ~3.7x faster |
 
 *Benchmarks run on Apple M1 Ultra. Results may vary by hardware.*
 
@@ -265,9 +316,10 @@ go test -bench=. -benchmem ./h/
 
 - **htmlgen is faster** for dynamic content generation with variable data structures
 - **html/template is faster** for static content with no runtime data substitution
-- htmlgen excels at list/table generation where it can be 2-3x faster
-- For attribute-heavy elements, htmlgen can be up to 3x faster
-- The Writer API is faster than the Builder API when you don't need declarative syntax
+- **Compile** pre-renders static content for near-template performance (164 ns vs 704 ns unbaked)
+- **CompileParams** is ~3.7x faster than html/template for parameterized content
+- htmlgen excels at list/table generation where it can be 4-5x faster
+- For attribute-heavy elements, htmlgen can be up to 4x faster
 
 ### When to Use Each
 
@@ -276,8 +328,8 @@ go test -bench=. -benchmem ./h/
 | Dynamic lists/tables | htmlgen |
 | Forms with many attributes | htmlgen |
 | Full page generation with data | htmlgen |
-| Static templates with no data | html/template |
-| Reusing same template many times | html/template |
+| Static templates with no data | html/template or `Compile` |
+| Parameterized templates | `CompileParams` |
 | Component-based UI architecture | htmlgen |
 
 ## License

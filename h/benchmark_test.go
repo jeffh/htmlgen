@@ -667,3 +667,119 @@ func BenchmarkPrebuiltTree_Template(b *testing.B) {
 		tmpl.Execute(&buf, nil)
 	}
 }
+
+// ============================================================================
+// Compiled Builder Benchmarks (pre-computed HTML bytes)
+// ============================================================================
+
+func BenchmarkCompiledTree_HtmlGen(b *testing.B) {
+	tree := Div(
+		Header(H1(Text("Title"))),
+		Main(
+			P(Text("Paragraph 1")),
+			P(Text("Paragraph 2")),
+			P(Text("Paragraph 3")),
+		),
+		Footer(Span(Text("Footer"))),
+	)
+	compiled := Compile(tree)
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		Render(&buf, compiled)
+	}
+}
+
+func BenchmarkCompiledDeepNesting_HtmlGen(b *testing.B) {
+	tree := buildNestedDivs(10)
+	compiled := Compile(tree)
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		Render(&buf, compiled)
+	}
+}
+
+func BenchmarkCompiledDeepNesting50_HtmlGen(b *testing.B) {
+	tree := buildNestedDivs(50)
+	compiled := Compile(tree)
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		Render(&buf, compiled)
+	}
+}
+
+// ============================================================================
+// Parameterized Compile Benchmarks
+// ============================================================================
+
+func BenchmarkCompiledParams_HtmlGen(b *testing.B) {
+	title := NewParam("title")
+	content := NewParam("content")
+	tmpl := CompileParams(Div(
+		H1(title),
+		P(content),
+	))
+	titleVal := title.Value(Text("Hello World"))
+	contentVal := content.Value(Text("Welcome to my site"))
+
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		tmpl.Render(&buf, titleVal, contentVal)
+	}
+}
+
+func BenchmarkCompiledParams_Template(b *testing.B) {
+	tmpl := template.Must(template.New("params").Parse(
+		`<div><h1>{{.Title}}</h1><p>{{.Content}}</p></div>`))
+	data := struct{ Title, Content string }{"Hello World", "Welcome to my site"}
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		tmpl.Execute(&buf, data)
+	}
+}
+
+func BenchmarkCompiledParamsComplex_HtmlGen(b *testing.B) {
+	title := NewParam("title")
+	nav := NewParam("nav")
+	content := NewParam("content")
+	footer := NewParam("footer")
+
+	tmpl := CompileParams(Html(
+		Head(
+			Meta(Attrs("charset", "utf-8")),
+			Title(title),
+		),
+		Body(
+			Header(nav),
+			Main(content),
+			Footer(footer),
+		),
+	))
+
+	titleVal := title.Value(Text("My Page"))
+	navVal := nav.Value(Ul(Li(A(Attrs("href", "/"), Text("Home")))))
+	contentVal := content.Value(P(Text("Page content here")))
+	footerVal := footer.Value(Text("Copyright 2024"))
+
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		tmpl.Render(&buf, titleVal, navVal, contentVal, footerVal)
+	}
+}
+
+func BenchmarkDynamicEquivalent_HtmlGen(b *testing.B) {
+	// Equivalent to CompiledParams but rebuilding each time
+	var buf bytes.Buffer
+	for b.Loop() {
+		buf.Reset()
+		Render(&buf, Div(
+			H1(Text("Hello World")),
+			P(Text("Welcome to my site")),
+		))
+	}
+}
