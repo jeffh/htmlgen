@@ -38,7 +38,7 @@ func Attrs(kv ...string) Attributes {
 		panic("Attrs(...) expects an even number of arguments")
 	}
 	if len(kv) == 0 {
-		return Attributes(nil)
+		return nil
 	}
 	results := make(Attributes, 0, len(kv)/2)
 	for i := 0; i < len(kv); i += 2 {
@@ -59,7 +59,7 @@ func AttrsMap(m map[string]string) Attributes {
 	for _, k := range keys {
 		result = append(result, Attribute{k, m[k]})
 	}
-	return Attributes(result)
+	return result
 }
 
 // Get returns the value for the given attribute name and true if found,
