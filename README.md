@@ -1,6 +1,8 @@
 # htmlgen
 
-A Go library for programmatic HTML generation with first-class [Datastar](https://data-star.dev/) support.
+A Go library for programmatic HTML generation.
+
+Experimental, API is subject to change.
 
 ## Installation
 
