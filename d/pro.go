@@ -2,11 +2,7 @@
 // These attributes provide additional functionality beyond the free tier.
 package d
 
-import (
-	"strings"
-
-	"github.com/jeffh/htmlgen/h"
-)
+import "github.com/jeffh/htmlgen/h"
 
 // Animate enables reactive animations on element attributes.
 // Requires Datastar Pro license.
@@ -18,8 +14,8 @@ func Animate(options ...AttrMutator) h.Attribute {
 // CustomValidity adds custom validation messages to form inputs.
 // Empty strings indicate valid; non-empty strings are shown as validation errors.
 // Requires Datastar Pro license.
-// Example: CustomValidity(Raw("$password === $confirmPassword ? ” : 'Passwords must match'"))
-// Produces: data-custom-validity="$password === $confirmPassword ? ” : 'Passwords must match'"
+// Example: CustomValidity(Raw("$password === $confirmPassword ? '' : 'Passwords must match'"))
+// Produces: data-custom-validity="$password === $confirmPassword ? '' : 'Passwords must match'"
 func CustomValidity(expression ...AttrMutator) h.Attribute {
 	return exprAttr("data-custom-validity", expression...)
 }
@@ -226,21 +222,8 @@ func Focus() AttrMutator {
 // Requires Datastar Pro license.
 // Example: OnClick(Clipboard(Str("Hello, world!")))
 // Produces: data-on:click="@clipboard('Hello, world!')"
-func Clipboard(text AttrValueAppender) ValueMutator {
-	return ValueMutator{
-		AttrMutator: AttrFunc(func(attr *attrBuilder) {
-			var sb strings.Builder
-			sb.WriteString("@clipboard(")
-			text.Append(&sb)
-			sb.WriteString(")")
-			attr.AppendStatement(sb.String())
-		}),
-		AttrValueAppender: AttrValueFunc(func(sb *strings.Builder) {
-			sb.WriteString("@clipboard(")
-			text.Append(sb)
-			sb.WriteString(")")
-		}),
-	}
+func Clipboard(text Value) Value {
+	return V(DSClipboard(text.expr))
 }
 
 // ClipboardBase64 copies Base64-decoded text to the clipboard.
@@ -248,86 +231,36 @@ func Clipboard(text AttrValueAppender) ValueMutator {
 // Requires Datastar Pro license.
 // Example: OnClick(ClipboardBase64(Str("SGVsbG8sIHdvcmxkIQ==")))
 // Produces: data-on:click="@clipboard('SGVsbG8sIHdvcmxkIQ==', true)"
-func ClipboardBase64(text AttrValueAppender) ValueMutator {
-	return ValueMutator{
-		AttrMutator: AttrFunc(func(attr *attrBuilder) {
-			var sb strings.Builder
-			sb.WriteString("@clipboard(")
-			text.Append(&sb)
-			sb.WriteString(", true)")
-			attr.AppendStatement(sb.String())
-		}),
-		AttrValueAppender: AttrValueFunc(func(sb *strings.Builder) {
-			sb.WriteString("@clipboard(")
-			text.Append(sb)
-			sb.WriteString(", true)")
-		}),
-	}
+func ClipboardBase64(text Value) Value {
+	return V(DSClipboardBase64(text.expr))
 }
 
 // Fit linearly interpolates a value from one range to another.
 // Requires Datastar Pro license.
 // Syntax: @fit(v, oldMin, oldMax, newMin, newMax)
 // Example: Computed("rgb", Fit(Raw("$slider"), Raw("0"), Raw("100"), Raw("0"), Raw("255")))
-func Fit(v, oldMin, oldMax, newMin, newMax AttrValueAppender) ValueMutator {
-	return fitAction(v, oldMin, oldMax, newMin, newMax, false, false)
+func Fit(v, oldMin, oldMax, newMin, newMax Value) Value {
+	return V(DSFit(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
 // FitClamped linearly interpolates with clamping to keep results within the target range.
 // Requires Datastar Pro license.
 // Syntax: @fit(v, oldMin, oldMax, newMin, newMax, true)
-func FitClamped(v, oldMin, oldMax, newMin, newMax AttrValueAppender) ValueMutator {
-	return fitAction(v, oldMin, oldMax, newMin, newMax, true, false)
+func FitClamped(v, oldMin, oldMax, newMin, newMax Value) Value {
+	return V(DSFitClamped(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
 // FitRounded linearly interpolates with rounding to nearest integer.
 // Requires Datastar Pro license.
 // Syntax: @fit(v, oldMin, oldMax, newMin, newMax, false, true)
-func FitRounded(v, oldMin, oldMax, newMin, newMax AttrValueAppender) ValueMutator {
-	return fitAction(v, oldMin, oldMax, newMin, newMax, false, true)
+func FitRounded(v, oldMin, oldMax, newMin, newMax Value) Value {
+	return V(DSFitRounded(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
 // FitClampedRounded linearly interpolates with both clamping and rounding.
 // Requires Datastar Pro license.
 // Syntax: @fit(v, oldMin, oldMax, newMin, newMax, true, true)
-func FitClampedRounded(v, oldMin, oldMax, newMin, newMax AttrValueAppender) ValueMutator {
-	return fitAction(v, oldMin, oldMax, newMin, newMax, true, true)
+func FitClampedRounded(v, oldMin, oldMax, newMin, newMax Value) Value {
+	return V(DSFitClampedRounded(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
-func fitAction(v, oldMin, oldMax, newMin, newMax AttrValueAppender, clamp, round bool) ValueMutator {
-	return ValueMutator{
-		AttrMutator: AttrFunc(func(attr *attrBuilder) {
-			var sb strings.Builder
-			writeFit(&sb, v, oldMin, oldMax, newMin, newMax, clamp, round)
-			attr.AppendStatement(sb.String())
-		}),
-		AttrValueAppender: AttrValueFunc(func(sb *strings.Builder) {
-			writeFit(sb, v, oldMin, oldMax, newMin, newMax, clamp, round)
-		}),
-	}
-}
-
-func writeFit(sb *strings.Builder, v, oldMin, oldMax, newMin, newMax AttrValueAppender, clamp, round bool) {
-	sb.WriteString("@fit(")
-	v.Append(sb)
-	sb.WriteString(", ")
-	oldMin.Append(sb)
-	sb.WriteString(", ")
-	oldMax.Append(sb)
-	sb.WriteString(", ")
-	newMin.Append(sb)
-	sb.WriteString(", ")
-	newMax.Append(sb)
-	if clamp || round {
-		sb.WriteString(", ")
-		if clamp {
-			sb.WriteString("true")
-		} else {
-			sb.WriteString("false")
-		}
-	}
-	if round {
-		sb.WriteString(", true")
-	}
-	sb.WriteString(")")
-}

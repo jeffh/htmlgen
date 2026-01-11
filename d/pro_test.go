@@ -233,12 +233,11 @@ func TestFocus(t *testing.T) {
 }
 
 func TestClipboard(t *testing.T) {
-	v := Clipboard(Str("Hello, world!"))
+	v := Clipboard(JsonValue("Hello, world!"))
 
-	var sb strings.Builder
-	v.Append(&sb)
+	got := ToJS(v.expr)
 	expected := `@clipboard("Hello, world!")`
-	if got := sb.String(); got != expected {
+	if got != expected {
 		t.Errorf("Clipboard() = %q, want %q", got, expected)
 	}
 
@@ -250,12 +249,11 @@ func TestClipboard(t *testing.T) {
 }
 
 func TestClipboardBase64(t *testing.T) {
-	v := ClipboardBase64(Str("SGVsbG8="))
+	v := ClipboardBase64(JsonValue("SGVsbG8="))
 
-	var sb strings.Builder
-	v.Append(&sb)
+	got := ToJS(v.expr)
 	expected := `@clipboard("SGVsbG8=", true)`
-	if got := sb.String(); got != expected {
+	if got != expected {
 		t.Errorf("ClipboardBase64() = %q, want %q", got, expected)
 	}
 
@@ -269,10 +267,9 @@ func TestClipboardBase64(t *testing.T) {
 func TestFit(t *testing.T) {
 	v := Fit(Raw("$slider"), Raw("0"), Raw("100"), Raw("0"), Raw("255"))
 
-	var sb strings.Builder
-	v.Append(&sb)
+	got := ToJS(v.expr)
 	expected := "@fit($slider, 0, 100, 0, 255)"
-	if got := sb.String(); got != expected {
+	if got != expected {
 		t.Errorf("Fit() = %q, want %q", got, expected)
 	}
 
@@ -286,10 +283,9 @@ func TestFit(t *testing.T) {
 func TestFitClamped(t *testing.T) {
 	v := FitClamped(Raw("$v"), Raw("0"), Raw("100"), Raw("0"), Raw("255"))
 
-	var sb strings.Builder
-	v.Append(&sb)
+	got := ToJS(v.expr)
 	expected := "@fit($v, 0, 100, 0, 255, true)"
-	if got := sb.String(); got != expected {
+	if got != expected {
 		t.Errorf("FitClamped() = %q, want %q", got, expected)
 	}
 }
@@ -297,10 +293,9 @@ func TestFitClamped(t *testing.T) {
 func TestFitRounded(t *testing.T) {
 	v := FitRounded(Raw("$v"), Raw("0"), Raw("100"), Raw("0"), Raw("255"))
 
-	var sb strings.Builder
-	v.Append(&sb)
+	got := ToJS(v.expr)
 	expected := "@fit($v, 0, 100, 0, 255, false, true)"
-	if got := sb.String(); got != expected {
+	if got != expected {
 		t.Errorf("FitRounded() = %q, want %q", got, expected)
 	}
 }
@@ -308,10 +303,9 @@ func TestFitRounded(t *testing.T) {
 func TestFitClampedRounded(t *testing.T) {
 	v := FitClampedRounded(Raw("$v"), Raw("0"), Raw("100"), Raw("0"), Raw("255"))
 
-	var sb strings.Builder
-	v.Append(&sb)
+	got := ToJS(v.expr)
 	expected := "@fit($v, 0, 100, 0, 255, true, true)"
-	if got := sb.String(); got != expected {
+	if got != expected {
 		t.Errorf("FitClampedRounded() = %q, want %q", got, expected)
 	}
 }

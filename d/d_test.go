@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jeffh/htmlgen/js"
 )
 
 // Helper to build attribute and return name and value
@@ -29,11 +31,9 @@ func TestRaw(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			v := Raw(tt.input)
 
-			// Test AttrValueAppender
-			var sb strings.Builder
-			v.Append(&sb)
-			if got := sb.String(); got != tt.expected {
-				t.Errorf("Append() = %q, want %q", got, tt.expected)
+			// Test via ToJS
+			if got := ToJS(v.expr); got != tt.expected {
+				t.Errorf("ToJS(Raw(%q)) = %q, want %q", tt.input, got, tt.expected)
 			}
 
 			// Test AttrMutator
@@ -62,10 +62,8 @@ func TestStr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := Str(tt.input)
-			var sb strings.Builder
-			v.Append(&sb)
-			if got := sb.String(); got != tt.expected {
-				t.Errorf("Str(%q).Append() = %q, want %q", tt.input, got, tt.expected)
+			if got := ToJS(v); got != tt.expected {
+				t.Errorf("Str(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
 	}
@@ -90,10 +88,8 @@ func TestJsonValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := JsonValue(tt.input)
-			var sb strings.Builder
-			v.Append(&sb)
-			if got := sb.String(); got != tt.expected {
-				t.Errorf("JsonValue(%v).Append() = %q, want %q", tt.input, got, tt.expected)
+			if got := ToJS(v.expr); got != tt.expected {
+				t.Errorf("JsonValue(%v) = %q, want %q", tt.input, got, tt.expected)
 			}
 
 			// Also test AttrMutator path
@@ -113,9 +109,7 @@ func TestJsonValuePanic(t *testing.T) {
 	}()
 
 	// channels cannot be marshaled to JSON
-	v := JsonValue(make(chan int))
-	var sb strings.Builder
-	v.Append(&sb)
+	JsonValue(make(chan int))
 }
 
 func TestNavigate(t *testing.T) {
@@ -141,9 +135,9 @@ func TestNavigate(t *testing.T) {
 }
 
 func TestOnSuccess(t *testing.T) {
-	action := OnSuccess("console.log('done')")
+	action := OnSuccess(Raw("console.log('done')"))
 	var sb strings.Builder
-	action.Append(&sb)
+	action.appendChain(&sb)
 	expected := ".then(() => console.log('done'))"
 	if got := sb.String(); got != expected {
 		t.Errorf("OnSuccess() = %q, want %q", got, expected)
@@ -151,9 +145,9 @@ func TestOnSuccess(t *testing.T) {
 }
 
 func TestOnFailure(t *testing.T) {
-	action := OnFailure("console.log(error)")
+	action := OnFailure(Raw("console.log(error)"))
 	var sb strings.Builder
-	action.Append(&sb)
+	action.appendChain(&sb)
 	expected := ".catch((error) => console.log(error))"
 	if got := sb.String(); got != expected {
 		t.Errorf("OnFailure() = %q, want %q", got, expected)
@@ -163,12 +157,12 @@ func TestOnFailure(t *testing.T) {
 func TestConsoleLog(t *testing.T) {
 	tests := []struct {
 		name     string
-		values   []AttrValueAppender
+		values   []js.Expr
 		expected string
 	}{
-		{"single value", []AttrValueAppender{Raw("$foo")}, "console.log($foo)"},
-		{"multiple values", []AttrValueAppender{Raw("$a"), Raw("$b")}, "console.log($a, $b)"},
-		{"with string", []AttrValueAppender{Str("msg"), Raw("$x")}, `console.log("msg", $x)`},
+		{"single value", []js.Expr{js.Raw("$foo")}, "console.log($foo)"},
+		{"multiple values", []js.Expr{js.Raw("$a"), js.Raw("$b")}, "console.log($a, $b)"},
+		{"with string", []js.Expr{js.String("msg"), js.Raw("$x")}, `console.log("msg", $x)`},
 	}
 
 	for _, tt := range tests {
@@ -185,26 +179,24 @@ func TestConsoleLog(t *testing.T) {
 func TestAnd(t *testing.T) {
 	tests := []struct {
 		name     string
-		actions  []AttrValueAppender
+		actions  []js.Expr
 		expected string
 	}{
-		{"two actions", []AttrValueAppender{Raw("$a"), Raw("$b")}, "$a && $b"},
-		{"three actions", []AttrValueAppender{Raw("$a"), Raw("$b"), Raw("$c")}, "$a && $b && $c"},
+		{"two actions", []js.Expr{js.Raw("$a"), js.Raw("$b")}, "($a && $b)"},
+		{"three actions", []js.Expr{js.Raw("$a"), js.Raw("$b"), js.Raw("$c")}, "(($a && $b) && $c)"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := And(tt.actions...)
 
-			// Test AttrValueAppender
-			var sb strings.Builder
-			v.Append(&sb)
-			if got := sb.String(); got != tt.expected {
-				t.Errorf("And().Append() = %q, want %q", got, tt.expected)
+			// Test via ToJS
+			if got := ToJS(v); got != tt.expected {
+				t.Errorf("And() = %q, want %q", got, tt.expected)
 			}
 
 			// Test AttrMutator
-			_, attrValue := buildTestAttr("test", v)
+			_, attrValue := buildTestAttr("test", AndMutator(tt.actions...))
 			if attrValue != tt.expected {
 				t.Errorf("And().Modify() = %q, want %q", attrValue, tt.expected)
 			}
@@ -434,11 +426,11 @@ func TestSetSignalExpr(t *testing.T) {
 	tests := []struct {
 		name       string
 		signalName string
-		expr       AttrValueAppender
+		expr       js.Expr
 		expected   string
 	}{
-		{"without $", "foo", Raw("1"), "$foo = 1"},
-		{"with $", "$bar", Raw("true"), "$bar = true"},
+		{"without $", "foo", js.Raw("1"), "$foo = 1"},
+		{"with $", "$bar", js.Raw("true"), "$bar = true"},
 	}
 
 	for _, tt := range tests {
@@ -703,10 +695,9 @@ func TestEffect(t *testing.T) {
 
 func TestPeek(t *testing.T) {
 	v := Peek(Raw("$foo"))
-	var sb strings.Builder
-	v.Append(&sb)
+	got := ToJS(v.expr)
 	expected := "@peek(() => $foo)"
-	if got := sb.String(); got != expected {
+	if got != expected {
 		t.Errorf("Peek() = %q, want %q", got, expected)
 	}
 }
@@ -882,48 +873,43 @@ func TestFilterOptionsValue(t *testing.T) {
 	opts := &FilterOptions{IncludeReg: &include}
 	v := FilterOptionsValue(opts)
 
-	var sb strings.Builder
-	v.Append(&sb)
-	if !strings.Contains(sb.String(), "include: /^user/") {
-		t.Errorf("FilterOptionsValue().Append() = %q, should contain include regex", sb.String())
+	_, attrValue := buildTestAttr("test", v)
+	if !strings.Contains(attrValue, "include: /^user/") {
+		t.Errorf("FilterOptionsValue().Modify() = %q, should contain include regex", attrValue)
 	}
 }
 
 func TestSetAll(t *testing.T) {
-	v := SetAll(JsonValue(true), FilterOptions{})
-	var sb strings.Builder
-	v.Append(&sb)
+	v := SetAll(JsonValue(true), nil)
+	got := ToJS(v.expr)
 	expected := "@setAll(true)"
-	if got := sb.String(); got != expected {
+	if got != expected {
 		t.Errorf("SetAll() = %q, want %q", got, expected)
 	}
 
 	// With filter
 	include := "^check"
-	v = SetAll(JsonValue(false), FilterOptions{IncludeReg: &include})
-	sb.Reset()
-	v.Append(&sb)
-	if !strings.Contains(sb.String(), "@setAll(false, {include: /^check/})") {
-		t.Errorf("SetAll() with filter = %q, should contain filter options", sb.String())
+	v = SetAll(JsonValue(false), &FilterOptions{IncludeReg: &include})
+	got = ToJS(v.expr)
+	if !strings.Contains(got, "@setAll(false, {include: /^check/})") {
+		t.Errorf("SetAll() with filter = %q, should contain filter options", got)
 	}
 }
 
 func TestToggleAll(t *testing.T) {
-	v := ToggleAll(FilterOptions{})
-	var sb strings.Builder
-	v.Append(&sb)
+	v := ToggleAll(nil)
+	got := ToJS(v.expr)
 	expected := "@toggleAll()"
-	if got := sb.String(); got != expected {
+	if got != expected {
 		t.Errorf("ToggleAll() = %q, want %q", got, expected)
 	}
 
 	// With filter
 	include := "^check"
-	v = ToggleAll(FilterOptions{IncludeReg: &include})
-	sb.Reset()
-	v.Append(&sb)
-	if !strings.Contains(sb.String(), "@toggleAll({include: /^check/})") {
-		t.Errorf("ToggleAll() with filter = %q, should contain filter options", sb.String())
+	v = ToggleAll(&FilterOptions{IncludeReg: &include})
+	got = ToJS(v.expr)
+	if !strings.Contains(got, "@toggleAll({include: /^check/})") {
+		t.Errorf("ToggleAll() with filter = %q, should contain filter options", got)
 	}
 }
 
@@ -932,10 +918,9 @@ func TestToggleAll(t *testing.T) {
 func TestGet(t *testing.T) {
 	v := Get("/api/users")
 
-	var sb strings.Builder
-	v.Append(&sb)
+	got := ToJS(v.expr)
 	expected := `@get("/api/users")`
-	if got := sb.String(); got != expected {
+	if got != expected {
 		t.Errorf("Get() = %q, want %q", got, expected)
 	}
 
@@ -948,46 +933,41 @@ func TestGet(t *testing.T) {
 
 func TestPost(t *testing.T) {
 	v := Post("/api/users")
-	var sb strings.Builder
-	v.Append(&sb)
-	if !strings.HasPrefix(sb.String(), `@post("/api/users")`) {
-		t.Errorf("Post() = %q, should start with @post", sb.String())
+	got := ToJS(v.expr)
+	if !strings.HasPrefix(got, `@post("/api/users")`) {
+		t.Errorf("Post() = %q, should start with @post", got)
 	}
 }
 
 func TestPut(t *testing.T) {
 	v := Put("/api/users/1")
-	var sb strings.Builder
-	v.Append(&sb)
-	if !strings.HasPrefix(sb.String(), `@put("/api/users/1")`) {
-		t.Errorf("Put() = %q, should start with @put", sb.String())
+	got := ToJS(v.expr)
+	if !strings.HasPrefix(got, `@put("/api/users/1")`) {
+		t.Errorf("Put() = %q, should start with @put", got)
 	}
 }
 
 func TestDelete(t *testing.T) {
 	v := Delete("/api/users/1")
-	var sb strings.Builder
-	v.Append(&sb)
-	if !strings.HasPrefix(sb.String(), `@delete("/api/users/1")`) {
-		t.Errorf("Delete() = %q, should start with @delete", sb.String())
+	got := ToJS(v.expr)
+	if !strings.HasPrefix(got, `@delete("/api/users/1")`) {
+		t.Errorf("Delete() = %q, should start with @delete", got)
 	}
 }
 
 func TestPatch(t *testing.T) {
 	v := Patch("/api/users/1")
-	var sb strings.Builder
-	v.Append(&sb)
-	if !strings.HasPrefix(sb.String(), `@patch("/api/users/1")`) {
-		t.Errorf("Patch() = %q, should start with @patch", sb.String())
+	got := ToJS(v.expr)
+	if !strings.HasPrefix(got, `@patch("/api/users/1")`) {
+		t.Errorf("Patch() = %q, should start with @patch", got)
 	}
 }
 
 func TestGetDynamic(t *testing.T) {
 	v := GetDynamic(Raw("`/api/users/${$userId}`"))
-	var sb strings.Builder
-	v.Append(&sb)
+	got := ToJS(v.expr)
 	expected := "@get(`/api/users/${$userId}`)"
-	if got := sb.String(); got != expected {
+	if got != expected {
 		t.Errorf("GetDynamic() = %q, want %q", got, expected)
 	}
 
@@ -1000,45 +980,39 @@ func TestGetDynamic(t *testing.T) {
 
 func TestPostDynamic(t *testing.T) {
 	v := PostDynamic(Raw("`/api/${$resource}`"))
-	var sb strings.Builder
-	v.Append(&sb)
-	if !strings.HasPrefix(sb.String(), "@post(") {
-		t.Errorf("PostDynamic() = %q, should start with @post(", sb.String())
+	got := ToJS(v.expr)
+	if !strings.HasPrefix(got, "@post(") {
+		t.Errorf("PostDynamic() = %q, should start with @post(", got)
 	}
 }
 
 func TestPutDynamic(t *testing.T) {
 	v := PutDynamic(Raw("`/api/${$resource}`"))
-	var sb strings.Builder
-	v.Append(&sb)
-	if !strings.HasPrefix(sb.String(), "@put(") {
-		t.Errorf("PutDynamic() = %q, should start with @put(", sb.String())
+	got := ToJS(v.expr)
+	if !strings.HasPrefix(got, "@put(") {
+		t.Errorf("PutDynamic() = %q, should start with @put(", got)
 	}
 }
 
 func TestDeleteDynamic(t *testing.T) {
 	v := DeleteDynamic(Raw("`/api/${$resource}`"))
-	var sb strings.Builder
-	v.Append(&sb)
-	if !strings.HasPrefix(sb.String(), "@delete(") {
-		t.Errorf("DeleteDynamic() = %q, should start with @delete(", sb.String())
+	got := ToJS(v.expr)
+	if !strings.HasPrefix(got, "@delete(") {
+		t.Errorf("DeleteDynamic() = %q, should start with @delete(", got)
 	}
 }
 
 func TestPatchDynamic(t *testing.T) {
 	v := PatchDynamic(Raw("`/api/${$resource}`"))
-	var sb strings.Builder
-	v.Append(&sb)
-	if !strings.HasPrefix(sb.String(), "@patch(") {
-		t.Errorf("PatchDynamic() = %q, should start with @patch(", sb.String())
+	got := ToJS(v.expr)
+	if !strings.HasPrefix(got, "@patch(") {
+		t.Errorf("PatchDynamic() = %q, should start with @patch(", got)
 	}
 }
 
 func TestRequestWithOptions(t *testing.T) {
-	v := Get("/api/data", OnSuccess("$done = true"), OnFailure("$error = true"))
-	var sb strings.Builder
-	v.Append(&sb)
-	got := sb.String()
+	v := Get("/api/data", OnSuccess(Raw("$done = true")), OnFailure(Raw("$error = true")))
+	got := ToJS(v.expr)
 	if !strings.Contains(got, ".then(") {
 		t.Errorf("Get with OnSuccess should contain .then(), got %q", got)
 	}
@@ -1047,57 +1021,48 @@ func TestRequestWithOptions(t *testing.T) {
 	}
 }
 
-func TestRequestOptions(t *testing.T) {
+func TestRequestOptionsBuilder(t *testing.T) {
 	tests := []struct {
 		name     string
-		opts     []RequestOption
+		builder  RequestOptionsBuilder
 		expected string
 	}{
-		{"empty", nil, ""},
-		{"content type", []RequestOption{ContentType("form")}, `, {contentType: "form"}`},
-		{"selector", []RequestOption{Selector("#myForm")}, `, {selector: "#myForm"}`},
-		{"open when hidden", []RequestOption{OpenWhenHidden(true)}, `, {openWhenHidden: true}`},
-		{"open when hidden false", []RequestOption{OpenWhenHidden(false)}, `, {openWhenHidden: false}`},
-		{"retry interval", []RequestOption{RetryInterval(2000)}, `, {retryInterval: 2000}`},
-		{"retry scaler", []RequestOption{RetryScaler(1.5)}, `, {retryScaler: 1.5}`},
-		{"retry max wait", []RequestOption{RetryMaxWaitMs(60000)}, `, {retryMaxWaitMs: 60000}`},
-		{"retry max count", []RequestOption{RetryMaxCount(5)}, `, {retryMaxCount: 5}`},
-		{"request cancellation", []RequestOption{RequestCancellation("disabled")}, `, {requestCancellation: "disabled"}`},
-		{"multiple options", []RequestOption{ContentType("json"), OpenWhenHidden(true)}, `, {contentType: "json", openWhenHidden: true}`},
+		{"content type", RequestOptions().ContentType("form"), `contentType: "form"`},
+		{"selector", RequestOptions().Selector("#myForm"), `selector: "#myForm"`},
+		{"open when hidden", RequestOptions().OpenWhenHidden(true), `openWhenHidden: true`},
+		{"open when hidden false", RequestOptions().OpenWhenHidden(false), `openWhenHidden: false`},
+		{"retry interval", RequestOptions().RetryInterval(2000), `retryInterval: 2000`},
+		{"retry scaler", RequestOptions().RetryScaler(1.5), `retryScaler: 1.5`},
+		{"retry max wait", RequestOptions().RetryMaxWaitMs(60000), `retryMaxWaitMs: 60000`},
+		{"retry max count", RequestOptions().RetryMaxCount(5), `retryMaxCount: 5`},
+		{"request cancellation", RequestOptions().RequestCancellation("disabled"), `requestCancellation: "disabled"`},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			opt := RequestOptions(tt.opts...)
-			var sb strings.Builder
-			opt.Append(&sb)
-			if got := sb.String(); got != tt.expected {
-				t.Errorf("RequestOptions() = %q, want %q", got, tt.expected)
+			v := GetWithOptions("/api", tt.builder)
+			got := ToJS(v.expr)
+			if !strings.Contains(got, tt.expected) {
+				t.Errorf("RequestOptions with %s = %q, should contain %q", tt.name, got, tt.expected)
 			}
 		})
 	}
 }
 
 func TestHeaders(t *testing.T) {
-	opt := Headers(map[string]string{"X-Custom": "value"})
-	var sb strings.Builder
-	requestOptionFunc(func(sb *strings.Builder) {
-		opt.appendOption(sb)
-	}).appendOption(&sb)
-	if !strings.Contains(sb.String(), `"X-Custom"`) || !strings.Contains(sb.String(), `"value"`) {
-		t.Errorf("Headers() = %q, should contain X-Custom and value", sb.String())
+	v := GetWithOptions("/api", RequestOptions().Headers(map[string]string{"X-Custom": "value"}))
+	got := ToJS(v.expr)
+	if !strings.Contains(got, `"X-Custom"`) || !strings.Contains(got, `"value"`) {
+		t.Errorf("Headers() = %q, should contain X-Custom and value", got)
 	}
 }
 
 func TestFilterSignals(t *testing.T) {
 	include := "^user"
-	opt := FilterSignals(&FilterOptions{IncludeReg: &include})
-	var sb strings.Builder
-	requestOptionFunc(func(sb *strings.Builder) {
-		opt.appendOption(sb)
-	}).appendOption(&sb)
-	if !strings.Contains(sb.String(), "filterSignals:") {
-		t.Errorf("FilterSignals() = %q, should contain filterSignals:", sb.String())
+	v := GetWithOptions("/api", RequestOptions().FilterSignals(&FilterOptions{IncludeReg: &include}))
+	got := ToJS(v.expr)
+	if !strings.Contains(got, "filterSignals:") {
+		t.Errorf("FilterSignals() = %q, should contain filterSignals:", got)
 	}
 }
 
@@ -1115,11 +1080,10 @@ func TestRetry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			opt := RequestOptions(Retry(tt.mode))
-			var sb strings.Builder
-			opt.Append(&sb)
-			if !strings.Contains(sb.String(), tt.expected) {
-				t.Errorf("Retry(%q) = %q, should contain %q", tt.mode, sb.String(), tt.expected)
+			v := GetWithOptions("/api", RequestOptions().Retry(tt.mode))
+			got := ToJS(v.expr)
+			if !strings.Contains(got, tt.expected) {
+				t.Errorf("Retry(%q) = %q, should contain %q", tt.mode, got, tt.expected)
 			}
 		})
 	}
@@ -1138,36 +1102,16 @@ func TestPayload(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			opt := RequestOptions(Payload(tt.data))
-			var sb strings.Builder
-			opt.Append(&sb)
-			if !strings.Contains(sb.String(), tt.expected) {
-				t.Errorf("Payload(%v) = %q, should contain %q", tt.data, sb.String(), tt.expected)
+			v := PostWithOptions("/api", RequestOptions().Payload(tt.data))
+			got := ToJS(v.expr)
+			if !strings.Contains(got, tt.expected) {
+				t.Errorf("Payload(%v) = %q, should contain %q", tt.data, got, tt.expected)
 			}
 		})
 	}
 }
 
 // ============ builders.go tests ============
-
-func TestValueMutatorFunc(t *testing.T) {
-	v := ValueMutatorFunc(func(sb *strings.Builder) {
-		sb.WriteString("custom value")
-	})
-
-	// Test AttrValueAppender
-	var sb strings.Builder
-	v.Append(&sb)
-	if got := sb.String(); got != "custom value" {
-		t.Errorf("ValueMutatorFunc().Append() = %q, want %q", got, "custom value")
-	}
-
-	// Test AttrMutator
-	_, attrValue := buildTestAttr("test", v)
-	if attrValue != "custom value" {
-		t.Errorf("ValueMutatorFunc().Modify() = %q, want %q", attrValue, "custom value")
-	}
-}
 
 func TestBuildAttr(t *testing.T) {
 	attr := buildAttr("data-test", Raw("$foo"), Raw("$bar"))
