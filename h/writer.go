@@ -237,14 +237,10 @@ func (w *Writer) SelfClosingTag(name string, as Attributes) error {
 	if _, err := w.writeAttrs(as, lineLen); err != nil {
 		return err
 	}
-
 	if _, err := io.WriteString(w.w, "/>"); err != nil {
 		return err
 	}
-	if err := w.writeIndentNewline(); err != nil {
-		return err
-	}
-	return nil
+	return w.writeIndentNewline()
 }
 
 // OpenTag writes an opening HTML tag with the given name and attributes.

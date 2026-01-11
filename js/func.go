@@ -2,6 +2,46 @@ package js
 
 import "strings"
 
+// writeArrowParams writes arrow function parameters in the format:
+// - Single param: x
+// - Zero or multiple params: (a, b)
+func writeArrowParams(sb *strings.Builder, params []string) {
+	if len(params) == 1 {
+		sb.WriteString(params[0])
+	} else {
+		sb.WriteString("(")
+		for i, p := range params {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(p)
+		}
+		sb.WriteString(")")
+	}
+}
+
+// writeParenParams writes parenthesized parameters: (a, b)
+func writeParenParams(sb *strings.Builder, params []string) {
+	sb.WriteString("(")
+	for i, p := range params {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(p)
+	}
+	sb.WriteString(")")
+}
+
+// writeStmtList writes statements separated by "; "
+func writeStmtList(sb *strings.Builder, stmts []Stmt) {
+	for i, s := range stmts {
+		if i > 0 {
+			sb.WriteString("; ")
+		}
+		s.stmt(sb)
+	}
+}
+
 // ArrowFunc creates an arrow function expression with a single expression body.
 // Example: ArrowFunc([]string{"x", "y"}, Add(Ident("x"), Ident("y")))
 //
@@ -16,18 +56,7 @@ type arrowFuncExpr struct {
 }
 
 func (a arrowFuncExpr) js(sb *strings.Builder) {
-	if len(a.params) == 1 {
-		sb.WriteString(a.params[0])
-	} else {
-		sb.WriteString("(")
-		for i, p := range a.params {
-			if i > 0 {
-				sb.WriteString(", ")
-			}
-			sb.WriteString(p)
-		}
-		sb.WriteString(")")
-	}
+	writeArrowParams(sb, a.params)
 	sb.WriteString(" => ")
 	a.body.js(sb)
 }
@@ -47,25 +76,9 @@ type arrowFuncStmtsExpr struct {
 }
 
 func (a arrowFuncStmtsExpr) js(sb *strings.Builder) {
-	if len(a.params) == 1 {
-		sb.WriteString(a.params[0])
-	} else {
-		sb.WriteString("(")
-		for i, p := range a.params {
-			if i > 0 {
-				sb.WriteString(", ")
-			}
-			sb.WriteString(p)
-		}
-		sb.WriteString(")")
-	}
+	writeArrowParams(sb, a.params)
 	sb.WriteString(" => { ")
-	for i, s := range a.body {
-		if i > 0 {
-			sb.WriteString("; ")
-		}
-		s.stmt(sb)
-	}
+	writeStmtList(sb, a.body)
 	sb.WriteString(" }")
 }
 func (a arrowFuncStmtsExpr) callable() {}
@@ -84,20 +97,10 @@ type funcExpr struct {
 }
 
 func (f funcExpr) js(sb *strings.Builder) {
-	sb.WriteString("function(")
-	for i, p := range f.params {
-		if i > 0 {
-			sb.WriteString(", ")
-		}
-		sb.WriteString(p)
-	}
-	sb.WriteString(") { ")
-	for i, s := range f.body {
-		if i > 0 {
-			sb.WriteString("; ")
-		}
-		s.stmt(sb)
-	}
+	sb.WriteString("function")
+	writeParenParams(sb, f.params)
+	sb.WriteString(" { ")
+	writeStmtList(sb, f.body)
 	sb.WriteString(" }")
 }
 func (f funcExpr) callable() {}
@@ -116,12 +119,7 @@ type iifeExpr struct {
 
 func (i iifeExpr) js(sb *strings.Builder) {
 	sb.WriteString("(function() { ")
-	for j, s := range i.body {
-		if j > 0 {
-			sb.WriteString("; ")
-		}
-		s.stmt(sb)
-	}
+	writeStmtList(sb, i.body)
 	sb.WriteString(" })()")
 }
 func (i iifeExpr) callable() {}
@@ -201,18 +199,7 @@ type asyncArrowFuncExpr struct {
 
 func (a asyncArrowFuncExpr) js(sb *strings.Builder) {
 	sb.WriteString("async ")
-	if len(a.params) == 1 {
-		sb.WriteString(a.params[0])
-	} else {
-		sb.WriteString("(")
-		for i, p := range a.params {
-			if i > 0 {
-				sb.WriteString(", ")
-			}
-			sb.WriteString(p)
-		}
-		sb.WriteString(")")
-	}
+	writeArrowParams(sb, a.params)
 	sb.WriteString(" => ")
 	a.body.js(sb)
 }
@@ -233,25 +220,9 @@ type asyncArrowFuncStmtsExpr struct {
 
 func (a asyncArrowFuncStmtsExpr) js(sb *strings.Builder) {
 	sb.WriteString("async ")
-	if len(a.params) == 1 {
-		sb.WriteString(a.params[0])
-	} else {
-		sb.WriteString("(")
-		for i, p := range a.params {
-			if i > 0 {
-				sb.WriteString(", ")
-			}
-			sb.WriteString(p)
-		}
-		sb.WriteString(")")
-	}
+	writeArrowParams(sb, a.params)
 	sb.WriteString(" => { ")
-	for i, s := range a.body {
-		if i > 0 {
-			sb.WriteString("; ")
-		}
-		s.stmt(sb)
-	}
+	writeStmtList(sb, a.body)
 	sb.WriteString(" }")
 }
 func (a asyncArrowFuncStmtsExpr) callable() {}

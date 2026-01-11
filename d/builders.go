@@ -37,7 +37,6 @@ func buildAttr(name string, options ...AttrMutator) *attrBuilder {
 		}
 	}()
 	attr.name.WriteString(name)
-	attr.statements = make([]string, 0, len(options))
 	for _, opt := range options {
 		opt.Modify(attr)
 	}
