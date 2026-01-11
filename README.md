@@ -10,10 +10,11 @@ go get github.com/jeffh/htmlgen
 
 ## Overview
 
-htmlgen provides two packages:
+htmlgen provides three packages:
 
 - **`h`** - Core HTML generation with both streaming and declarative APIs
 - **`d`** - Datastar attribute helpers for building reactive web applications
+- **`js`** - Type-safe JavaScript generation for event handler attributes
 
 ## Package `h` - HTML Generation
 
@@ -41,7 +42,7 @@ page := h.Html(nil,
 h.Render(os.Stdout, page)
 
 // Or render with pretty-printed indentation (using two spaces)
-h.RenderPretty(os.Stdout, "  ", page)
+h.RenderIndent(os.Stdout, "  ", page)
 ```
 
 ### Attributes
@@ -269,19 +270,6 @@ The `d` package also includes helpers for [Datastar Pro](https://data-star.dev/)
 - Scrolling: `ScrollIntoView`
 - Transitions: `ViewTransitionName`
 - Utility actions: `Clipboard`, `Fit`, `FitClamped`
-
-## Platform Detection
-
-The `h` package provides build-tag controlled constants for detecting runtime environment:
-
-```go
-if h.Server {
-    // Server-side Go
-}
-if h.Client {
-    // WebAssembly in browser
-}
-```
 
 ## Benchmarks
 
