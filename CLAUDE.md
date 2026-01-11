@@ -21,17 +21,15 @@ This is a Go library (`github.com/jeffh/htmlgen`) for programmatic HTML generati
 
 ### Package `h` - Core HTML Generation
 
-**Writer API** (`h/api.go`): Low-level streaming HTML writer wrapping `io.Writer`. Tracks open tags and provides:
+**Writer API** (`h/writer.go`): Low-level streaming HTML writer wrapping `io.Writer`. Tracks open tags and provides:
 - `Doctype()`, `OpenTag()`, `CloseTag()`, `SelfClosingTag()` for tag manipulation
 - `Text()` (escaped) and `Raw()` (unescaped) for content
-- `End()` closes most recent tag, `Close()` closes all remaining tags
+- `CloseOneTag()` closes most recent tag, `Close()` closes all remaining tags
 - Attribute values are automatically HTML-escaped via `html/template`
 
 **Builder API** (`h/builder.go`, `h/tags.go`): Declarative tree-building API where nodes implement `Builder` interface (`Build(w *Writer) error`). Use `Render(w, builder)` to write a builder tree to an io.Writer. All standard HTML5 elements have corresponding functions (e.g., `Div()`, `Span()`, `A()`) that take `Attributes` and child `Builder` elements.
 
 **Attributes** (`h/attrs.go`): `Attributes` is a `[]Attribute` slice with `Get()`, `Set()`, `SetDefault()`, `Delete()` methods. Create via `Attrs("key", "value", ...)` or `AttrsMap(map[string]string{...})`.
-
-**Platform Detection** (`h/dsl.go`, `h/dsl_js.go`): Build-tag controlled constants `Server`/`Client` indicate runtime environment (server-side Go vs WebAssembly).
 
 ### Package `d` - Datastar Attribute Helpers
 
