@@ -392,8 +392,37 @@ func TestRenderPretty(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	b := Div(P(Text("hello")))
 	RenderIndent(buf, "  ", b)
-	// Text content is not indented - only tags get indentation
-	expected := "<div>\n  <p>\nhello  </p>\n</div>\n"
+	// Text content is indented at the content depth (inside parent tag)
+	expected := "<div>\n  <p>\n    hello\n  </p>\n</div>\n"
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
+func TestRenderMinified(t *testing.T) {
+	// Verify minified mode produces no extra whitespace
+	buf := bytes.NewBuffer(nil)
+	b := Div(P(Text("hello")), Span(Text("world")))
+	Render(buf, b)
+	// Minified output should have no newlines or indentation
+	expected := "<div><p>hello</p><span>world</span></div>"
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
+func TestRenderMinifiedDeepNesting(t *testing.T) {
+	// Verify deeply nested elements in minified mode have no whitespace
+	buf := bytes.NewBuffer(nil)
+	b := Div(
+		Div(
+			Div(
+				Span(Text("Nested")),
+			),
+		),
+	)
+	Render(buf, b)
+	expected := "<div><div><div><span>Nested</span></div></div></div>"
 	if buf.String() != expected {
 		t.Errorf("expected %q, got %q", expected, buf.String())
 	}
@@ -972,7 +1001,8 @@ func TestDeepNestingWithIndent(t *testing.T) {
 		),
 	)
 	RenderIndent(buf, "\t", b)
-	expected := "<div>\n\t<div>\n\t\t<div>\n\t\t\t<span>\nNested\t\t\t</span>\n\t\t</div>\n\t</div>\n</div>\n"
+	// Text is now properly indented at content depth
+	expected := "<div>\n\t<div>\n\t\t<div>\n\t\t\t<span>\n\t\t\t\tNested\n\t\t\t</span>\n\t\t</div>\n\t</div>\n</div>\n"
 	if buf.String() != expected {
 		t.Errorf("expected %q, got %q", expected, buf.String())
 	}
@@ -994,6 +1024,54 @@ func TestManyAttributes(t *testing.T) {
 	expected := `<div id="myDiv" class="container fluid" data-value="123" data-name="test" aria-label="Main container" role="main" tabindex="0" title="A div with many attributes"></div>`
 	if buf.String() != expected {
 		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
+func TestMultiLineAttributes(t *testing.T) {
+	// Test attribute wrapping when line exceeds maxLineLen
+	buf := bytes.NewBuffer(nil)
+	w := NewWriter(buf)
+	w.SetIndent("  ")
+	w.SetMaxLineLength(30) // Short line length to trigger wrapping
+
+	b := Div(Attrs(
+		"id", "myDiv",
+		"class", "container",
+		"data-value", "123",
+	))
+	b.Build(w)
+
+	// With maxLineLen=30, the line "<div id="myDiv" class="container"..." exceeds limit
+	// So attributes after "id" should wrap
+	expected := "<div id=\"myDiv\"\n  class=\"container\"\n  data-value=\"123\">\n</div>\n"
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
+func TestMultiLineAttributesNested(t *testing.T) {
+	// Test attribute wrapping with nested elements
+	buf := bytes.NewBuffer(nil)
+	w := NewWriter(buf)
+	w.SetIndent("  ")
+	w.SetMaxLineLength(40)
+
+	b := Div(Attrs("id", "outer"),
+		Span(Attrs("id", "inner", "class", "highlight", "data-x", "value"),
+			Text("content"),
+		),
+	)
+	b.Build(w)
+
+	// The inner span should have wrapped attributes with deeper indentation
+	got := buf.String()
+	// Verify it starts correctly
+	if !bytes.Contains(buf.Bytes(), []byte("<span id=\"inner\"")) {
+		t.Errorf("expected span with id, got %q", got)
+	}
+	// Verify content is properly indented
+	if !bytes.Contains(buf.Bytes(), []byte("content\n")) {
+		t.Errorf("expected content with newline, got %q", got)
 	}
 }
 
