@@ -142,7 +142,7 @@ page := tmpl.With(
 h.Render(w, page)
 ```
 
-Compiled templates are ~3.7x faster than `html/template` for parameterized content.
+Compiled templates are ~8.7x faster than `html/template` for parameterized content.
 
 ## Package `d` - Datastar Integration
 
@@ -285,31 +285,30 @@ go test -bench=. -benchmem ./h/
 
 | Scenario | htmlgen | html/template | Winner |
 |----------|---------|---------------|--------|
-| Simple Div | 281 ns | 508 ns | htmlgen ~1.8x faster |
-| Div with Attributes | 470 ns | 2045 ns | htmlgen ~4.4x faster |
-| Nested Elements | 1155 ns | 2066 ns | htmlgen ~1.8x faster |
-| List (10 items) | 1132 ns | 4676 ns | htmlgen ~4.1x faster |
-| List (100 items) | 8.5 µs | 44.2 µs | htmlgen ~5.2x faster |
-| Table (10 rows) | 7.3 µs | 16.7 µs | htmlgen ~2.3x faster |
-| Table (100 rows) | 62.7 µs | 163.0 µs | htmlgen ~2.6x faster |
-| Full Page | 4.9 µs | 10.6 µs | htmlgen ~2.2x faster |
-| Escaping | 893 ns | 1396 ns | htmlgen ~1.6x faster |
-| Deep Nesting (10 levels) | 1063 ns | 503 ns | template ~2.1x faster |
-| Form | 3.9 µs | 13.2 µs | htmlgen ~3.4x faster |
-| Pre-built Tree (static) | 704 ns | 64 ns | template ~11x faster |
-| Compiled Tree (static) | 164 ns | 64 ns | template ~2.6x faster |
-| Compiled Params | 294 ns | 1081 ns | htmlgen ~3.7x faster |
+| Simple Div | 150 ns | 522 ns | htmlgen ~3.5x faster |
+| Div with Attributes | 563 ns | 3568 ns | htmlgen ~6.3x faster |
+| Nested Elements | 1379 ns | 2130 ns | htmlgen ~1.5x faster |
+| List (10 items) | 913 ns | 4839 ns | htmlgen ~5.3x faster |
+| List (100 items) | 7.5 µs | 46.0 µs | htmlgen ~6.2x faster |
+| Table (10 rows) | 7.4 µs | 17.2 µs | htmlgen ~2.3x faster |
+| Table (100 rows) | 65.2 µs | 167.6 µs | htmlgen ~2.6x faster |
+| Full Page | 5.0 µs | 11.2 µs | htmlgen ~2.2x faster |
+| Escaping | 449 ns | 1445 ns | htmlgen ~3.2x faster |
+| Deep Nesting (10 levels) | 1030 ns | 527 ns | template ~2.0x faster |
+| Form | 3.5 µs | 13.6 µs | htmlgen ~3.8x faster |
+| Pre-built Tree (static) | 536 ns | 69 ns | template ~7.8x faster |
+| Compiled Tree (static) | 19 ns | 69 ns | htmlgen ~3.6x faster |
+| Compiled Params | 141 ns | 1234 ns | htmlgen ~8.7x faster |
 
 *Benchmarks run on Apple M1 Ultra. Results may vary by hardware.*
 
 ### Key Insights
 
 - **htmlgen is faster** for dynamic content generation with variable data structures
-- **html/template is faster** for static content with no runtime data substitution
-- **Compile** pre-renders static content for near-template performance (164 ns vs 704 ns unbaked)
-- **CompileParams** is ~3.7x faster than html/template for parameterized content
-- htmlgen excels at list/table generation where it can be 4-5x faster
-- For attribute-heavy elements, htmlgen can be up to 4x faster
+- **Compile** pre-renders static content for excellent performance (19 ns vs 536 ns unbaked)
+- **CompileParams** is ~8.7x faster than html/template for parameterized content
+- htmlgen excels at list/table generation where it can be 5-6x faster
+- For attribute-heavy elements, htmlgen can be up to 6x faster
 
 ### When to Use Each
 
@@ -318,7 +317,7 @@ go test -bench=. -benchmem ./h/
 | Dynamic lists/tables | htmlgen |
 | Forms with many attributes | htmlgen |
 | Full page generation with data | htmlgen |
-| Static templates with no data | html/template or `Compile` |
+| Static templates with no data | `Compile` |
 | Parameterized templates | `CompileParams` |
 | Component-based UI architecture | htmlgen |
 
