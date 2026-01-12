@@ -5,6 +5,7 @@
 **Version documented**: 2.0.8
 **Last updated**: 2026-01-12
 **Created with**: `/reference` command
+**Updated**: Web Components section added
 
 ---
 
@@ -746,6 +747,49 @@ HTMX applies these classes during operations:
 
 ---
 
+## Web Components
+
+HTMX can work with web components but requires manual setup for shadow DOM.
+
+### Enabling HTMX in Shadow DOM
+
+By default, HTMX doesn't see inside shadow DOM. Call `htmx.process()` on the shadow root:
+
+```javascript
+customElements.define('my-component', class MyComponent extends HTMLElement {
+  connectedCallback() {
+    const root = this.attachShadow({ mode: 'closed' })
+    root.innerHTML = `
+      <button hx-get="/endpoint" hx-target="next div">Click me!</button>
+      <div></div>
+    `
+    htmx.process(root)  // Enable HTMX processing
+  }
+})
+```
+
+### Shadow DOM Selectors
+
+Selectors are scoped to the current shadow DOM. Use these prefixes to escape:
+
+| Prefix | Target |
+|--------|--------|
+| `host:` | The element hosting the shadow DOM |
+| `global:` | Elements in the main document |
+
+```html
+<!-- Inside shadow DOM -->
+<button hx-get="/data" hx-target="global:#main-content">Update Main</button>
+```
+
+### Limitations
+
+- Form inputs inside shadow DOM aren't automatically included in requests
+- Components must handle the `formdata` event or implement form element APIs
+- Light DOM (no shadow DOM) works seamlessly with HTMX
+
+---
+
 ## Debugging
 
 ### Enable Logging
@@ -786,6 +830,7 @@ monitorEvents(document.getElementById('element'));
 - [HTMX Events Reference](https://htmx.org/events/) - Retrieved 2026-01-12
 - [HTMX JavaScript API](https://htmx.org/api/) - Retrieved 2026-01-12
 - [HTMX Extensions](https://htmx.org/extensions/) - Retrieved 2026-01-12
+- [HTMX Web Components Example](https://htmx.org/examples/web-components/) - Retrieved 2026-01-12
 - [HTMX GitHub Repository](https://github.com/bigskysoftware/htmx) - Retrieved 2026-01-12
 
 ---
