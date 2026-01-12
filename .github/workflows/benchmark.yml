@@ -160,7 +160,7 @@ jobs:
           echo "- For attribute-heavy elements, htmlgen can be up to 3x faster" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Benchmark Results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: benchmark-results
           path: benchmark_output.txt
