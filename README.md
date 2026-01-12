@@ -142,7 +142,7 @@ page := tmpl.With(
 h.Render(w, page)
 ```
 
-Compiled templates are ~3.7x faster than `html/template` for parameterized content.
+Compiled templates are ~8.0x faster than `html/template` for parameterized content.
 
 ## Package `d` - Datastar Integration
 
@@ -279,37 +279,42 @@ htmlgen is benchmarked against Go's standard `html/template` package. Run benchm
 
 ```bash
 go test -bench=. -benchmem ./h/
+
+# Run with purego (no unsafe optimizations)
+go test -bench=. -benchmem -tags=purego ./h/
 ```
+
+The `purego` build tag disables unsafe pointer optimizations for environments that require pure Go code.
 
 ### Performance Comparison
 
-| Scenario | htmlgen | html/template | Winner |
-|----------|---------|---------------|--------|
-| Simple Div | 281 ns | 508 ns | htmlgen ~1.8x faster |
-| Div with Attributes | 470 ns | 2045 ns | htmlgen ~4.4x faster |
-| Nested Elements | 1155 ns | 2066 ns | htmlgen ~1.8x faster |
-| List (10 items) | 1132 ns | 4676 ns | htmlgen ~4.1x faster |
-| List (100 items) | 8.5 µs | 44.2 µs | htmlgen ~5.2x faster |
-| Table (10 rows) | 7.3 µs | 16.7 µs | htmlgen ~2.3x faster |
-| Table (100 rows) | 62.7 µs | 163.0 µs | htmlgen ~2.6x faster |
-| Full Page | 4.9 µs | 10.6 µs | htmlgen ~2.2x faster |
-| Escaping | 893 ns | 1396 ns | htmlgen ~1.6x faster |
-| Deep Nesting (10 levels) | 1063 ns | 503 ns | template ~2.1x faster |
-| Form | 3.9 µs | 13.2 µs | htmlgen ~3.4x faster |
-| Pre-built Tree (static) | 704 ns | 64 ns | template ~11x faster |
-| Compiled Tree (static) | 164 ns | 64 ns | template ~2.6x faster |
-| Compiled Params | 294 ns | 1081 ns | htmlgen ~3.7x faster |
+| Scenario | htmlgen | htmlgen (purego) | html/template | Winner |
+|----------|---------|------------------|---------------|--------|
+| Simple Div | 151 ns | 152 ns | 521 ns | htmlgen ~3.5x faster |
+| Div with Attributes | 303 ns | 349 ns | 2100 ns | htmlgen ~6.9x faster |
+| Nested Elements | 1068 ns | 1095 ns | 2128 ns | htmlgen ~2.0x faster |
+| List (10 items) | 887 ns | 1022 ns | 4762 ns | htmlgen ~5.4x faster |
+| List (100 items) | 7.2 µs | 8.5 µs | 45.2 µs | htmlgen ~6.3x faster |
+| Table (10 rows) | 7.2 µs | 7.7 µs | 17.1 µs | htmlgen ~2.4x faster |
+| Table (100 rows) | 62.7 µs | 66.7 µs | 167.5 µs | htmlgen ~2.7x faster |
+| Full Page | 4.9 µs | 5.2 µs | 11.0 µs | htmlgen ~2.3x faster |
+| Escaping | 450 ns | 498 ns | 1437 ns | htmlgen ~3.2x faster |
+| Deep Nesting (10 levels) | 1030 ns | 1030 ns | 530 ns | template ~1.9x faster |
+| Form | 3.5 µs | 4.1 µs | 13.7 µs | htmlgen ~3.9x faster |
+| Pre-built Tree (static) | 539 ns | 576 ns | 73 ns | template ~7.4x faster |
+| Compiled Tree (static) | 19 ns | 19 ns | 73 ns | htmlgen ~3.8x faster |
+| Compiled Params | 141 ns | 145 ns | 1122 ns | htmlgen ~8.0x faster |
 
 *Benchmarks run on Apple M1 Ultra. Results may vary by hardware.*
 
 ### Key Insights
 
 - **htmlgen is faster** for dynamic content generation with variable data structures
-- **html/template is faster** for static content with no runtime data substitution
-- **Compile** pre-renders static content for near-template performance (164 ns vs 704 ns unbaked)
-- **CompileParams** is ~3.7x faster than html/template for parameterized content
-- htmlgen excels at list/table generation where it can be 4-5x faster
-- For attribute-heavy elements, htmlgen can be up to 4x faster
+- **Compile** pre-renders static content for excellent performance (19 ns vs 539 ns)
+- **CompileParams** is ~8.0x faster than html/template for parameterized content
+- htmlgen excels at list/table generation where it can be 5-6x faster
+- For attribute-heavy elements, htmlgen can be up to 7x faster
+- **purego** adds ~5-15% overhead but remains significantly faster than html/template
 
 ### When to Use Each
 
@@ -318,7 +323,7 @@ go test -bench=. -benchmem ./h/
 | Dynamic lists/tables | htmlgen |
 | Forms with many attributes | htmlgen |
 | Full page generation with data | htmlgen |
-| Static templates with no data | html/template or `Compile` |
+| Static templates with no data | `Compile` |
 | Parameterized templates | `CompileParams` |
 | Component-based UI architecture | htmlgen |
 

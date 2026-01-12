@@ -5,7 +5,6 @@ package h
 import (
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
 	"sync"
 )
@@ -37,23 +36,6 @@ func putPooledWriter(w *Writer) {
 	w.atLineStart = false
 	w.maxLineLen = 0
 	writerPool.Put(w)
-}
-
-// writeEscapedString writes s to w with HTML escaping, avoiding allocations
-// when no escaping is needed.
-func writeEscapedString(w io.Writer, s string) error {
-	// Fast path: check if escaping is needed
-	for i := 0; i < len(s); i++ {
-		switch s[i] {
-		case '&', '<', '>', '"', '\'':
-			// Slow path: use template.HTMLEscape which writes directly to w
-			template.HTMLEscape(w, []byte(s))
-			return nil
-		}
-	}
-	// No escaping needed
-	_, err := io.WriteString(w, s)
-	return err
 }
 
 // NewWriter creates a new Writer that wraps the provided io.Writer.
@@ -414,4 +396,47 @@ func (w *Writer) Close() error {
 	}
 	w.openTags = nil
 	return nil
+}
+
+// copied from text/template.HTMLEscape so we can return errors
+var (
+	htmlQuot = []byte("&#34;") // shorter than "&quot;"
+	htmlApos = []byte("&#39;") // shorter than "&apos;" and apos was not in HTML until HTML5
+	htmlAmp  = []byte("&amp;")
+	htmlLt   = []byte("&lt;")
+	htmlGt   = []byte("&gt;")
+	htmlNull = []byte("\uFFFD")
+)
+
+// writeHTMLEscape writes to w the escaped HTML equivalent of the plain text data b.
+func writeHTMLEscape(w io.Writer, b []byte) error {
+	last := 0
+	for i, c := range b {
+		var html []byte
+		switch c {
+		case '\000':
+			html = htmlNull
+		case '"':
+			html = htmlQuot
+		case '\'':
+			html = htmlApos
+		case '&':
+			html = htmlAmp
+		case '<':
+			html = htmlLt
+		case '>':
+			html = htmlGt
+		default:
+			continue
+		}
+		if _, err := w.Write(b[last:i]); err != nil {
+			return err
+		}
+		if _, err := w.Write(html); err != nil {
+			return err
+		}
+		last = i + 1
+	}
+	_, err := w.Write(b[last:])
+	return err
 }
