@@ -31,6 +31,13 @@ This is a Go library (`github.com/jeffh/htmlgen`) for programmatic HTML generati
 
 **Attributes** (`h/attrs.go`): `Attributes` is a `[]Attribute` slice with `Get()`, `Set()`, `SetDefault()`, `Delete()` methods. Create via `Attrs("key", "value", ...)` or `AttrsMap(map[string]string{...})`.
 
+**Helpers** (`h/helpers.go`): Control flow and iteration utilities for builder composition:
+- `If(cond, ifTrue, ifElse)` - returns `ifTrue` if cond is true, else `ifElse`
+- `When(cond, ifTrue)` - returns `ifTrue` if cond is true, else nil (skipped during render)
+- `First(b...)` - returns first non-nil builder from arguments
+- `ForEach[X](seq, fn)` - lazily maps `iter.Seq[X]` to builders during render
+- `ForEach2[X,Y](seq, fn)` - lazily maps `iter.Seq2[X,Y]` (e.g., `slices.All()`, `maps.All()`) to builders
+
 ### Package `d` - Datastar Attribute Helpers
 
 Provides helpers for building [Datastar](https://data-star.dev/) reactive attributes:
