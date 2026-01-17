@@ -101,15 +101,26 @@ For frequently rendered content, use `Compile` to pre-render HTML to bytes for f
 
 ```go
 // Compile once at startup
-header := h.Compile(h.Header(nil,
+header, err := h.Compile(h.Header(nil,
     h.Nav(nil,
         h.A(h.Attrs("href", "/"), h.Text("Home")),
         h.A(h.Attrs("href", "/about"), h.Text("About")),
     ),
 ))
+if err != nil {
+    // handle error
+}
 
 // Fast renders afterward - just writes pre-computed bytes
 h.Render(w, header)
+
+// Or use MustCompile to panic on error (for initialization code)
+header := h.MustCompile(h.Header(nil,
+    h.Nav(nil,
+        h.A(h.Attrs("href", "/"), h.Text("Home")),
+        h.A(h.Attrs("href", "/about"), h.Text("About")),
+    ),
+))
 ```
 
 For templates with dynamic content, use `CompileParams` with parameter placeholders:
@@ -120,13 +131,16 @@ title := h.NewParam("title")
 content := h.NewParam("content")
 
 // Compile template with parameter slots
-tmpl := h.CompileParams(h.Html(nil,
+tmpl, err := h.CompileParams(h.Html(nil,
     h.Head(nil, h.Title(nil, title)),
     h.Body(nil,
         h.H1(nil, title),
         h.Main(nil, content),
     ),
 ))
+if err != nil {
+    // handle error
+}
 
 // Render with values
 tmpl.Render(w,
@@ -140,6 +154,15 @@ page := tmpl.With(
     content.Value(h.P(nil, h.Text("Hello, World!"))),
 )
 h.Render(w, page)
+
+// Or use MustCompileParams to panic on error (for initialization code)
+tmpl := h.MustCompileParams(h.Html(nil,
+    h.Head(nil, h.Title(nil, title)),
+    h.Body(nil,
+        h.H1(nil, title),
+        h.Main(nil, content),
+    ),
+))
 ```
 
 Compiled templates are ~8.0x faster than `html/template` for parameterized content.

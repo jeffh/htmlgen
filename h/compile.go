@@ -33,7 +33,10 @@ func (b *compiledBuilder) Build(w *Writer) error {
 // Use Compile for static content that is rendered frequently:
 //
 //	// Compile once at startup
-//	header := h.Compile(h.Header(h.H1(h.Text("My Site"))))
+//	header, err := h.Compile(h.Header(h.H1(h.Text("My Site"))))
+//	if err != nil {
+//		// handle error
+//	}
 //
 //	// Fast renders afterward
 //	h.Render(w, header)
@@ -41,16 +44,32 @@ func (b *compiledBuilder) Build(w *Writer) error {
 // Note: Compiled builders ignore indentation settings since the output
 // is pre-computed. For pretty-printed cached output, render with
 // RenderIndent first, then compile the result using Raw.
-func Compile(b Builder) Builder {
+func Compile(b Builder) (Builder, error) {
 	if b == nil {
-		return nil
+		return nil, nil
 	}
 	buf := bufPool.Get().(*bytes.Buffer)
 	buf.Reset()
-	Render(buf, b)
+	if err := Render(buf, b); err != nil {
+		bufPool.Put(buf)
+		return nil, err
+	}
 	result := &compiledBuilder{html: slices.Clone(buf.Bytes())}
 	bufPool.Put(buf)
-	return result
+	return result, nil
+}
+
+// MustCompile is like Compile but panics if compilation fails.
+// It is intended for use during initialization when errors should be caught immediately.
+//
+//	// Compile once at startup
+//	header := h.MustCompile(h.Header(h.H1(h.Text("My Site"))))
+func MustCompile(b Builder) Builder {
+	compiled, err := Compile(b)
+	if err != nil {
+		panic("htmlgen: Compile failed: " + err.Error())
+	}
+	return compiled
 }
 
 // Param is a placeholder for dynamic content in a parameterized template.
@@ -84,7 +103,10 @@ type ParamValue struct {
 // NewParam creates a named placeholder for dynamic content in CompileParams.
 //
 //	title := h.NewParam("title")
-//	tmpl := h.CompileParams(h.Div(h.H1(title)))
+//	tmpl, err := h.CompileParams(h.Div(h.H1(title)))
+//	if err != nil {
+//		// handle error
+//	}
 //	tmpl.Render(w, title.Value(h.Text("Hello")))
 func NewParam(name string) *Param {
 	return &Param{name: name}
@@ -128,23 +150,28 @@ func (cw *compileWriter) recordParam(p *Param) {
 //	title := h.NewParam("title")
 //	content := h.NewParam("content")
 //
-//	tmpl := h.CompileParams(h.Div(
+//	tmpl, err := h.CompileParams(h.Div(
 //	    h.H1(title),
 //	    h.P(content),
 //	))
+//	if err != nil {
+//		// handle error
+//	}
 //
 //	// Render with values
 //	tmpl.Render(w,
 //	    title.Value(h.Text("Hello World")),
 //	    content.Value(h.Text("Welcome!")),
 //	)
-func CompileParams(b Builder) *CompiledTemplate {
+func CompileParams(b Builder) (*CompiledTemplate, error) {
 	if b == nil {
-		return &CompiledTemplate{}
+		return &CompiledTemplate{}, nil
 	}
 	cw := &compileWriter{}
 	w := &Writer{w: cw, openTags: make([]string, 0, 32)}
-	b.Build(w)
+	if err := b.Build(w); err != nil {
+		return nil, err
+	}
 
 	// Add final segment
 	segment := make([]byte, cw.buf.Len())
@@ -154,7 +181,25 @@ func CompileParams(b Builder) *CompiledTemplate {
 	return &CompiledTemplate{
 		segments: cw.segments,
 		params:   cw.params,
+	}, nil
+}
+
+// MustCompileParams is like CompileParams but panics if compilation fails.
+// It is intended for use during initialization when errors should be caught immediately.
+//
+//	title := h.NewParam("title")
+//	content := h.NewParam("content")
+//
+//	tmpl := h.MustCompileParams(h.Div(
+//	    h.H1(title),
+//	    h.P(content),
+//	))
+func MustCompileParams(b Builder) *CompiledTemplate {
+	tmpl, err := CompileParams(b)
+	if err != nil {
+		panic("htmlgen: CompileParams failed: " + err.Error())
 	}
+	return tmpl
 }
 
 // With creates a Builder with parameter values bound for rendering.
