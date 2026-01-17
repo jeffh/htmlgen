@@ -86,6 +86,43 @@ func TestWhenInContext(t *testing.T) {
 	}
 }
 
+func TestUnless(t *testing.T) {
+	tests := []struct {
+		name     string
+		cond     bool
+		ifFalse  Builder
+		expected string
+	}{
+		{"false condition", false, Text("shown"), "shown"},
+		{"true condition", true, Text("hidden"), ""},
+		{"false with nil", false, nil, ""},
+		{"true with nil", true, nil, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, Unless(tt.cond, tt.ifFalse))
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestUnlessInContext(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	b := Div(
+		Unless(false, Span(Text("visible"))),
+		Unless(true, Span(Text("hidden"))),
+	)
+	Render(buf, b)
+	expected := "<div><span>visible</span></div>"
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
 func TestFirst(t *testing.T) {
 	tests := []struct {
 		name     string
