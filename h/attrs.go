@@ -23,6 +23,22 @@ func Attr(name, value string) Attribute {
 	return Attribute{Name: name, Value: value}
 }
 
+// AttrIf returns an Attribute if cond is true, otherwise returns a zero Attribute
+// which will be ignored during rendering. This is useful for conditionally
+// including attributes:
+//
+//	h.Button(
+//	    h.AttrIf(isDisabled, "disabled", ""),
+//	    h.AttrIf(isPrimary, "class", "btn-primary"),
+//	    h.Text("Submit"),
+//	)
+func AttrIf(cond bool, name, value string) Attribute {
+	if cond {
+		return Attribute{Name: name, Value: value}
+	}
+	return Attribute{}
+}
+
 // Attributes is a slice of Attribute values representing HTML element attributes.
 // It provides methods for getting, setting, and deleting attributes by name.
 type Attributes []Attribute

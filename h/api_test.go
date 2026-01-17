@@ -280,6 +280,74 @@ func TestAttributesMergeIntoEmpty(t *testing.T) {
 	}
 }
 
+func TestAttrIf(t *testing.T) {
+	tests := []struct {
+		name     string
+		cond     bool
+		attrName string
+		value    string
+		wantName string
+	}{
+		{"true condition", true, "disabled", "", "disabled"},
+		{"false condition", false, "disabled", "", ""},
+		{"true with value", true, "class", "active", "class"},
+		{"false with value", false, "class", "active", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attr := AttrIf(tt.cond, tt.attrName, tt.value)
+			if attr.Name != tt.wantName {
+				t.Errorf("expected name %q, got %q", tt.wantName, attr.Name)
+			}
+			if tt.cond && attr.Value != tt.value {
+				t.Errorf("expected value %q, got %q", tt.value, attr.Value)
+			}
+		})
+	}
+}
+
+func TestAttrIfInContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		cond     bool
+		expected string
+	}{
+		{"disabled when true", true, `<button disabled>Submit</button>`},
+		{"not disabled when false", false, `<button>Submit</button>`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			b := Button(AttrIf(tt.cond, "disabled", ""), Text("Submit"))
+			Render(buf, b)
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestAttrIfMultiple(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	isDisabled := true
+	isPrimary := false
+	hasTitle := true
+
+	b := Button(
+		AttrIf(isDisabled, "disabled", ""),
+		AttrIf(isPrimary, "class", "btn-primary"),
+		AttrIf(hasTitle, "title", "Click me"),
+		Text("Submit"),
+	)
+	Render(buf, b)
+	expected := `<button disabled title="Click me">Submit</button>`
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
 func TestCloseOneTagError(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	w := NewWriter(buf)
@@ -338,6 +406,42 @@ func TestRawBuilder(t *testing.T) {
 	}
 }
 
+func TestTextf(t *testing.T) {
+	tests := []struct {
+		name     string
+		format   string
+		args     []any
+		expected string
+	}{
+		{"simple string", "Hello, %s!", []any{"World"}, "Hello, World!"},
+		{"integer", "Count: %d", []any{42}, "Count: 42"},
+		{"multiple args", "%s is %d years old", []any{"Alice", 30}, "Alice is 30 years old"},
+		{"no args", "Static text", []any{}, "Static text"},
+		{"with escaping", "Value: %s", []any{"<script>"}, "Value: &lt;script&gt;"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.NewBuffer(nil)
+			Render(buf, Textf(tt.format, tt.args...))
+			if buf.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, buf.String())
+			}
+		})
+	}
+}
+
+func TestTextfInContext(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	name := "World"
+	b := Div(Span(Textf("Hello, %s!", name)))
+	Render(buf, b)
+	expected := "<div><span>Hello, World!</span></div>"
+	if buf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, buf.String())
+	}
+}
+
 func TestFragment(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	b := Fragment(
@@ -385,6 +489,53 @@ func TestRenderPrettyNil(t *testing.T) {
 	}
 	if buf.String() != "" {
 		t.Errorf("expected empty string, got %q", buf.String())
+	}
+}
+
+func TestRenderString(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"simple div", Div(Text("hello")), "<div>hello</div>"},
+		{"nil builder", nil, ""},
+		{"nested elements", Div(Span(Text("nested"))), "<div><span>nested</span></div>"},
+		{"with attributes", Div(Attrs("class", "test"), Text("content")), `<div class="test">content</div>`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := RenderString(tt.builder)
+			if result != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestRenderBytes(t *testing.T) {
+	tests := []struct {
+		name     string
+		builder  Builder
+		expected string
+	}{
+		{"simple div", Div(Text("hello")), "<div>hello</div>"},
+		{"nil builder", nil, ""},
+		{"nested elements", Div(Span(Text("nested"))), "<div><span>nested</span></div>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := RenderBytes(tt.builder)
+			if tt.builder == nil {
+				if result != nil {
+					t.Errorf("expected nil, got %q", result)
+				}
+			} else if string(result) != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, string(result))
+			}
+		})
 	}
 }
 

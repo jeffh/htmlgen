@@ -32,6 +32,19 @@ func When(cond bool, ifTrue Builder) Builder {
 	return nil
 }
 
+// Unless returns ifFalse if cond is false, otherwise returns nil.
+// This is the inverse of When, useful for "render unless" patterns:
+//
+//	h.Div(
+//	    h.Unless(user.IsAdmin, h.Span(h.Text("(Restricted)"))),
+//	)
+func Unless(cond bool, ifFalse Builder) Builder {
+	if !cond {
+		return ifFalse
+	}
+	return nil
+}
+
 // First returns the first non-nil Builder from the provided arguments.
 // Returns nil if all arguments are nil or no arguments are provided.
 // Useful for fallback content patterns:
