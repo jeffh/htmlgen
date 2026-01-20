@@ -27,14 +27,14 @@ Build HTML trees using Go functions that mirror HTML elements:
 ```go
 import "github.com/jeffh/htmlgen/h"
 
-page := h.Html(nil,
-    h.Head(nil,
-        h.Title(nil, h.Text("My Page")),
+page := h.Html(
+    h.Head(
+        h.Title(h.Text("My Page")),
     ),
-    h.Body(nil,
+    h.Body(
         h.Div(h.Attrs("class", "container"),
-            h.H1(nil, h.Text("Hello, World!")),
-            h.P(nil, h.Text("Welcome to htmlgen.")),
+            h.H1(h.Text("Hello, World!")),
+            h.P(h.Text("Welcome to htmlgen.")),
             h.A(h.Attrs("href", "/about"), h.Text("About")),
         ),
     ),
@@ -101,8 +101,8 @@ For frequently rendered content, use `Compile` to pre-render HTML to bytes for f
 
 ```go
 // Compile once at startup
-header, err := h.Compile(h.Header(nil,
-    h.Nav(nil,
+header, err := h.Compile(h.Header(
+    h.Nav(
         h.A(h.Attrs("href", "/"), h.Text("Home")),
         h.A(h.Attrs("href", "/about"), h.Text("About")),
     ),
@@ -115,8 +115,8 @@ if err != nil {
 h.Render(w, header)
 
 // Or use MustCompile to panic on error (for initialization code)
-header := h.MustCompile(h.Header(nil,
-    h.Nav(nil,
+header := h.MustCompile(h.Header(
+    h.Nav(
         h.A(h.Attrs("href", "/"), h.Text("Home")),
         h.A(h.Attrs("href", "/about"), h.Text("About")),
     ),
@@ -131,11 +131,11 @@ title := h.NewParam("title")
 content := h.NewParam("content")
 
 // Compile template with parameter slots
-tmpl, err := h.CompileParams(h.Html(nil,
-    h.Head(nil, h.Title(nil, title)),
-    h.Body(nil,
-        h.H1(nil, title),
-        h.Main(nil, content),
+tmpl, err := h.CompileParams(h.Html(
+    h.Head(h.Title(title)),
+    h.Body(
+        h.H1(title),
+        h.Main(content),
     ),
 ))
 if err != nil {
@@ -145,22 +145,22 @@ if err != nil {
 // Render with values
 tmpl.Render(w,
     title.Value(h.Text("Welcome")),
-    content.Value(h.P(nil, h.Text("Hello, World!"))),
+    content.Value(h.P(h.Text("Hello, World!"))),
 )
 
 // Or create a reusable Builder
 page := tmpl.With(
     title.Value(h.Text("Welcome")),
-    content.Value(h.P(nil, h.Text("Hello, World!"))),
+    content.Value(h.P(h.Text("Hello, World!"))),
 )
 h.Render(w, page)
 
 // Or use MustCompileParams to panic on error (for initialization code)
-tmpl := h.MustCompileParams(h.Html(nil,
-    h.Head(nil, h.Title(nil, title)),
-    h.Body(nil,
-        h.H1(nil, title),
-        h.Main(nil, content),
+tmpl := h.MustCompileParams(h.Html(
+    h.Head(h.Title(title)),
+    h.Body(
+        h.H1(title),
+        h.Main(content),
     ),
 ))
 ```
@@ -261,12 +261,12 @@ import (
 )
 
 func main() {
-    page := h.Html(nil,
-        h.Head(nil,
-            h.Title(nil, h.Text("Counter")),
+    page := h.Html(
+        h.Head(
+            h.Title(h.Text("Counter")),
             h.Script(h.Attrs("type", "module", "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.7/bundles/datastar.js")),
         ),
-        h.Body(nil,
+        h.Body(
             h.Div(h.Attrs("id", "app"),
                 h.Button(h.Attributes{
                     d.Signal("count", 0),
@@ -313,20 +313,20 @@ The `purego` build tag disables unsafe pointer optimizations for environments th
 
 | Scenario | htmlgen | htmlgen (purego) | html/template | Winner |
 |----------|---------|------------------|---------------|--------|
-| Simple Div | 151 ns | 152 ns | 521 ns | htmlgen ~3.5x faster |
-| Div with Attributes | 303 ns | 349 ns | 2100 ns | htmlgen ~6.9x faster |
-| Nested Elements | 1068 ns | 1095 ns | 2128 ns | htmlgen ~2.0x faster |
-| List (10 items) | 887 ns | 1022 ns | 4762 ns | htmlgen ~5.4x faster |
-| List (100 items) | 7.2 µs | 8.5 µs | 45.2 µs | htmlgen ~6.3x faster |
-| Table (10 rows) | 7.2 µs | 7.7 µs | 17.1 µs | htmlgen ~2.4x faster |
-| Table (100 rows) | 62.7 µs | 66.7 µs | 167.5 µs | htmlgen ~2.7x faster |
-| Full Page | 4.9 µs | 5.2 µs | 11.0 µs | htmlgen ~2.3x faster |
-| Escaping | 450 ns | 498 ns | 1437 ns | htmlgen ~3.2x faster |
-| Deep Nesting (10 levels) | 1030 ns | 1030 ns | 530 ns | template ~1.9x faster |
-| Form | 3.5 µs | 4.1 µs | 13.7 µs | htmlgen ~3.9x faster |
-| Pre-built Tree (static) | 539 ns | 576 ns | 73 ns | template ~7.4x faster |
-| Compiled Tree (static) | 19 ns | 19 ns | 73 ns | htmlgen ~3.8x faster |
-| Compiled Params | 141 ns | 145 ns | 1122 ns | htmlgen ~8.0x faster |
+| [Simple Div](h/benchmark_test.go#L16) | 151 ns | 152 ns | 521 ns | htmlgen ~3.5x faster |
+| [Div with Attributes](h/benchmark_test.go#L37) | 303 ns | 349 ns | 2100 ns | htmlgen ~6.9x faster |
+| [Nested Elements](h/benchmark_test.go#L68) | 1068 ns | 1095 ns | 2128 ns | htmlgen ~2.0x faster |
+| [List (10 items)](h/benchmark_test.go#L104) | 887 ns | 1022 ns | 4762 ns | htmlgen ~5.4x faster |
+| [List (100 items)](h/benchmark_test.go#L130) | 7.2 µs | 8.5 µs | 45.2 µs | htmlgen ~6.3x faster |
+| [Table (10 rows)](h/benchmark_test.go#L166) | 7.2 µs | 7.7 µs | 17.1 µs | htmlgen ~2.4x faster |
+| [Table (100 rows)](h/benchmark_test.go#L207) | 62.7 µs | 66.7 µs | 167.5 µs | htmlgen ~2.7x faster |
+| [Full Page](h/benchmark_test.go#L270) | 4.9 µs | 5.2 µs | 11.0 µs | htmlgen ~2.3x faster |
+| [Escaping](h/benchmark_test.go#L349) | 450 ns | 498 ns | 1437 ns | htmlgen ~3.2x faster |
+| [Deep Nesting (10 levels)](h/benchmark_test.go#L376) | 1030 ns | 1030 ns | 530 ns | template ~1.9x faster |
+| [Form](h/benchmark_test.go#L450) | 3.5 µs | 4.1 µs | 13.7 µs | htmlgen ~3.9x faster |
+| [Pre-built Tree (static)](h/benchmark_test.go#L644) | 539 ns | 576 ns | 73 ns | template ~7.4x faster |
+| [Compiled Tree (static)](h/benchmark_test.go#L675) | 19 ns | 19 ns | 73 ns | htmlgen ~3.8x faster |
+| [Compiled Params](h/benchmark_test.go#L717) | 141 ns | 145 ns | 1122 ns | htmlgen ~8.0x faster |
 
 *Benchmarks run on Apple M1 Ultra. Results may vary by hardware.*
 
