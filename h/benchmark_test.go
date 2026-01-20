@@ -682,7 +682,7 @@ func BenchmarkCompiledTree_HtmlGen(b *testing.B) {
 		),
 		Footer(Span(Text("Footer"))),
 	)
-	compiled := Compile(tree)
+	compiled := MustCompile(tree)
 	var buf bytes.Buffer
 	for b.Loop() {
 		buf.Reset()
@@ -692,7 +692,7 @@ func BenchmarkCompiledTree_HtmlGen(b *testing.B) {
 
 func BenchmarkCompiledDeepNesting_HtmlGen(b *testing.B) {
 	tree := buildNestedDivs(10)
-	compiled := Compile(tree)
+	compiled := MustCompile(tree)
 	var buf bytes.Buffer
 	for b.Loop() {
 		buf.Reset()
@@ -702,7 +702,7 @@ func BenchmarkCompiledDeepNesting_HtmlGen(b *testing.B) {
 
 func BenchmarkCompiledDeepNesting50_HtmlGen(b *testing.B) {
 	tree := buildNestedDivs(50)
-	compiled := Compile(tree)
+	compiled := MustCompile(tree)
 	var buf bytes.Buffer
 	for b.Loop() {
 		buf.Reset()
@@ -717,7 +717,7 @@ func BenchmarkCompiledDeepNesting50_HtmlGen(b *testing.B) {
 func BenchmarkCompiledParams_HtmlGen(b *testing.B) {
 	title := NewParam("title")
 	content := NewParam("content")
-	tmpl := CompileParams(Div(
+	tmpl := MustCompileParams(Div(
 		H1(title),
 		P(content),
 	))
@@ -748,7 +748,7 @@ func BenchmarkCompiledParamsComplex_HtmlGen(b *testing.B) {
 	content := NewParam("content")
 	footer := NewParam("footer")
 
-	tmpl := CompileParams(Html(
+	tmpl := MustCompileParams(Html(
 		Head(
 			Meta(Attrs("charset", "utf-8")),
 			Title(title),

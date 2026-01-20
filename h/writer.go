@@ -139,8 +139,14 @@ func attrLen(attr Attribute) int {
 // writeAttrs writes attributes, wrapping to new lines if maxLineLen is exceeded.
 // lineLen is the current line length before attributes.
 // Returns the final line length.
+// Attributes with empty names are skipped (useful for conditional attributes).
 func (w *Writer) writeAttrs(as Attributes, lineLen int) (int, error) {
 	for _, attr := range as {
+		// Skip attributes with empty names (e.g., from AttrIf when condition is false)
+		if attr.Name == "" {
+			continue
+		}
+
 		aLen := attrLen(attr)
 		wrapped := false
 

@@ -1,10 +1,20 @@
 package h
 
+import "fmt"
+
 // Fragment creates a Builder that renders its children without a wrapping element.
 func Fragment(children ...Builder) Builder { return &fragmentBuilder{children} }
 
 // Text creates a Builder that renders HTML-escaped text content.
 func Text(value string) Builder { return &textBuilder{value, false} }
+
+// Textf creates a Builder that renders HTML-escaped formatted text.
+// Arguments are formatted according to the format specifier using fmt.Sprintf.
+//
+//	h.Span(h.Textf("Hello, %s!", name))
+func Textf(format string, args ...any) Builder {
+	return &textBuilder{fmt.Sprintf(format, args...), false}
+}
 
 // Raw creates a Builder that renders unescaped HTML content.
 // Use with caution as this can introduce XSS vulnerabilities.
