@@ -39,7 +39,9 @@ func (b *compiledBuilder) Build(w *Writer) error {
 //	}
 //
 //	// Fast renders afterward
-//	h.Render(w, header)
+//	if err := h.Render(w, header); err != nil {
+//		// handle error
+//	}
 //
 // Note: Compiled builders ignore indentation settings since the output
 // is pre-computed. For pretty-printed cached output, render with
