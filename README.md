@@ -41,10 +41,14 @@ page := h.Html(nil,
 )
 
 // Render to any io.Writer
-h.Render(os.Stdout, page)
+if err := h.Render(os.Stdout, page); err != nil {
+    panic(err)
+}
 
 // Or render with pretty-printed indentation (using two spaces)
-h.RenderIndent(os.Stdout, "  ", page)
+if err := h.RenderIndent(os.Stdout, "  ", page); err != nil {
+    panic(err)
+}
 ```
 
 ### Attributes
@@ -112,15 +116,23 @@ if err != nil {
 }
 
 // Fast renders afterward - just writes pre-computed bytes
-h.Render(w, header)
+if err := h.Render(w, header); err != nil {
+    // handle error
+}
+```
 
-// Or use MustCompile to panic on error (for initialization code)
+Or use `MustCompile` to panic on error (for initialization code):
+
+```go
 header := h.MustCompile(h.Header(nil,
-    h.Nav(nil,
-        h.A(h.Attrs("href", "/"), h.Text("Home")),
-        h.A(h.Attrs("href", "/about"), h.Text("About")),
-    ),
+	h.Nav(nil,
+		h.A(h.Attrs("href", "/"), h.Text("Home")),
+		h.A(h.Attrs("href", "/about"), h.Text("About")),
+	),
 ))
+if err := h.Render(w, header); err != nil {
+	// handle error
+}
 ```
 
 For templates with dynamic content, use `CompileParams` with parameter placeholders:
@@ -143,26 +155,42 @@ if err != nil {
 }
 
 // Render with values
-tmpl.Render(w,
-    title.Value(h.Text("Welcome")),
-    content.Value(h.P(nil, h.Text("Hello, World!"))),
-)
+if err := tmpl.Render(w,
+	title.Value(h.Text("Welcome")),
+	content.Value(h.P(nil, h.Text("Hello, World!"))),
+); err != nil {
+	// handle error
+}
 
 // Or create a reusable Builder
 page := tmpl.With(
     title.Value(h.Text("Welcome")),
     content.Value(h.P(nil, h.Text("Hello, World!"))),
 )
-h.Render(w, page)
+if err := h.Render(w, page); err != nil {
+	// handle error
+}
+```
 
-// Or use MustCompileParams to panic on error (for initialization code)
+Or use `MustCompileParams` to panic on error (for initialization code):
+
+```go
+title := h.NewParam("title")
+content := h.NewParam("content")
+
 tmpl := h.MustCompileParams(h.Html(nil,
-    h.Head(nil, h.Title(nil, title)),
-    h.Body(nil,
-        h.H1(nil, title),
-        h.Main(nil, content),
-    ),
+	h.Head(nil, h.Title(nil, title)),
+	h.Body(nil,
+		h.H1(nil, title),
+		h.Main(nil, content),
+	),
 ))
+if err := tmpl.Render(w,
+	title.Value(h.Text("Welcome")),
+	content.Value(h.P(nil, h.Text("Hello, World!"))),
+); err != nil {
+	// handle error
+}
 ```
 
 Compiled templates are ~8.0x faster than `html/template` for parameterized content.
@@ -279,7 +307,9 @@ func main() {
         ),
     )
 
-    h.Render(os.Stdout, page)
+    if err := h.Render(os.Stdout, page); err != nil {
+        panic(err)
+    }
 }
 ```
 
