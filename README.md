@@ -125,6 +125,7 @@ if err := h.Render(w, header); err != nil {
 
 Or use `MustCompile` to panic on error (for initialization code):
 
+```go
 // Or use MustCompile to panic on error (for initialization code)
 header := h.MustCompile(h.Header(
     h.Nav(
