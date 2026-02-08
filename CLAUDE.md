@@ -38,7 +38,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) for programmatic HTML generati
 - `ForEach[X](seq, fn)` - lazily maps `iter.Seq[X]` to builders during render
 - `ForEach2[X,Y](seq, fn)` - lazily maps `iter.Seq2[X,Y]` (e.g., `slices.All()`, `maps.All()`) to builders
 
-### Package `d` - Datastar Attribute Helpers
+### Package `ds` - Datastar Attribute Helpers
 
 Provides helpers for building [Datastar](https://data-star.dev/) reactive attributes:
 
@@ -48,7 +48,7 @@ Provides helpers for building [Datastar](https://data-star.dev/) reactive attrib
 - **Modifiers**: `PreventDefault()`, `Debounce()`, `Throttle()`, `Delay()`, `Once()`, `ViewTransition()` - event modifiers
 - **Values**: `Raw()`, `JsonValue()`, `Str()` - value builders for expressions
 
-The `d` package uses a builder pattern with `AttrMutator` and `AttrValueAppender` interfaces to compose complex Datastar attributes.
+The `ds` package uses a builder pattern with `AttrMutator` and `AttrValueAppender` interfaces to compose complex Datastar attributes.
 
 ### Package `js` - Type-Safe JavaScript Generation
 

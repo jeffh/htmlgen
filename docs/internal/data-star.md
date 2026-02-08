@@ -13,7 +13,7 @@ This guide covers [Datastar](https://data-star.dev/), a lightweight hypermedia f
 - [Backend Requests](#backend-requests)
 - [SSE Events](#sse-events)
 - [Go SDK (datastar-go)](#go-sdk)
-- [htmlgen/d Package](#htmlgend-package)
+- [htmlgen/ds Package](#htmlgends-package)
 - [Philosophy (The Tao of Datastar)](#philosophy)
 
 ## Installation
@@ -485,142 +485,142 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-## htmlgen/d Package
+## htmlgen/ds Package
 
-The `d` package provides Go helpers for building Datastar attributes with htmlgen.
+The `ds` package provides Go helpers for building Datastar attributes with htmlgen.
 
 ### Signals
 
 ```go
 // Define signals
-d.Signal("count", 0)           // data-signals:count="0"
-d.Signals(map[string]any{      // data-signals="{...}"
+ds.Signal("count", 0)           // data-signals:count="0"
+ds.Signals(map[string]any{      // data-signals="{...}"
     "foo": 1,
     "bar": "hello",
 })
-d.Bind("username")             // data-bind="username"
-d.BindKey("email", d.Case(d.CamelCase)) // data-bind:email__case.camel
+ds.Bind("username")             // data-bind="username"
+ds.BindKey("email", ds.Case(ds.CamelCase)) // data-bind:email__case.camel
 
 // Computed signals
-d.Computed("total", d.Raw("$price * $qty"))
+ds.Computed("total", ds.Raw("$price * $qty"))
 ```
 
 ### Event Handlers
 
 ```go
-d.OnClick(d.Get("/api"))                    // data-on:click="@get('/api')"
-d.OnSubmit(d.PreventDefault(), d.Post("/submit"))
-d.On("keydown", d.Debounce(300*time.Millisecond), d.Raw("search()"))
-d.OnIntersect(d.Once(), d.Raw("$seen = true"))
-d.OnInterval(d.Duration(500*time.Millisecond), d.Raw("$tick++"))
+ds.OnClick(ds.Get("/api"))                    // data-on:click="@get('/api')"
+ds.OnSubmit(ds.PreventDefault(), ds.Post("/submit"))
+ds.On("keydown", ds.Debounce(300*time.Millisecond), ds.Raw("search()"))
+ds.OnIntersect(ds.Once(), ds.Raw("$seen = true"))
+ds.OnInterval(ds.Duration(500*time.Millisecond), ds.Raw("$tick++"))
 ```
 
 ### Display Attributes
 
 ```go
-d.Show(d.Raw("$isVisible"))    // data-show="$isVisible"
-d.Text(d.Raw("$message"))      // data-text="$message"
-d.Class("active", d.Raw("$selected"))
-d.Classes(map[string]string{"hidden": "$collapsed"})
-d.Style("color", d.Raw("$textColor"))
-d.Attribute("title", d.Raw("$tooltip"))
+ds.Show(ds.Raw("$isVisible"))    // data-show="$isVisible"
+ds.Text(ds.Raw("$message"))      // data-text="$message"
+ds.Class("active", ds.Raw("$selected"))
+ds.Classes(map[string]string{"hidden": "$collapsed"})
+ds.Style("color", ds.Raw("$textColor"))
+ds.Attribute("title", ds.Raw("$tooltip"))
 ```
 
 ### Backend Actions
 
 ```go
 // Simple requests
-d.Get("/api")
-d.Post("/submit")
-d.Put("/update")
-d.Delete("/remove")
+ds.Get("/api")
+ds.Post("/submit")
+ds.Put("/update")
+ds.Delete("/remove")
 
 // With options
-d.Get("/api", d.RequestOptions(
-    d.ContentType("form"),
-    d.Headers(map[string]string{"X-Custom": "value"}),
-    d.FilterSignals(&d.FilterOptions{IncludeReg: ptr("user")}),
-    d.RetryMaxCount(3),
+ds.Get("/api", ds.RequestOptions(
+    ds.ContentType("form"),
+    ds.Headers(map[string]string{"X-Custom": "value"}),
+    ds.FilterSignals(&ds.FilterOptions{IncludeReg: ptr("user")}),
+    ds.RetryMaxCount(3),
 ))
 
 // Dynamic paths
-d.GetDynamic(d.Raw("`/api/items/${$id}`"))
+ds.GetDynamic(ds.Raw("`/api/items/${$id}`"))
 ```
 
 ### Modifiers
 
 ```go
-d.PreventDefault()
-d.StopPropagation()
-d.Once()
-d.Passive()
-d.Capture()
-d.Debounce(300 * time.Millisecond)
-d.Throttle(100 * time.Millisecond)
-d.Delay(500 * time.Millisecond)
-d.ViewTransition()
-d.Window()
-d.Outside()
-d.Case(d.CamelCase)  // camel, kebab, snake, pascal
-d.IfMissing()
+ds.PreventDefault()
+ds.StopPropagation()
+ds.Once()
+ds.Passive()
+ds.Capture()
+ds.Debounce(300 * time.Millisecond)
+ds.Throttle(100 * time.Millisecond)
+ds.Delay(500 * time.Millisecond)
+ds.ViewTransition()
+ds.Window()
+ds.Outside()
+ds.Case(ds.CamelCase)  // camel, kebab, snake, pascal
+ds.IfMissing()
 ```
 
 ### DOM Control
 
 ```go
-d.Indicator("loading")         // data-indicator="loading"
-d.Ref("myElement")             // data-ref:myElement
-d.Init(d.Raw("$count = 0"))
-d.Effect(d.Raw("$total = $a + $b"))
-d.Ignore()
-d.IgnoreSelf()
-d.IgnoreMorph()
-d.PreserveAttr("open", "class")
-d.JsonSignalsDebug(nil)        // Debug display
+ds.Indicator("loading")         // data-indicator="loading"
+ds.Ref("myElement")             // data-ref:myElement
+ds.Init(ds.Raw("$count = 0"))
+ds.Effect(ds.Raw("$total = $a + $b"))
+ds.Ignore()
+ds.IgnoreSelf()
+ds.IgnoreMorph()
+ds.PreserveAttr("open", "class")
+ds.JsonSignalsDebug(nil)        // Debug display
 ```
 
 ### Values and Expressions
 
 ```go
-d.Raw("$foo + $bar")           // Raw JavaScript
-d.Str("hello")                 // JSON string: "hello"
-d.JsonValue(map[string]int{"a": 1})
-d.SetSignal("count", 42)       // $count = 42
-d.SetSignalExpr("msg", d.Str("hi"))
-d.And(d.Raw("$a"), d.Raw("$b")) // $a && $b
-d.ConsoleLog(d.Raw("$count"))
-d.Navigate("/page/%d", 5)      // window.location.href = "/page/5"
+ds.Raw("$foo + $bar")           // Raw JavaScript
+ds.Str("hello")                 // JSON string: "hello"
+ds.JsonValue(map[string]int{"a": 1})
+ds.SetSignal("count", 42)       // $count = 42
+ds.SetSignalExpr("msg", ds.Str("hi"))
+ds.And(ds.Raw("$a"), ds.Raw("$b")) // $a && $b
+ds.ConsoleLog(ds.Raw("$count"))
+ds.Navigate("/page/%d", 5)      // window.location.href = "/page/5"
 ```
 
 ### Actions
 
 ```go
-d.Peek(d.Raw("$count"))        // @peek(() => $count)
-d.SetAll(d.Raw("false"), d.FilterOptions{IncludeReg: ptr("selected")})
-d.ToggleAll(d.FilterOptions{IncludeReg: ptr("checkbox")})
+ds.Peek(ds.Raw("$count"))        // @peek(() => $count)
+ds.SetAll(ds.Raw("false"), ds.FilterOptions{IncludeReg: ptr("selected")})
+ds.ToggleAll(ds.FilterOptions{IncludeReg: ptr("checkbox")})
 ```
 
 ### Pro Features (Commercial License)
 
 ```go
 // Attributes
-d.CustomValidity(d.Raw("$pw === $confirm ? '' : 'Must match'"))
-d.Persist(nil)
-d.PersistKey("settings", d.Session())
-d.QueryString(nil, d.Filter(), d.History())
-d.ReplaceURL(d.Raw("`/page/${$num}`"))
-d.ScrollIntoView(d.Smooth(), d.VCenter())
-d.ViewTransitionName(d.Raw("$itemId"))
-d.OnRAF(d.Throttle(16*time.Millisecond), d.Raw("animate()"))
-d.OnResize(d.Debounce(200*time.Millisecond), d.Raw("$w = el.offsetWidth"))
+ds.CustomValidity(ds.Raw("$pw === $confirm ? '' : 'Must match'"))
+ds.Persist(nil)
+ds.PersistKey("settings", ds.Session())
+ds.QueryString(nil, ds.Filter(), ds.History())
+ds.ReplaceURL(ds.Raw("`/page/${$num}`"))
+ds.ScrollIntoView(ds.Smooth(), ds.VCenter())
+ds.ViewTransitionName(ds.Raw("$itemId"))
+ds.OnRAF(ds.Throttle(16*time.Millisecond), ds.Raw("animate()"))
+ds.OnResize(ds.Debounce(200*time.Millisecond), ds.Raw("$w = el.offsetWidth"))
 
 // Actions
-d.Clipboard(d.Str("copied text"))
-d.ClipboardBase64(d.Str("base64content"))
-d.Fit(d.Raw("$v"), d.Raw("0"), d.Raw("100"), d.Raw("0"), d.Raw("255"))
-d.FitClamped(...)
-d.FitRounded(...)
-d.FitClampedRounded(...)
+ds.Clipboard(ds.Str("copied text"))
+ds.ClipboardBase64(ds.Str("base64content"))
+ds.Fit(ds.Raw("$v"), ds.Raw("0"), ds.Raw("100"), ds.Raw("0"), ds.Raw("255"))
+ds.FitClamped(...)
+ds.FitRounded(...)
+ds.FitClampedRounded(...)
 ```
 
 ### Complete Example
@@ -630,42 +630,42 @@ package main
 
 import (
     "github.com/jeffh/htmlgen/h"
-    "github.com/jeffh/htmlgen/d"
+    "github.com/jeffh/htmlgen/ds"
     "time"
 )
 
 func CounterComponent() h.Builder {
     return h.Div(
-        d.Signal("count", 0),
+        ds.Signal("count", 0),
         h.Button(
             h.Attrs("type", "button"),
-            d.OnClick(d.Raw("$count++")),
+            ds.OnClick(ds.Raw("$count++")),
             h.Text("Increment"),
         ),
         h.Span(
-            d.Text(d.Raw("`Count: ${$count}`")),
+            ds.Text(ds.Raw("`Count: ${$count}`")),
         ),
     )
 }
 
 func SearchForm() h.Builder {
     return h.Form(
-        d.Signal("query", ""),
-        d.Indicator("searching"),
+        ds.Signal("query", ""),
+        ds.Indicator("searching"),
         h.Input(
             h.Attrs("type", "text", "placeholder", "Search..."),
-            d.Bind("query"),
-            d.OnInput(
-                d.Debounce(300*time.Millisecond),
-                d.Get("/search"),
+            ds.Bind("query"),
+            ds.OnInput(
+                ds.Debounce(300*time.Millisecond),
+                ds.Get("/search"),
             ),
         ),
         h.Div(
             h.Attrs("id", "results"),
-            d.Show(d.Raw("!$searching")),
+            ds.Show(ds.Raw("!$searching")),
         ),
         h.Div(
-            d.Show(d.Raw("$searching")),
+            ds.Show(ds.Raw("$searching")),
             h.Text("Loading..."),
         ),
     )

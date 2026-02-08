@@ -12,12 +12,12 @@ go test ./...
 # Run tests for a specific package
 go test ./h
 go test ./js
-go test ./d
+go test ./ds
 
 # Run a specific test
 go test -run TestHtmlWriting ./h
 go test -run TestString ./js
-go test -run TestRaw ./d
+go test -run TestRaw ./ds
 
 # Run tests with coverage
 go test -cover ./...
@@ -50,7 +50,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
 
 - **`h`** - Core HTML generation with streaming Writer API and declarative Builder API
 - **`js`** - Type-safe JavaScript code generation for event handlers
-- **`d`** - Datastar reactive attribute helpers
+- **`ds`** - Datastar reactive attribute helpers
 - **`hx`** - HTMX attribute helpers (not documented in CLAUDE.md but present)
 
 ## Code Style Guidelines

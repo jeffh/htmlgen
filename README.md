@@ -17,7 +17,7 @@ go get github.com/jeffh/htmlgen
 htmlgen provides three packages:
 
 - **`h`** - Core HTML generation with both streaming and declarative APIs
-- **`d`** - Datastar attribute helpers for building reactive web applications
+- **`ds`** - Datastar attribute helpers for building reactive web applications
 - **`js`** - Type-safe JavaScript generation for event handler attributes
 
 ## Package `h` - HTML Generation
@@ -197,85 +197,85 @@ if err := tmpl.Render(w,
 
 Compiled templates are ~8.0x faster than `html/template` for parameterized content.
 
-## Package `d` - Datastar Integration
+## Package `ds` - Datastar Integration
 
 Build reactive attributes for [Datastar](https://data-star.dev/) applications:
 
 ### Signals
 
 ```go
-import "github.com/jeffh/htmlgen/d"
+import "github.com/jeffh/htmlgen/ds"
 
 // Define reactive signals
-d.Signal("count", 0)           // data-signals:count="0"
-d.Signal("name", "Alice")      // data-signals:name="\"Alice\""
-d.Signals(map[string]any{      // data-signals="{...}"
+ds.Signal("count", 0)           // data-signals:count="0"
+ds.Signal("name", "Alice")      // data-signals:name="\"Alice\""
+ds.Signals(map[string]any{      // data-signals="{...}"
     "x": 1,
     "y": 2,
 })
 
 // Two-way binding
-d.Bind("username")             // data-bind="username"
+ds.Bind("username")             // data-bind="username"
 ```
 
 ### Event Handlers
 
 ```go
 // Click events
-d.OnClick(d.SetSignal("count", d.Raw("$count + 1")))
+ds.OnClick(ds.SetSignal("count", ds.Raw("$count + 1")))
 
 // Form events
-d.OnSubmit(d.PreventDefault(), d.Post("/api/submit"))
+ds.OnSubmit(ds.PreventDefault(), ds.Post("/api/submit"))
 
 // Other events
-d.OnInput(d.Debounce(300*time.Millisecond), d.SetSignal("search", d.Raw("evt.target.value")))
-d.OnChange(d.Get("/api/update"))
-d.OnLoad(d.Get("/api/init"))
-d.On("keydown", d.Raw("handleKey(evt)"))
+ds.OnInput(ds.Debounce(300*time.Millisecond), ds.SetSignal("search", ds.Raw("evt.target.value")))
+ds.OnChange(ds.Get("/api/update"))
+ds.OnLoad(ds.Get("/api/init"))
+ds.On("keydown", ds.Raw("handleKey(evt)"))
 
 // Intersection and interval observers
-d.OnIntersect(d.Once(), d.Raw("$seen = true"))
-d.OnInterval(d.Duration(1*time.Second), d.Raw("$tick++"))
+ds.OnIntersect(ds.Once(), ds.Raw("$seen = true"))
+ds.OnInterval(ds.Duration(1*time.Second), ds.Raw("$tick++"))
 ```
 
 ### HTTP Actions
 
 ```go
-d.Get("/api/data")
-d.Post("/api/submit")
-d.Put("/api/update")
-d.Delete("/api/remove")
+ds.Get("/api/data")
+ds.Post("/api/submit")
+ds.Put("/api/update")
+ds.Delete("/api/remove")
 
 // With options
-d.Post("/api/submit",
-    d.ContentType("application/json"),
-    d.Headers(map[string]string{"X-Custom": "value"}),
+ds.Post("/api/submit",
+    ds.ContentType("application/json"),
+    ds.Headers(map[string]string{"X-Custom": "value"}),
 )
 ```
 
 ### Reactive Display
 
 ```go
-d.Show(d.Raw("$isVisible"))                    // data-show="$isVisible"
-d.Text(d.Raw("$message"))                      // data-text="$message"
-d.Class("active", d.Raw("$isActive"))          // data-class:active="$isActive"
-d.Style("color", d.Raw("$textColor"))          // data-style:color="$textColor"
-d.Attribute("disabled", d.Raw("$isDisabled"))  // data-attr:disabled="$isDisabled"
+ds.Show(ds.Raw("$isVisible"))                    // data-show="$isVisible"
+ds.Text(ds.Raw("$message"))                      // data-text="$message"
+ds.Class("active", ds.Raw("$isActive"))          // data-class:active="$isActive"
+ds.Style("color", ds.Raw("$textColor"))          // data-style:color="$textColor"
+ds.Attribute("disabled", ds.Raw("$isDisabled"))  // data-attr:disabled="$isDisabled"
 
 // Multiple classes/styles/attrs at once
-d.Classes(map[string]string{"hidden": "$foo", "bold": "$bar"})
-d.Styles(map[string]string{"color": "$red ? 'red' : 'blue'"})
+ds.Classes(map[string]string{"hidden": "$foo", "bold": "$bar"})
+ds.Styles(map[string]string{"color": "$red ? 'red' : 'blue'"})
 ```
 
 ### Event Modifiers
 
 ```go
-d.PreventDefault()
-d.Debounce(300 * time.Millisecond)
-d.Throttle(100 * time.Millisecond)
-d.Delay(500 * time.Millisecond)
-d.Once()
-d.ViewTransition()
+ds.PreventDefault()
+ds.Debounce(300 * time.Millisecond)
+ds.Throttle(100 * time.Millisecond)
+ds.Delay(500 * time.Millisecond)
+ds.Once()
+ds.ViewTransition()
 ```
 
 ### Complete Example
@@ -287,7 +287,7 @@ import (
     "os"
 
     "github.com/jeffh/htmlgen/h"
-    "github.com/jeffh/htmlgen/d"
+    "github.com/jeffh/htmlgen/ds"
 )
 
 func main() {
@@ -299,11 +299,11 @@ func main() {
         h.Body(
             h.Div(h.Attrs("id", "app"),
                 h.Button(h.Attributes{
-                    d.Signal("count", 0),
-                    d.OnClick(d.SetSignal("count", d.Raw("$count + 1"))),
+                    ds.Signal("count", 0),
+                    ds.OnClick(ds.SetSignal("count", ds.Raw("$count + 1"))),
                 },
                     h.Text("Count: "),
-                    h.Span(h.Attributes{d.Text(d.Raw("$count"))}),
+                    h.Span(h.Attributes{ds.Text(ds.Raw("$count"))}),
                 ),
             ),
         ),
@@ -317,7 +317,7 @@ func main() {
 
 ### Datastar Pro
 
-The `d` package also includes helpers for [Datastar Pro](https://data-star.dev/) features (requires commercial license):
+The `ds` package also includes helpers for [Datastar Pro](https://data-star.dev/) features (requires commercial license):
 
 - Animations: `Animate`
 - Form validation: `CustomValidity`
