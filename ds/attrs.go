@@ -181,7 +181,7 @@ func Effect(values ...AttrMutator) h.Attribute {
 // Peek creates a @peek(() => expr) Datastar action for debugging.
 // Returns a Value that can be used with event handlers.
 func Peek(action Value) Value {
-	return V(DSPeek(action.expr))
+	return V(ActionPeek(action.expr))
 }
 
 // Computed creates a read-only signal computed from an expression.
@@ -332,11 +332,11 @@ func FilterOptionsValue(o *FilterOptions) AttrMutator {
 // SetAll creates a @setAll(value, filter) Datastar action.
 // Returns a Value that can be used with event handlers.
 func SetAll(value Value, options *FilterOptions) Value {
-	return V(DSSetAll(value.expr, options))
+	return V(ActionSetAll(value.expr, options))
 }
 
 // ToggleAll creates a @toggleAll(filter) Datastar action.
 // Returns a Value that can be used with event handlers.
 func ToggleAll(options *FilterOptions) Value {
-	return V(DSToggleAll(options))
+	return V(ActionToggleAll(options))
 }
