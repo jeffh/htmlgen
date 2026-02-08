@@ -1,6 +1,8 @@
 # htmlgen
 
-**Experimental WIP**
+**Experimental**
+
+[![Go Reference](https://pkg.go.dev/badge/github.com/jeffh/htmlgen.svg)](https://pkg.go.dev/github.com/jeffh/htmlgen)
 
 A Go library for programmatic HTML generation.
 
