@@ -169,33 +169,33 @@ func DatastarAction(name string, args ...js.Expr) js.Callable {
 	return js.Raw(sb.String())
 }
 
-// DSGet creates @get(path) Datastar action
-func DSGet(path js.Expr) js.Callable {
+// ActionGet creates @get(path) Datastar action
+func ActionGet(path js.Expr) js.Callable {
 	return DatastarAction("get", path)
 }
 
-// DSPost creates @post(path) Datastar action
-func DSPost(path js.Expr) js.Callable {
+// ActionPost creates @post(path) Datastar action
+func ActionPost(path js.Expr) js.Callable {
 	return DatastarAction("post", path)
 }
 
-// DSPut creates @put(path) Datastar action
-func DSPut(path js.Expr) js.Callable {
+// ActionPut creates @put(path) Datastar action
+func ActionPut(path js.Expr) js.Callable {
 	return DatastarAction("put", path)
 }
 
-// DSDelete creates @delete(path) Datastar action
-func DSDelete(path js.Expr) js.Callable {
+// ActionDelete creates @delete(path) Datastar action
+func ActionDelete(path js.Expr) js.Callable {
 	return DatastarAction("delete", path)
 }
 
-// DSPatch creates @patch(path) Datastar action
-func DSPatch(path js.Expr) js.Callable {
+// ActionPatch creates @patch(path) Datastar action
+func ActionPatch(path js.Expr) js.Callable {
 	return DatastarAction("patch", path)
 }
 
-// DSPeek creates @peek(() => expr) Datastar action for debugging
-func DSPeek(expr js.Expr) js.Callable {
+// ActionPeek creates @peek(() => expr) Datastar action for debugging
+func ActionPeek(expr js.Expr) js.Callable {
 	var sb strings.Builder
 	sb.WriteString("@peek(() => ")
 	sb.WriteString(js.ToJS(expr))
@@ -203,8 +203,8 @@ func DSPeek(expr js.Expr) js.Callable {
 	return js.Raw(sb.String())
 }
 
-// DSSetAll creates @setAll(value, filter) Datastar action
-func DSSetAll(value js.Expr, filter *FilterOptions) js.Callable {
+// ActionSetAll creates @setAll(value, filter) Datastar action
+func ActionSetAll(value js.Expr, filter *FilterOptions) js.Callable {
 	var sb strings.Builder
 	sb.WriteString("@setAll(")
 	sb.WriteString(js.ToJS(value))
@@ -216,8 +216,8 @@ func DSSetAll(value js.Expr, filter *FilterOptions) js.Callable {
 	return js.Raw(sb.String())
 }
 
-// DSToggleAll creates @toggleAll(filter) Datastar action
-func DSToggleAll(filter *FilterOptions) js.Callable {
+// ActionToggleAll creates @toggleAll(filter) Datastar action
+func ActionToggleAll(filter *FilterOptions) js.Callable {
 	var sb strings.Builder
 	sb.WriteString("@toggleAll(")
 	if filter != nil && (filter.IncludeReg != nil || filter.ExcludeReg != nil) {
@@ -227,33 +227,33 @@ func DSToggleAll(filter *FilterOptions) js.Callable {
 	return js.Raw(sb.String())
 }
 
-// DSClipboard creates @clipboard(text) Datastar Pro action
-func DSClipboard(text js.Expr) js.Callable {
+// ActionClipboard creates @clipboard(text) Datastar Pro action
+func ActionClipboard(text js.Expr) js.Callable {
 	return DatastarAction("clipboard", text)
 }
 
-// DSClipboardBase64 creates @clipboard(text, true) Datastar Pro action for Base64-decoded content
-func DSClipboardBase64(text js.Expr) js.Callable {
+// ActionClipboardBase64 creates @clipboard(text, true) Datastar Pro action for Base64-decoded content
+func ActionClipboardBase64(text js.Expr) js.Callable {
 	return DatastarAction("clipboard", text, js.Bool(true))
 }
 
-// DSFit creates @fit(v, oldMin, oldMax, newMin, newMax) Datastar Pro action
-func DSFit(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
+// ActionFit creates @fit(v, oldMin, oldMax, newMin, newMax) Datastar Pro action
+func ActionFit(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
 	return DatastarAction("fit", v, oldMin, oldMax, newMin, newMax)
 }
 
-// DSFitClamped creates @fit(v, oldMin, oldMax, newMin, newMax, true) with clamping
-func DSFitClamped(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
+// ActionFitClamped creates @fit(v, oldMin, oldMax, newMin, newMax, true) with clamping
+func ActionFitClamped(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
 	return DatastarAction("fit", v, oldMin, oldMax, newMin, newMax, js.Bool(true))
 }
 
-// DSFitRounded creates @fit(v, oldMin, oldMax, newMin, newMax, false, true) with rounding
-func DSFitRounded(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
+// ActionFitRounded creates @fit(v, oldMin, oldMax, newMin, newMax, false, true) with rounding
+func ActionFitRounded(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
 	return DatastarAction("fit", v, oldMin, oldMax, newMin, newMax, js.Bool(false), js.Bool(true))
 }
 
-// DSFitClampedRounded creates @fit(v, oldMin, oldMax, newMin, newMax, true, true) with clamping and rounding
-func DSFitClampedRounded(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
+// ActionFitClampedRounded creates @fit(v, oldMin, oldMax, newMin, newMax, true, true) with clamping and rounding
+func ActionFitClampedRounded(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
 	return DatastarAction("fit", v, oldMin, oldMax, newMin, newMax, js.Bool(true), js.Bool(true))
 }
 

@@ -223,7 +223,7 @@ func Focus() AttrMutator {
 // Example: OnClick(Clipboard(Str("Hello, world!")))
 // Produces: data-on:click="@clipboard('Hello, world!')"
 func Clipboard(text Value) Value {
-	return V(DSClipboard(text.expr))
+	return V(ActionClipboard(text.expr))
 }
 
 // ClipboardBase64 copies Base64-decoded text to the clipboard.
@@ -232,7 +232,7 @@ func Clipboard(text Value) Value {
 // Example: OnClick(ClipboardBase64(Str("SGVsbG8sIHdvcmxkIQ==")))
 // Produces: data-on:click="@clipboard('SGVsbG8sIHdvcmxkIQ==', true)"
 func ClipboardBase64(text Value) Value {
-	return V(DSClipboardBase64(text.expr))
+	return V(ActionClipboardBase64(text.expr))
 }
 
 // Fit linearly interpolates a value from one range to another.
@@ -240,27 +240,27 @@ func ClipboardBase64(text Value) Value {
 // Syntax: @fit(v, oldMin, oldMax, newMin, newMax)
 // Example: Computed("rgb", Fit(Raw("$slider"), Raw("0"), Raw("100"), Raw("0"), Raw("255")))
 func Fit(v, oldMin, oldMax, newMin, newMax Value) Value {
-	return V(DSFit(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
+	return V(ActionFit(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
 // FitClamped linearly interpolates with clamping to keep results within the target range.
 // Requires Datastar Pro license.
 // Syntax: @fit(v, oldMin, oldMax, newMin, newMax, true)
 func FitClamped(v, oldMin, oldMax, newMin, newMax Value) Value {
-	return V(DSFitClamped(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
+	return V(ActionFitClamped(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
 // FitRounded linearly interpolates with rounding to nearest integer.
 // Requires Datastar Pro license.
 // Syntax: @fit(v, oldMin, oldMax, newMin, newMax, false, true)
 func FitRounded(v, oldMin, oldMax, newMin, newMax Value) Value {
-	return V(DSFitRounded(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
+	return V(ActionFitRounded(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
 // FitClampedRounded linearly interpolates with both clamping and rounding.
 // Requires Datastar Pro license.
 // Syntax: @fit(v, oldMin, oldMax, newMin, newMax, true, true)
 func FitClampedRounded(v, oldMin, oldMax, newMin, newMax Value) Value {
-	return V(DSFitClampedRounded(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
+	return V(ActionFitClampedRounded(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
