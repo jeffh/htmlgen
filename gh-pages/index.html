@@ -1,136 +1,254 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>htmlgen &mdash; Type-Safe HTML Generation for Go</title>
-  <meta name="description" content="Generate HTML with Go functions, not templates. Type-safe, blazing fast, with first-class Datastar and HTMX support.">
-  <meta property="og:title" content="htmlgen — Type-Safe HTML Generation for Go">
-  <meta property="og:description" content="Generate HTML with Go functions, not templates. 2-8x faster than html/template.">
-  <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary_large_image">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>htmlgen &mdash; Type-Safe HTML Generation for Go</title>
+        <meta
+            name="description"
+            content="Generate HTML with Go functions, not templates. Type-safe, blazing fast, with first-class Datastar and HTMX support."
+        />
+        <meta
+            property="og:title"
+            content="htmlgen — Type-Safe HTML Generation for Go"
+        />
+        <meta
+            property="og:description"
+            content="Generate HTML with Go functions, not templates. 2-8x faster than html/template."
+        />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
 
-  <!-- Prism.js (base only — we override the theme in style.css) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+        <!-- Prism.js (base only — we override the theme in style.css) -->
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css"
+        />
 
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <!-- Top accent line -->
+        <div class="accent-line"></div>
 
-<!-- Top accent line -->
-<div class="accent-line"></div>
+        <!-- Navigation -->
+        <nav class="site-nav">
+            <div class="nav-inner">
+                <a href="#" class="nav-logo">html<span>gen</span></a>
+                <ul class="nav-links">
+                    <li>
+                        <a href="#features"
+                            ><span class="nav-link-text">Features</span></a
+                        >
+                    </li>
+                    <li>
+                        <a href="#examples"
+                            ><span class="nav-link-text">Examples</span></a
+                        >
+                    </li>
+                    <li>
+                        <a href="#benchmarks"
+                            ><span class="nav-link-text">Performance</span></a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            href="https://github.com/jeffh/htmlgen"
+                            class="nav-github"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            <svg viewBox="0 0 16 16" aria-hidden="true">
+                                <path
+                                    d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+                                />
+                            </svg>
+                            <span class="nav-link-text">GitHub</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
 
-<!-- Navigation -->
-<nav class="site-nav">
-  <div class="nav-inner">
-    <a href="#" class="nav-logo">html<span>gen</span></a>
-    <ul class="nav-links">
-      <li><a href="#features"><span class="nav-link-text">Features</span></a></li>
-      <li><a href="#examples"><span class="nav-link-text">Examples</span></a></li>
-      <li><a href="#benchmarks"><span class="nav-link-text">Performance</span></a></li>
-      <li>
-        <a href="https://github.com/jeffh/htmlgen" class="nav-github" target="_blank" rel="noopener">
-          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-          <span class="nav-link-text">GitHub</span>
-        </a>
-      </li>
-    </ul>
-  </div>
-</nav>
+        <!-- ============ Hero ============ -->
+        <section class="hero" id="hero">
+            <div class="container">
+                <div class="badge reveal">
+                    Experimental &middot; Open Source &middot; Go Library
+                </div>
+                <h1 class="reveal reveal-delay-1">
+                    Generate HTML with<br /><em>Go</em>, not templates
+                </h1>
+                <p class="hero-sub reveal reveal-delay-2">
+                    Type-safe, blazing-fast HTML generation using pure Go
+                    functions. No template language. No string concatenation.
+                    Just Go.
+                </p>
 
-<!-- ============ Hero ============ -->
-<section class="hero" id="hero">
-  <div class="container">
-    <div class="badge reveal">Experimental &middot; Open Source &middot; Go Library</div>
-    <h1 class="reveal reveal-delay-1">Generate HTML with<br><em>Go</em>, not templates</h1>
-    <p class="hero-sub reveal reveal-delay-2">
-      Type-safe, blazing-fast HTML generation using pure Go functions.
-      No template language. No string concatenation. Just Go.
-    </p>
+                <div class="install-cmd reveal reveal-delay-3">
+                    <span class="prompt">$</span>
+                    <code>go get github.com/jeffh/htmlgen</code>
+                    <button
+                        class="copy-btn"
+                        aria-label="Copy install command"
+                        data-copy="go get github.com/jeffh/htmlgen"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <rect
+                                x="9"
+                                y="9"
+                                width="13"
+                                height="13"
+                                rx="2"
+                                ry="2"
+                            />
+                            <path
+                                d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                            />
+                        </svg>
+                    </button>
+                </div>
 
-    <div class="install-cmd reveal reveal-delay-3">
-      <span class="prompt">$</span>
-      <code>go get github.com/jeffh/htmlgen</code>
-      <button class="copy-btn" aria-label="Copy install command" data-copy="go get github.com/jeffh/htmlgen">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-        </svg>
-      </button>
-    </div>
+                <div class="hero-ctas reveal reveal-delay-4">
+                    <a
+                        href="https://github.com/jeffh/htmlgen"
+                        class="btn btn-primary"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        View on GitHub
+                    </a>
+                    <a href="#quickstart" class="btn btn-secondary">
+                        Quick Start
+                    </a>
+                </div>
+            </div>
+        </section>
 
-    <div class="hero-ctas reveal reveal-delay-4">
-      <a href="https://github.com/jeffh/htmlgen" class="btn btn-primary" target="_blank" rel="noopener">
-        View on GitHub
-      </a>
-      <a href="#quickstart" class="btn btn-secondary">
-        Quick Start
-      </a>
-    </div>
-  </div>
-</section>
+        <!-- ============ Features ============ -->
+        <section class="features" id="features">
+            <div class="container">
+                <div class="section-heading reveal">
+                    <h2>Why htmlgen</h2>
+                    <p>
+                        Everything you need to generate HTML in Go, nothing you
+                        don't.
+                    </p>
+                </div>
 
-<!-- ============ Features ============ -->
-<section class="features" id="features">
-  <div class="container">
-    <div class="section-heading reveal">
-      <h2>Why htmlgen</h2>
-      <p>Everything you need to generate HTML in Go, nothing you don't.</p>
-    </div>
+                <div class="features-grid">
+                    <div class="feature-card reveal reveal-delay-1">
+                        <div class="feature-icon">&lt;/&gt;</div>
+                        <h3>Just Go</h3>
+                        <p>
+                            No template language to learn. Write HTML with Go
+                            functions that mirror HTML elements. Full IDE
+                            support, type checking, and refactoring tools work
+                            out of the box.
+                        </p>
+                    </div>
 
-    <div class="features-grid">
-      <div class="feature-card reveal reveal-delay-1">
-        <div class="feature-icon">&lt;/&gt;</div>
-        <h3>Just Go</h3>
-        <p>No template language to learn. Write HTML with Go functions that mirror HTML elements. Full IDE support, type checking, and refactoring tools work out of the box.</p>
-      </div>
+                    <div class="feature-card reveal reveal-delay-2">
+                        <div class="feature-icon">ns</div>
+                        <h3>Blazing Fast</h3>
+                        <p>
+                            2&ndash;8&times; faster than html/template. Compiled
+                            templates render in 19&thinsp;ns. Pre-render static
+                            content once, then write raw bytes on every request.
+                        </p>
+                    </div>
 
-      <div class="feature-card reveal reveal-delay-2">
-        <div class="feature-icon">ns</div>
-        <h3>Blazing Fast</h3>
-        <p>2&ndash;8&times; faster than html/template. Compiled templates render in 19&thinsp;ns. Pre-render static content once, then write raw bytes on every request.</p>
-      </div>
+                    <div class="feature-card reveal reveal-delay-3">
+                        <div class="feature-icon">T</div>
+                        <h3>Type-Safe</h3>
+                        <p>
+                            HTML elements, attributes, and even JavaScript
+                            generation are all type-checked at compile time.
+                            Catch errors before they reach production, not in
+                            your logs.
+                        </p>
+                    </div>
 
-      <div class="feature-card reveal reveal-delay-3">
-        <div class="feature-icon">T</div>
-        <h3>Type-Safe</h3>
-        <p>HTML elements, attributes, and even JavaScript generation are all type-checked at compile time. Catch errors before they reach production, not in your logs.</p>
-      </div>
+                    <div class="feature-card reveal reveal-delay-4">
+                        <div class="feature-icon">*</div>
+                        <h3>Modern Stack</h3>
+                        <p>
+                            First-class Datastar and HTMX support. Build
+                            reactive web applications without npm, without a
+                            JavaScript build pipeline &mdash; just Go and a CDN
+                            script tag.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-      <div class="feature-card reveal reveal-delay-4">
-        <div class="feature-icon">*</div>
-        <h3>Modern Stack</h3>
-        <p>First-class Datastar and HTMX support. Build reactive web applications without npm, without a JavaScript build pipeline &mdash; just Go and a CDN script tag.</p>
-      </div>
-    </div>
-  </div>
-</section>
+        <!-- ============ Code Examples ============ -->
+        <section class="examples" id="examples">
+            <div class="container">
+                <div class="section-heading reveal">
+                    <h2>See it in action</h2>
+                    <p>
+                        Real code, real patterns. htmlgen reads like the HTML it
+                        generates.
+                    </p>
+                </div>
 
-<!-- ============ Code Examples ============ -->
-<section class="examples" id="examples">
-  <div class="container">
-    <div class="section-heading reveal">
-      <h2>See it in action</h2>
-      <p>Real code, real patterns. htmlgen reads like the HTML it generates.</p>
-    </div>
+                <div class="reveal">
+                    <div class="tabs" role="tablist">
+                        <button
+                            class="tab-btn active"
+                            role="tab"
+                            aria-selected="true"
+                            data-tab="builder"
+                        >
+                            Builder API
+                        </button>
+                        <button
+                            class="tab-btn"
+                            role="tab"
+                            aria-selected="false"
+                            data-tab="compiled"
+                        >
+                            Compiled Templates
+                        </button>
+                        <button
+                            class="tab-btn"
+                            role="tab"
+                            aria-selected="false"
+                            data-tab="datastar"
+                        >
+                            Datastar
+                        </button>
+                        <button
+                            class="tab-btn"
+                            role="tab"
+                            aria-selected="false"
+                            data-tab="jsgen"
+                        >
+                            JS Generation
+                        </button>
+                    </div>
 
-    <div class="reveal">
-      <div class="tabs" role="tablist">
-        <button class="tab-btn active" role="tab" aria-selected="true" data-tab="builder">Builder API</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="compiled">Compiled Templates</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="datastar">Datastar</button>
-        <button class="tab-btn" role="tab" aria-selected="false" data-tab="jsgen">JS Generation</button>
-      </div>
-
-      <!-- Tab: Builder API -->
-      <div class="tab-panel active" id="tab-builder">
-        <div class="code-block">
-<pre><code class="language-go">page := h.Html(
+                    <!-- Tab: Builder API -->
+                    <div class="tab-panel active" id="tab-builder">
+                        <div class="code-block">
+                            <pre><code class="language-go">page := h.Html(
     h.Head(
         h.Title(h.Text("My Page")),
     ),
@@ -145,14 +263,17 @@
 
 // Render to any io.Writer
 h.Render(os.Stdout, page)</code></pre>
-          <div class="code-caption">Declarative tree-building API &mdash; every HTML element is a Go function.</div>
-        </div>
-      </div>
+                            <div class="code-caption">
+                                Declarative tree-building API &mdash; every HTML
+                                element is a Go function.
+                            </div>
+                        </div>
+                    </div>
 
-      <!-- Tab: Compiled Templates -->
-      <div class="tab-panel" id="tab-compiled">
-        <div class="code-block">
-<pre><code class="language-go">// Define parameters
+                    <!-- Tab: Compiled Templates -->
+                    <div class="tab-panel" id="tab-compiled">
+                        <div class="code-block">
+                            <pre><code class="language-go">// Define parameters
 title := h.NewParam("title")
 content := h.NewParam("content")
 
@@ -170,40 +291,46 @@ tmpl.Render(w,
     title.Value(h.Text("Welcome")),
     content.Value(h.P(h.Text("Hello, World!"))),
 )</code></pre>
-          <div class="code-caption">Pre-compiled parameterized templates &mdash; 141&thinsp;ns per render.</div>
-        </div>
-      </div>
+                            <div class="code-caption">
+                                Pre-compiled parameterized templates &mdash;
+                                141&thinsp;ns per render.
+                            </div>
+                        </div>
+                    </div>
 
-      <!-- Tab: Datastar -->
-      <div class="tab-panel" id="tab-datastar">
-        <div class="code-block">
-<pre><code class="language-go">page := h.Html(
+                    <!-- Tab: Datastar -->
+                    <div class="tab-panel" id="tab-datastar">
+                        <div class="code-block">
+                            <pre><code class="language-go">page := h.Html(
     h.Head(
         h.Script(h.Attrs("type", "module",
-            "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@1/bundles/datastar.js")),
+            "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.7/bundles/datastar.js")),
     ),
     h.Body(
         h.Div(h.Attrs("id", "app"),
             h.Button(h.Attributes{
-                d.Signal("count", 0),
-                d.OnClick(d.SetSignal("count", d.Raw("$count + 1"))),
+                ds.Signal("count", 0),
+                ds.OnClick(ds.SetSignal("count", ds.Raw("$count + 1"))),
             },
                 h.Text("Count: "),
-                h.Span(h.Attributes{d.Text(d.Raw("$count"))}),
+                h.Span(h.Attributes{ds.Text(ds.Raw("$count"))}),
             ),
         ),
     ),
 )
 
 h.Render(os.Stdout, page)</code></pre>
-          <div class="code-caption">Reactive counter with Datastar &mdash; no npm, no build step.</div>
-        </div>
-      </div>
+                            <div class="code-caption">
+                                Reactive counter with Datastar &mdash; no npm,
+                                no build step.
+                            </div>
+                        </div>
+                    </div>
 
-      <!-- Tab: JS Generation -->
-      <div class="tab-panel" id="tab-jsgen">
-        <div class="code-block">
-<pre><code class="language-go">// Type-safe event handlers
+                    <!-- Tab: JS Generation -->
+                    <div class="tab-panel" id="tab-jsgen">
+                        <div class="code-block">
+                            <pre><code class="language-go">// Type-safe event handlers
 attr := js.OnClick(
     js.ExprStmt(js.PreventDefault()),
     js.ExprStmt(js.ConsoleLog(js.String("clicked"))),
@@ -225,160 +352,207 @@ handler := js.Handler(
     ),
 )
 // &rarr; event.target.value = event.target.value.toUpperCase()</code></pre>
-          <div class="code-caption">Type-safe JavaScript generation &mdash; expressions and statements, not strings.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ Benchmarks ============ -->
-<section class="benchmarks" id="benchmarks">
-  <div class="container">
-    <div class="section-heading reveal">
-      <h2>Performance</h2>
-      <p>Consistently faster than html/template across real-world scenarios.</p>
-    </div>
-
-    <div class="bench-list reveal">
-
-      <div class="bench-row" data-animate>
-        <div class="bench-label">Simple Div</div>
-        <div class="bench-bars">
-          <div class="bench-bar">
-            <span class="bench-bar-label">htmlgen</span>
-            <div class="bench-bar-track">
-              <div class="bench-bar-fill htmlgen" style="--w: 29%"></div>
+                            <div class="code-caption">
+                                Type-safe JavaScript generation &mdash;
+                                expressions and statements, not strings.
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <span class="bench-bar-time">151 ns</span>
-          </div>
-          <div class="bench-bar">
-            <span class="bench-bar-label">html/template</span>
-            <div class="bench-bar-track">
-              <div class="bench-bar-fill template" style="--w: 100%"></div>
-            </div>
-            <span class="bench-bar-time">521 ns</span>
-          </div>
-        </div>
-        <div class="bench-speedup">3.5&times;</div>
-      </div>
+        </section>
 
-      <div class="bench-row" data-animate>
-        <div class="bench-label">Div + Attrs</div>
-        <div class="bench-bars">
-          <div class="bench-bar">
-            <span class="bench-bar-label">htmlgen</span>
-            <div class="bench-bar-track">
-              <div class="bench-bar-fill htmlgen" style="--w: 14%"></div>
-            </div>
-            <span class="bench-bar-time">303 ns</span>
-          </div>
-          <div class="bench-bar">
-            <span class="bench-bar-label">html/template</span>
-            <div class="bench-bar-track">
-              <div class="bench-bar-fill template" style="--w: 100%"></div>
-            </div>
-            <span class="bench-bar-time">2.1 &mu;s</span>
-          </div>
-        </div>
-        <div class="bench-speedup">6.9&times;</div>
-      </div>
+        <!-- ============ Benchmarks ============ -->
+        <section class="benchmarks" id="benchmarks">
+            <div class="container">
+                <div class="section-heading reveal">
+                    <h2>Performance</h2>
+                    <p>
+                        Consistently faster than html/template across real-world
+                        scenarios.
+                    </p>
+                </div>
 
-      <div class="bench-row" data-animate>
-        <div class="bench-label">List (100)</div>
-        <div class="bench-bars">
-          <div class="bench-bar">
-            <span class="bench-bar-label">htmlgen</span>
-            <div class="bench-bar-track">
-              <div class="bench-bar-fill htmlgen" style="--w: 16%"></div>
+                <div class="bench-list reveal">
+                    <div class="bench-row" data-animate>
+                        <div class="bench-label">Simple Div</div>
+                        <div class="bench-bars">
+                            <div class="bench-bar">
+                                <span class="bench-bar-label">htmlgen</span>
+                                <div class="bench-bar-track">
+                                    <div
+                                        class="bench-bar-fill htmlgen"
+                                        style="--w: 29%"
+                                    ></div>
+                                </div>
+                                <span class="bench-bar-time">151 ns</span>
+                            </div>
+                            <div class="bench-bar">
+                                <span class="bench-bar-label"
+                                    >html/template</span
+                                >
+                                <div class="bench-bar-track">
+                                    <div
+                                        class="bench-bar-fill template"
+                                        style="--w: 100%"
+                                    ></div>
+                                </div>
+                                <span class="bench-bar-time">521 ns</span>
+                            </div>
+                        </div>
+                        <div class="bench-speedup">3.5&times;</div>
+                    </div>
+
+                    <div class="bench-row" data-animate>
+                        <div class="bench-label">Div + Attrs</div>
+                        <div class="bench-bars">
+                            <div class="bench-bar">
+                                <span class="bench-bar-label">htmlgen</span>
+                                <div class="bench-bar-track">
+                                    <div
+                                        class="bench-bar-fill htmlgen"
+                                        style="--w: 14%"
+                                    ></div>
+                                </div>
+                                <span class="bench-bar-time">303 ns</span>
+                            </div>
+                            <div class="bench-bar">
+                                <span class="bench-bar-label"
+                                    >html/template</span
+                                >
+                                <div class="bench-bar-track">
+                                    <div
+                                        class="bench-bar-fill template"
+                                        style="--w: 100%"
+                                    ></div>
+                                </div>
+                                <span class="bench-bar-time">2.1 &mu;s</span>
+                            </div>
+                        </div>
+                        <div class="bench-speedup">6.9&times;</div>
+                    </div>
+
+                    <div class="bench-row" data-animate>
+                        <div class="bench-label">List (100)</div>
+                        <div class="bench-bars">
+                            <div class="bench-bar">
+                                <span class="bench-bar-label">htmlgen</span>
+                                <div class="bench-bar-track">
+                                    <div
+                                        class="bench-bar-fill htmlgen"
+                                        style="--w: 16%"
+                                    ></div>
+                                </div>
+                                <span class="bench-bar-time">7.2 &mu;s</span>
+                            </div>
+                            <div class="bench-bar">
+                                <span class="bench-bar-label"
+                                    >html/template</span
+                                >
+                                <div class="bench-bar-track">
+                                    <div
+                                        class="bench-bar-fill template"
+                                        style="--w: 100%"
+                                    ></div>
+                                </div>
+                                <span class="bench-bar-time">45.2 &mu;s</span>
+                            </div>
+                        </div>
+                        <div class="bench-speedup">6.3&times;</div>
+                    </div>
+
+                    <div class="bench-row" data-animate>
+                        <div class="bench-label">Form</div>
+                        <div class="bench-bars">
+                            <div class="bench-bar">
+                                <span class="bench-bar-label">htmlgen</span>
+                                <div class="bench-bar-track">
+                                    <div
+                                        class="bench-bar-fill htmlgen"
+                                        style="--w: 26%"
+                                    ></div>
+                                </div>
+                                <span class="bench-bar-time">3.5 &mu;s</span>
+                            </div>
+                            <div class="bench-bar">
+                                <span class="bench-bar-label"
+                                    >html/template</span
+                                >
+                                <div class="bench-bar-track">
+                                    <div
+                                        class="bench-bar-fill template"
+                                        style="--w: 100%"
+                                    ></div>
+                                </div>
+                                <span class="bench-bar-time">13.7 &mu;s</span>
+                            </div>
+                        </div>
+                        <div class="bench-speedup">3.9&times;</div>
+                    </div>
+
+                    <div class="bench-row" data-animate>
+                        <div class="bench-label">Compiled</div>
+                        <div class="bench-bars">
+                            <div class="bench-bar">
+                                <span class="bench-bar-label">htmlgen</span>
+                                <div class="bench-bar-track">
+                                    <div
+                                        class="bench-bar-fill htmlgen"
+                                        style="--w: 13%"
+                                    ></div>
+                                </div>
+                                <span class="bench-bar-time">141 ns</span>
+                            </div>
+                            <div class="bench-bar">
+                                <span class="bench-bar-label"
+                                    >html/template</span
+                                >
+                                <div class="bench-bar-track">
+                                    <div
+                                        class="bench-bar-fill template"
+                                        style="--w: 100%"
+                                    ></div>
+                                </div>
+                                <span class="bench-bar-time">1.1 &mu;s</span>
+                            </div>
+                        </div>
+                        <div class="bench-speedup">8.0&times;</div>
+                    </div>
+                </div>
+
+                <p class="bench-note reveal">
+                    Benchmarked on Apple M1 Ultra.
+                    <a href="https://github.com/jeffh/htmlgen#benchmarks"
+                        >Full benchmark results &rarr;</a
+                    >
+                </p>
             </div>
-            <span class="bench-bar-time">7.2 &mu;s</span>
-          </div>
-          <div class="bench-bar">
-            <span class="bench-bar-label">html/template</span>
-            <div class="bench-bar-track">
-              <div class="bench-bar-fill template" style="--w: 100%"></div>
-            </div>
-            <span class="bench-bar-time">45.2 &mu;s</span>
-          </div>
-        </div>
-        <div class="bench-speedup">6.3&times;</div>
-      </div>
+        </section>
 
-      <div class="bench-row" data-animate>
-        <div class="bench-label">Form</div>
-        <div class="bench-bars">
-          <div class="bench-bar">
-            <span class="bench-bar-label">htmlgen</span>
-            <div class="bench-bar-track">
-              <div class="bench-bar-fill htmlgen" style="--w: 26%"></div>
-            </div>
-            <span class="bench-bar-time">3.5 &mu;s</span>
-          </div>
-          <div class="bench-bar">
-            <span class="bench-bar-label">html/template</span>
-            <div class="bench-bar-track">
-              <div class="bench-bar-fill template" style="--w: 100%"></div>
-            </div>
-            <span class="bench-bar-time">13.7 &mu;s</span>
-          </div>
-        </div>
-        <div class="bench-speedup">3.9&times;</div>
-      </div>
+        <!-- ============ Quick Start ============ -->
+        <section class="quickstart" id="quickstart">
+            <div class="container">
+                <div class="section-heading reveal">
+                    <h2>Quick Start</h2>
+                </div>
 
-      <div class="bench-row" data-animate>
-        <div class="bench-label">Compiled</div>
-        <div class="bench-bars">
-          <div class="bench-bar">
-            <span class="bench-bar-label">htmlgen</span>
-            <div class="bench-bar-track">
-              <div class="bench-bar-fill htmlgen" style="--w: 13%"></div>
-            </div>
-            <span class="bench-bar-time">141 ns</span>
-          </div>
-          <div class="bench-bar">
-            <span class="bench-bar-label">html/template</span>
-            <div class="bench-bar-track">
-              <div class="bench-bar-fill template" style="--w: 100%"></div>
-            </div>
-            <span class="bench-bar-time">1.1 &mu;s</span>
-          </div>
-        </div>
-        <div class="bench-speedup">8.0&times;</div>
-      </div>
+                <div class="steps">
+                    <div class="step reveal">
+                        <span class="step-num">1</span>
+                        <div class="step-content">
+                            <h3>Install</h3>
+                            <div class="code-block">
+                                <pre><code class="language-bash">go get github.com/jeffh/htmlgen</code></pre>
+                            </div>
+                        </div>
+                    </div>
 
-    </div>
-
-    <p class="bench-note reveal">
-      Benchmarked on Apple M1 Ultra. <a href="https://github.com/jeffh/htmlgen#benchmarks">Full benchmark results &rarr;</a>
-    </p>
-  </div>
-</section>
-
-<!-- ============ Quick Start ============ -->
-<section class="quickstart" id="quickstart">
-  <div class="container">
-    <div class="section-heading reveal">
-      <h2>Quick Start</h2>
-    </div>
-
-    <div class="steps">
-      <div class="step reveal">
-        <span class="step-num">1</span>
-        <div class="step-content">
-          <h3>Install</h3>
-          <div class="code-block">
-<pre><code class="language-bash">go get github.com/jeffh/htmlgen</code></pre>
-          </div>
-        </div>
-      </div>
-
-      <div class="step reveal reveal-delay-1">
-        <span class="step-num">2</span>
-        <div class="step-content">
-          <h3>Write</h3>
-          <div class="code-block">
-<pre><code class="language-go">package main
+                    <div class="step reveal reveal-delay-1">
+                        <span class="step-num">2</span>
+                        <div class="step-content">
+                            <h3>Write</h3>
+                            <div class="code-block">
+                                <pre><code class="language-go">package main
 
 import (
     "os"
@@ -397,111 +571,148 @@ func main() {
 
     h.Render(os.Stdout, page)
 }</code></pre>
-          </div>
-        </div>
-      </div>
+                            </div>
+                        </div>
+                    </div>
 
-      <div class="step reveal reveal-delay-2">
-        <span class="step-num">3</span>
-        <div class="step-content">
-          <h3>Run</h3>
-          <div class="code-block">
-<pre><code class="language-bash">go run main.go</code></pre>
-          </div>
-          <div class="code-block" style="margin-top: 8px;">
-<pre><code class="language-markup">&lt;html&gt;&lt;head&gt;&lt;title&gt;Hello&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Hello, htmlgen!&lt;/h1&gt;&lt;p&gt;Generated with Go.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</code></pre>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+                    <div class="step reveal reveal-delay-2">
+                        <span class="step-num">3</span>
+                        <div class="step-content">
+                            <h3>Run</h3>
+                            <div class="code-block">
+                                <pre><code class="language-bash">go run main.go</code></pre>
+                            </div>
+                            <div class="code-block" style="margin-top: 8px">
+                                <pre><code class="language-markup">&lt;html&gt;&lt;head&gt;&lt;title&gt;Hello&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Hello, htmlgen!&lt;/h1&gt;&lt;p&gt;Generated with Go.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-<!-- ============ Footer ============ -->
-<footer class="site-footer">
-  <div class="container">
-    <div class="footer-inner">
-      <div class="footer-logo">html<span>gen</span></div>
-      <ul class="footer-links">
-        <li><a href="https://github.com/jeffh/htmlgen" target="_blank" rel="noopener">GitHub</a></li>
-        <li><a href="https://pkg.go.dev/github.com/jeffh/htmlgen" target="_blank" rel="noopener">Go Docs</a></li>
-        <li><a href="https://github.com/jeffh/htmlgen/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
-      </ul>
-      <p class="footer-note">An experimental Go library by <a href="https://github.com/jeffh">jeffh</a></p>
-    </div>
-  </div>
-</footer>
+        <!-- ============ Footer ============ -->
+        <footer class="site-footer">
+            <div class="container">
+                <div class="footer-inner">
+                    <div class="footer-logo">html<span>gen</span></div>
+                    <ul class="footer-links">
+                        <li>
+                            <a
+                                href="https://github.com/jeffh/htmlgen"
+                                target="_blank"
+                                rel="noopener"
+                                >GitHub</a
+                            >
+                        </li>
+                        <li>
+                            <a
+                                href="https://pkg.go.dev/github.com/jeffh/htmlgen"
+                                target="_blank"
+                                rel="noopener"
+                                >Go Docs</a
+                            >
+                        </li>
+                        <li>
+                            <a
+                                href="https://github.com/jeffh/htmlgen/blob/main/LICENSE"
+                                target="_blank"
+                                rel="noopener"
+                                >License</a
+                            >
+                        </li>
+                    </ul>
+                    <p class="footer-note">
+                        An experimental Go library by
+                        <a href="https://github.com/jeffh">jeffh</a>
+                    </p>
+                </div>
+            </div>
+        </footer>
 
-<!-- Prism.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+        <!-- Prism.js -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
 
-<script>
-// --- Tab switching ---
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tab = btn.dataset.tab;
-    const parent = btn.closest('section') || btn.closest('.container');
+        <script>
+            // --- Tab switching ---
+            document.querySelectorAll(".tab-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const tab = btn.dataset.tab;
+                    const parent =
+                        btn.closest("section") || btn.closest(".container");
 
-    parent.querySelectorAll('.tab-btn').forEach(b => {
-      b.classList.remove('active');
-      b.setAttribute('aria-selected', 'false');
-    });
-    btn.classList.add('active');
-    btn.setAttribute('aria-selected', 'true');
+                    parent.querySelectorAll(".tab-btn").forEach((b) => {
+                        b.classList.remove("active");
+                        b.setAttribute("aria-selected", "false");
+                    });
+                    btn.classList.add("active");
+                    btn.setAttribute("aria-selected", "true");
 
-    parent.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    const panel = document.getElementById('tab-' + tab);
-    if (panel) panel.classList.add('active');
-  });
-});
+                    parent
+                        .querySelectorAll(".tab-panel")
+                        .forEach((p) => p.classList.remove("active"));
+                    const panel = document.getElementById("tab-" + tab);
+                    if (panel) panel.classList.add("active");
+                });
+            });
 
-// --- Scroll reveal ---
-const revealObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-      revealObserver.unobserve(entry.target);
-    }
-  });
-}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+            // --- Scroll reveal ---
+            const revealObserver = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add("visible");
+                            revealObserver.unobserve(entry.target);
+                        }
+                    });
+                },
+                { threshold: 0.12, rootMargin: "0px 0px -40px 0px" },
+            );
 
-document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+            document
+                .querySelectorAll(".reveal")
+                .forEach((el) => revealObserver.observe(el));
 
-// --- Benchmark bar animation ---
-const benchObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('animate');
-      benchObserver.unobserve(entry.target);
-    }
-  });
-}, { threshold: 0.2 });
+            // --- Benchmark bar animation ---
+            const benchObserver = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add("animate");
+                            benchObserver.unobserve(entry.target);
+                        }
+                    });
+                },
+                { threshold: 0.2 },
+            );
 
-document.querySelectorAll('.bench-row[data-animate]').forEach(el => benchObserver.observe(el));
+            document
+                .querySelectorAll(".bench-row[data-animate]")
+                .forEach((el) => benchObserver.observe(el));
 
-// --- Copy to clipboard ---
-document.querySelectorAll('.copy-btn').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    const text = btn.dataset.copy;
-    try {
-      await navigator.clipboard.writeText(text);
-      btn.classList.add('copied');
-      const svg = btn.querySelector('svg');
-      const original = svg.innerHTML;
-      svg.innerHTML = '<polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
-      setTimeout(() => {
-        btn.classList.remove('copied');
-        svg.innerHTML = original;
-      }, 2000);
-    } catch (e) {
-      // Fallback: select text
-    }
-  });
-});
-</script>
-
-</body>
+            // --- Copy to clipboard ---
+            document.querySelectorAll(".copy-btn").forEach((btn) => {
+                btn.addEventListener("click", async () => {
+                    const text = btn.dataset.copy;
+                    try {
+                        await navigator.clipboard.writeText(text);
+                        btn.classList.add("copied");
+                        const svg = btn.querySelector("svg");
+                        const original = svg.innerHTML;
+                        svg.innerHTML =
+                            '<polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+                        setTimeout(() => {
+                            btn.classList.remove("copied");
+                            svg.innerHTML = original;
+                        }, 2000);
+                    } catch (e) {
+                        // Fallback: select text
+                    }
+                });
+            });
+        </script>
+    </body>
 </html>

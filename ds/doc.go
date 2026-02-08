@@ -1,4 +1,4 @@
-// Package d provides helpers for building Datastar (https://data-star.dev/) reactive attributes.
+// Package ds provides helpers for building Datastar (https://data-star.dev/) reactive attributes.
 //
 // This package includes:
 //   - Signal management: Signal, Signals, Computed, Bind, BindKey
@@ -17,4 +17,4 @@
 //
 // Pro actions (require commercial license): Clipboard, ClipboardBase64, Fit, FitClamped,
 // FitRounded, FitClampedRounded.
-package d
+package ds

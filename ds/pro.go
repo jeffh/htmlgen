@@ -1,6 +1,6 @@
 // Pro Datastar attributes require a commercial license from https://data-star.dev/
 // These attributes provide additional functionality beyond the free tier.
-package d
+package ds
 
 import "github.com/jeffh/htmlgen/h"
 
