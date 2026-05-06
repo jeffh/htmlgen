@@ -19,79 +19,82 @@ func (b binaryOp) js(sb *strings.Builder) {
 	b.right.js(sb)
 	sb.WriteString(")")
 }
-func (b binaryOp) callable() {}
 
-// Add returns left + right
-func Add(left, right Expr) Callable { return binaryOp{left, "+", right} }
+func (e Expr) binary(op string, other Expr) Expr {
+	return Expr{node: binaryOp{left: e, op: op, right: other}}
+}
 
-// Sub returns left - right
-func Sub(left, right Expr) Callable { return binaryOp{left, "-", right} }
+// Add returns (e + other).
+func (e Expr) Add(other Expr) Expr { return e.binary("+", other) }
 
-// Mul returns left * right
-func Mul(left, right Expr) Callable { return binaryOp{left, "*", right} }
+// Sub returns (e - other).
+func (e Expr) Sub(other Expr) Expr { return e.binary("-", other) }
 
-// Div returns left / right
-func Div(left, right Expr) Callable { return binaryOp{left, "/", right} }
+// Mul returns (e * other).
+func (e Expr) Mul(other Expr) Expr { return e.binary("*", other) }
 
-// Mod returns left % right
-func Mod(left, right Expr) Callable { return binaryOp{left, "%", right} }
+// Div returns (e / other).
+func (e Expr) Div(other Expr) Expr { return e.binary("/", other) }
 
-// Eq returns left === right (strict equality)
-func Eq(left, right Expr) Callable { return binaryOp{left, "===", right} }
+// Mod returns (e % other).
+func (e Expr) Mod(other Expr) Expr { return e.binary("%", other) }
 
-// NotEq returns left !== right (strict inequality)
-func NotEq(left, right Expr) Callable { return binaryOp{left, "!==", right} }
+// Eq returns (e === other) — strict equality.
+func (e Expr) Eq(other Expr) Expr { return e.binary("===", other) }
 
-// LooseEq returns left == right (loose equality)
-func LooseEq(left, right Expr) Callable { return binaryOp{left, "==", right} }
+// NotEq returns (e !== other) — strict inequality.
+func (e Expr) NotEq(other Expr) Expr { return e.binary("!==", other) }
 
-// LooseNotEq returns left != right (loose inequality)
-func LooseNotEq(left, right Expr) Callable { return binaryOp{left, "!=", right} }
+// LooseEq returns (e == other) — loose equality.
+func (e Expr) LooseEq(other Expr) Expr { return e.binary("==", other) }
 
-// Lt returns left < right
-func Lt(left, right Expr) Callable { return binaryOp{left, "<", right} }
+// LooseNotEq returns (e != other) — loose inequality.
+func (e Expr) LooseNotEq(other Expr) Expr { return e.binary("!=", other) }
 
-// LtEq returns left <= right
-func LtEq(left, right Expr) Callable { return binaryOp{left, "<=", right} }
+// Lt returns (e < other).
+func (e Expr) Lt(other Expr) Expr { return e.binary("<", other) }
 
-// Gt returns left > right
-func Gt(left, right Expr) Callable { return binaryOp{left, ">", right} }
+// LtEq returns (e <= other).
+func (e Expr) LtEq(other Expr) Expr { return e.binary("<=", other) }
 
-// GtEq returns left >= right
-func GtEq(left, right Expr) Callable { return binaryOp{left, ">=", right} }
+// Gt returns (e > other).
+func (e Expr) Gt(other Expr) Expr { return e.binary(">", other) }
 
-// And returns left && right
-func And(left, right Expr) Callable { return binaryOp{left, "&&", right} }
+// GtEq returns (e >= other).
+func (e Expr) GtEq(other Expr) Expr { return e.binary(">=", other) }
 
-// Or returns left || right
-func Or(left, right Expr) Callable { return binaryOp{left, "||", right} }
+// And returns (e && other).
+func (e Expr) And(other Expr) Expr { return e.binary("&&", other) }
 
-// NullishCoalesce returns left ?? right
-func NullishCoalesce(left, right Expr) Callable { return binaryOp{left, "??", right} }
+// Or returns (e || other).
+func (e Expr) Or(other Expr) Expr { return e.binary("||", other) }
 
-// BitwiseAnd returns left & right
-func BitwiseAnd(left, right Expr) Callable { return binaryOp{left, "&", right} }
+// NullishCoalesce returns (e ?? other).
+func (e Expr) NullishCoalesce(other Expr) Expr { return e.binary("??", other) }
 
-// BitwiseOr returns left | right
-func BitwiseOr(left, right Expr) Callable { return binaryOp{left, "|", right} }
+// BitwiseAnd returns (e & other).
+func (e Expr) BitwiseAnd(other Expr) Expr { return e.binary("&", other) }
 
-// BitwiseXor returns left ^ right
-func BitwiseXor(left, right Expr) Callable { return binaryOp{left, "^", right} }
+// BitwiseOr returns (e | other).
+func (e Expr) BitwiseOr(other Expr) Expr { return e.binary("|", other) }
 
-// ShiftLeft returns left << right
-func ShiftLeft(left, right Expr) Callable { return binaryOp{left, "<<", right} }
+// BitwiseXor returns (e ^ other).
+func (e Expr) BitwiseXor(other Expr) Expr { return e.binary("^", other) }
 
-// ShiftRight returns left >> right
-func ShiftRight(left, right Expr) Callable { return binaryOp{left, ">>", right} }
+// ShiftLeft returns (e << other).
+func (e Expr) ShiftLeft(other Expr) Expr { return e.binary("<<", other) }
 
-// UnsignedShiftRight returns left >>> right
-func UnsignedShiftRight(left, right Expr) Callable { return binaryOp{left, ">>>", right} }
+// ShiftRight returns (e >> other).
+func (e Expr) ShiftRight(other Expr) Expr { return e.binary(">>", other) }
 
-// Instanceof returns left instanceof right
-func Instanceof(left, right Expr) Callable { return binaryOp{left, "instanceof", right} }
+// UnsignedShiftRight returns (e >>> other).
+func (e Expr) UnsignedShiftRight(other Expr) Expr { return e.binary(">>>", other) }
 
-// In returns left in right
-func In(left, right Expr) Callable { return binaryOp{left, "in", right} }
+// InstanceOf returns (e instanceof other).
+func (e Expr) InstanceOf(other Expr) Expr { return e.binary("instanceof", other) }
+
+// In returns (e in obj).
+func (e Expr) In(obj Expr) Expr { return e.binary("in", obj) }
 
 // Unary operators
 
@@ -110,28 +113,31 @@ func (u unaryOp) js(sb *strings.Builder) {
 		sb.WriteString(u.op)
 	}
 }
-func (u unaryOp) callable() {}
 
-// Not returns !expr
-func Not(expr Expr) Callable { return unaryOp{"!", expr, true} }
+func unary(op string, e Expr) Expr {
+	return Expr{node: unaryOp{op: op, expr: e, prefix: true}}
+}
 
-// Neg returns -expr (negation)
-func Neg(expr Expr) Callable { return unaryOp{"-", expr, true} }
+// Not returns !e.
+func (e Expr) Not() Expr { return unary("!", e) }
 
-// Pos returns +expr (unary plus)
-func Pos(expr Expr) Callable { return unaryOp{"+", expr, true} }
+// Neg returns -e (negation).
+func (e Expr) Neg() Expr { return unary("-", e) }
 
-// BitwiseNot returns ~expr
-func BitwiseNot(expr Expr) Callable { return unaryOp{"~", expr, true} }
+// Pos returns +e (unary plus).
+func (e Expr) Pos() Expr { return unary("+", e) }
 
-// Typeof returns typeof expr
-func Typeof(expr Expr) Callable { return unaryOp{"typeof ", expr, true} }
+// BitwiseNot returns ~e.
+func (e Expr) BitwiseNot() Expr { return unary("~", e) }
 
-// Void returns void expr
-func Void(expr Expr) Callable { return unaryOp{"void ", expr, true} }
+// Typeof returns (typeof e).
+func (e Expr) Typeof() Expr { return unary("typeof ", e) }
 
-// Delete returns delete expr
-func Delete(expr Expr) Callable { return unaryOp{"delete ", expr, true} }
+// Void returns (void e).
+func (e Expr) Void() Expr { return unary("void ", e) }
+
+// Delete returns (delete e).
+func (e Expr) Delete() Expr { return unary("delete ", e) }
 
 // Ternary operator
 
@@ -150,11 +156,10 @@ func (t ternaryOp) js(sb *strings.Builder) {
 	t.ifFalse.js(sb)
 	sb.WriteString(")")
 }
-func (t ternaryOp) callable() {}
 
-// Ternary returns cond ? ifTrue : ifFalse
-func Ternary(cond, ifTrue, ifFalse Expr) Callable {
-	return ternaryOp{cond, ifTrue, ifFalse}
+// Ternary returns (e ? ifTrue : ifFalse) using e as the condition.
+func (e Expr) Ternary(ifTrue, ifFalse Expr) Expr {
+	return Expr{node: ternaryOp{cond: e, ifTrue: ifTrue, ifFalse: ifFalse}}
 }
 
 // Grouping
@@ -168,12 +173,9 @@ func (g groupExpr) js(sb *strings.Builder) {
 	g.expr.js(sb)
 	sb.WriteString(")")
 }
-func (g groupExpr) callable() {}
 
-// Group wraps an expression in parentheses.
-func Group(expr Expr) Callable {
-	return groupExpr{expr}
-}
+// Group wraps the expression in parentheses.
+func (e Expr) Group() Expr { return Expr{node: groupExpr{e}} }
 
 // Comma expression
 
@@ -191,12 +193,11 @@ func (c commaExpr) js(sb *strings.Builder) {
 	}
 	sb.WriteString(")")
 }
-func (c commaExpr) callable() {}
 
 // Comma creates a comma expression that evaluates all expressions
 // and returns the value of the last one.
-func Comma(exprs ...Expr) Callable {
-	return commaExpr{exprs}
+func Comma(exprs ...Expr) Expr {
+	return Expr{node: commaExpr{exprs}}
 }
 
 // Spread operator
@@ -209,9 +210,6 @@ func (s spreadExpr) js(sb *strings.Builder) {
 	sb.WriteString("...")
 	s.expr.js(sb)
 }
-func (s spreadExpr) callable() {}
 
-// Spread creates a spread expression: ...expr
-func Spread(expr Expr) Callable {
-	return spreadExpr{expr}
-}
+// Spread returns ...e.
+func (e Expr) Spread() Expr { return Expr{node: spreadExpr{e}} }

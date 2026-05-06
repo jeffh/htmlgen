@@ -6,132 +6,55 @@ import (
 	"github.com/jeffh/htmlgen/js"
 )
 
-// Re-export js types for convenience
+// Re-export common js types for convenience.
 type (
-	Expr     = js.Expr
-	Callable = js.Callable
-	Stmt     = js.Stmt
-	KV       = js.KV
+	Expr = js.Expr
+	Stmt = js.Stmt
+	KV   = js.KV
 )
 
-// Value wraps a js.Expr and implements AttrMutator.
-// This allows expressions to be used directly with Datastar attribute functions.
+// Value wraps a js.Expr as a Datastar action/expression value. It is the
+// argument type accepted by event handlers like OnClick and by the various
+// signal-related attribute helpers.
 type Value struct {
 	expr js.Expr
 }
 
-// Modify implements AttrMutator
-func (v Value) Modify(attr *attrBuilder) {
-	attr.AppendStatement(js.ToJS(v.expr))
-}
+// Expr returns the underlying js.Expr.
+func (v Value) Expr() js.Expr { return v.expr }
 
-// Expr returns the underlying js.Expr
-func (v Value) Expr() js.Expr {
-	return v.expr
-}
+// V wraps a js.Expr as a Value.
+func V(expr js.Expr) Value { return Value{expr: expr} }
 
-// V wraps a js.Expr as a Value that can be used with Datastar attributes.
-func V(expr js.Expr) Value {
-	return Value{expr: expr}
-}
+// Raw injects raw JavaScript code as a Value. This is the escape hatch — use
+// sparingly, as it bypasses type safety.
+func Raw(s string) Value { return Value{expr: js.Raw(s)} }
 
-// Raw injects raw JavaScript code. This is the escape hatch for arbitrary JavaScript.
-// Use with caution as this bypasses type safety.
-func Raw(s string) Value {
-	return Value{expr: js.Raw(s)}
-}
+// Str creates a JavaScript string literal Value, properly JSON-escaped.
+func Str(s string) Value { return Value{expr: js.String(s)} }
 
-// JsonValue creates a JavaScript value from a Go value using JSON encoding.
-// Panics if the value cannot be marshaled to JSON.
-func JsonValue(value any) Value {
-	return Value{expr: js.JSON(value)}
-}
+// JsonValue encodes a Go value as JSON and wraps the result as a Value.
+func JsonValue(value any) Value { return Value{expr: js.JSON(value)} }
 
-// Re-export js value constructors
+// Re-export js value constructors that are useful as Datastar action arguments.
 var (
-	// Str creates a JavaScript string literal, properly escaped.
-	Str = js.String
-	// Int creates a JavaScript number literal from an integer.
-	Int = js.Int
-	// Int64 creates a JavaScript number literal from an int64.
-	Int64 = js.Int64
-	// Float creates a JavaScript number literal from a float64.
-	Float = js.Float
-	// Bool creates a JavaScript boolean literal.
-	Bool = js.Bool
-	// Null creates a JavaScript null literal.
-	Null = js.Null
-	// Undefined creates a JavaScript undefined literal.
+	Int       = js.Int
+	Int64     = js.Int64
+	Float     = js.Float
+	Bool      = js.Bool
+	Null      = js.Null
 	Undefined = js.Undefined
-	// JSON creates a JavaScript value from a Go value using JSON encoding.
-	JSON = js.JSON
-	// Array creates a JavaScript array literal from expressions.
-	Array = js.Array
-	// Object creates a JavaScript object literal from key-value pairs.
-	Object = js.Object
-	// Pair creates a key-value pair for Object().
-	Pair = js.Pair
-	// Ident creates a JavaScript identifier reference.
-	Ident = js.Ident
-	// This creates the special "this" identifier.
-	This = js.This
-	// ToJS converts an expression to its JavaScript string representation.
-	ToJS = js.ToJS
-	// ToJSStmt converts a statement to its JavaScript string representation.
-	ToJSStmt = js.ToJSStmt
+	JSON      = js.JSON
+	Array     = js.Array
+	Object    = js.Object
+	Pair      = js.Pair
+	Ident     = js.Ident
+	This      = js.This
+	ToJS      = js.ToJS
+	ToJSStmt  = js.ToJSStmt
 )
 
-// Re-export js operators
-var (
-	Add             = js.Add
-	Sub             = js.Sub
-	Mul             = js.Mul
-	Div             = js.Div
-	Mod             = js.Mod
-	Eq              = js.Eq
-	NotEq           = js.NotEq
-	Lt              = js.Lt
-	LtEq            = js.LtEq
-	Gt              = js.Gt
-	GtEq            = js.GtEq
-	JSAnd           = js.And
-	JSOr            = js.Or
-	JSNot           = js.Not
-	Ternary         = js.Ternary
-	NullishCoalesce = js.NullishCoalesce
-	Group           = js.Group
-)
-
-// Re-export js property/method access
-var (
-	Prop         = js.Prop
-	Method       = js.Method
-	Index        = js.Index
-	Call         = js.Call
-	New          = js.New
-	OptionalProp = js.OptionalProp
-	OptionalCall = js.OptionalCall
-)
-
-// Re-export js statements
-var (
-	ExprStmt   = js.ExprStmt
-	Let        = js.Let
-	Const      = js.Const
-	Assign     = js.Assign
-	AddAssign  = js.AddAssign
-	SubAssign  = js.SubAssign
-	Incr       = js.Incr
-	Decr       = js.Decr
-	PreIncr    = js.PreIncr
-	PreDecr    = js.PreDecr
-	PostIncr   = js.PostIncr
-	PostDecr   = js.PostDecr
-	Return     = js.Return
-	ReturnVoid = js.ReturnVoid
-)
-
-// Re-export js builtins
+// Re-export common js builtins.
 var (
 	Console      = js.Console
 	Document     = js.Document
@@ -143,18 +66,26 @@ var (
 	EventValue   = js.EventValue
 )
 
-// SignalRef creates a Datastar signal reference: $name
-// Use this to reference a signal value in expressions.
-// Example: SignalRef("count") produces $count
+// Re-export js statement creators.
+var (
+	ExprStmt   = js.ExprStmt
+	Let        = js.Let
+	Const      = js.Const
+	Return     = js.Return
+	ReturnVoid = js.ReturnVoid
+)
+
+// SignalRef creates a Datastar signal reference: $name. Use this to reference
+// a signal value in expressions. Any leading "$" is stripped.
 func SignalRef(name string) Value {
-	// Remove $ prefix if already present
 	name = strings.TrimPrefix(name, "$")
 	return Value{expr: js.Raw("$" + name)}
 }
 
-// DatastarAction creates a Datastar action call: @action(args...)
-// Example: DatastarAction("get", js.String("/api")) produces @get("/api")
-func DatastarAction(name string, args ...js.Expr) js.Callable {
+// DatastarAction creates a Datastar action call: @action(args...).
+//
+//	DatastarAction("get", js.String("/api"))  =>  @get("/api")
+func DatastarAction(name string, args ...js.Expr) js.Expr {
 	var sb strings.Builder
 	sb.WriteString("@")
 	sb.WriteString(name)
@@ -169,33 +100,23 @@ func DatastarAction(name string, args ...js.Expr) js.Callable {
 	return js.Raw(sb.String())
 }
 
-// ActionGet creates @get(path) Datastar action
-func ActionGet(path js.Expr) js.Callable {
-	return DatastarAction("get", path)
-}
+// ActionGet creates @get(path) Datastar action.
+func ActionGet(path js.Expr) js.Expr { return DatastarAction("get", path) }
 
-// ActionPost creates @post(path) Datastar action
-func ActionPost(path js.Expr) js.Callable {
-	return DatastarAction("post", path)
-}
+// ActionPost creates @post(path) Datastar action.
+func ActionPost(path js.Expr) js.Expr { return DatastarAction("post", path) }
 
-// ActionPut creates @put(path) Datastar action
-func ActionPut(path js.Expr) js.Callable {
-	return DatastarAction("put", path)
-}
+// ActionPut creates @put(path) Datastar action.
+func ActionPut(path js.Expr) js.Expr { return DatastarAction("put", path) }
 
-// ActionDelete creates @delete(path) Datastar action
-func ActionDelete(path js.Expr) js.Callable {
-	return DatastarAction("delete", path)
-}
+// ActionDelete creates @delete(path) Datastar action.
+func ActionDelete(path js.Expr) js.Expr { return DatastarAction("delete", path) }
 
-// ActionPatch creates @patch(path) Datastar action
-func ActionPatch(path js.Expr) js.Callable {
-	return DatastarAction("patch", path)
-}
+// ActionPatch creates @patch(path) Datastar action.
+func ActionPatch(path js.Expr) js.Expr { return DatastarAction("patch", path) }
 
-// ActionPeek creates @peek(() => expr) Datastar action for debugging
-func ActionPeek(expr js.Expr) js.Callable {
+// ActionPeek creates @peek(() => expr) Datastar action.
+func ActionPeek(expr js.Expr) js.Expr {
 	var sb strings.Builder
 	sb.WriteString("@peek(() => ")
 	sb.WriteString(js.ToJS(expr))
@@ -203,8 +124,8 @@ func ActionPeek(expr js.Expr) js.Callable {
 	return js.Raw(sb.String())
 }
 
-// ActionSetAll creates @setAll(value, filter) Datastar action
-func ActionSetAll(value js.Expr, filter *FilterOptions) js.Callable {
+// ActionSetAll creates @setAll(value, filter) Datastar action.
+func ActionSetAll(value js.Expr, filter *FilterOptions) js.Expr {
 	var sb strings.Builder
 	sb.WriteString("@setAll(")
 	sb.WriteString(js.ToJS(value))
@@ -216,8 +137,8 @@ func ActionSetAll(value js.Expr, filter *FilterOptions) js.Callable {
 	return js.Raw(sb.String())
 }
 
-// ActionToggleAll creates @toggleAll(filter) Datastar action
-func ActionToggleAll(filter *FilterOptions) js.Callable {
+// ActionToggleAll creates @toggleAll(filter) Datastar action.
+func ActionToggleAll(filter *FilterOptions) js.Expr {
 	var sb strings.Builder
 	sb.WriteString("@toggleAll(")
 	if filter != nil && (filter.IncludeReg != nil || filter.ExcludeReg != nil) {
@@ -227,45 +148,40 @@ func ActionToggleAll(filter *FilterOptions) js.Callable {
 	return js.Raw(sb.String())
 }
 
-// ActionClipboard creates @clipboard(text) Datastar Pro action
-func ActionClipboard(text js.Expr) js.Callable {
-	return DatastarAction("clipboard", text)
-}
+// ActionClipboard creates @clipboard(text) Datastar Pro action.
+func ActionClipboard(text js.Expr) js.Expr { return DatastarAction("clipboard", text) }
 
-// ActionClipboardBase64 creates @clipboard(text, true) Datastar Pro action for Base64-decoded content
-func ActionClipboardBase64(text js.Expr) js.Callable {
+// ActionClipboardBase64 creates @clipboard(text, true) for Base64-decoded content.
+func ActionClipboardBase64(text js.Expr) js.Expr {
 	return DatastarAction("clipboard", text, js.Bool(true))
 }
 
-// ActionFit creates @fit(v, oldMin, oldMax, newMin, newMax) Datastar Pro action
-func ActionFit(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
+// ActionFit creates @fit(v, oldMin, oldMax, newMin, newMax).
+func ActionFit(v, oldMin, oldMax, newMin, newMax js.Expr) js.Expr {
 	return DatastarAction("fit", v, oldMin, oldMax, newMin, newMax)
 }
 
-// ActionFitClamped creates @fit(v, oldMin, oldMax, newMin, newMax, true) with clamping
-func ActionFitClamped(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
+// ActionFitClamped creates @fit(v, oldMin, oldMax, newMin, newMax, true).
+func ActionFitClamped(v, oldMin, oldMax, newMin, newMax js.Expr) js.Expr {
 	return DatastarAction("fit", v, oldMin, oldMax, newMin, newMax, js.Bool(true))
 }
 
-// ActionFitRounded creates @fit(v, oldMin, oldMax, newMin, newMax, false, true) with rounding
-func ActionFitRounded(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
+// ActionFitRounded creates @fit(v, oldMin, oldMax, newMin, newMax, false, true).
+func ActionFitRounded(v, oldMin, oldMax, newMin, newMax js.Expr) js.Expr {
 	return DatastarAction("fit", v, oldMin, oldMax, newMin, newMax, js.Bool(false), js.Bool(true))
 }
 
-// ActionFitClampedRounded creates @fit(v, oldMin, oldMax, newMin, newMax, true, true) with clamping and rounding
-func ActionFitClampedRounded(v, oldMin, oldMax, newMin, newMax js.Expr) js.Callable {
+// ActionFitClampedRounded creates @fit(v, oldMin, oldMax, newMin, newMax, true, true).
+func ActionFitClampedRounded(v, oldMin, oldMax, newMin, newMax js.Expr) js.Expr {
 	return DatastarAction("fit", v, oldMin, oldMax, newMin, newMax, js.Bool(true), js.Bool(true))
 }
 
-// PromiseChain represents a chainable action for HTTP requests (then/catch)
+// PromiseChain represents a chainable action for HTTP requests (then/catch).
 type PromiseChain interface {
 	appendChain(sb *strings.Builder)
 }
 
-// thenChain represents .then(() => expr)
-type thenChain struct {
-	expr js.Expr
-}
+type thenChain struct{ expr js.Expr }
 
 func (t thenChain) appendChain(sb *strings.Builder) {
 	sb.WriteString(".then(() => ")
@@ -273,10 +189,7 @@ func (t thenChain) appendChain(sb *strings.Builder) {
 	sb.WriteString(")")
 }
 
-// catchChain represents .catch((error) => expr)
-type catchChain struct {
-	expr js.Expr
-}
+type catchChain struct{ expr js.Expr }
 
 func (c catchChain) appendChain(sb *strings.Builder) {
 	sb.WriteString(".catch((error) => ")
@@ -284,18 +197,14 @@ func (c catchChain) appendChain(sb *strings.Builder) {
 	sb.WriteString(")")
 }
 
-// ThenChain creates a .then() chain for successful request handling
-func ThenChain(expr js.Expr) PromiseChain {
-	return thenChain{expr}
-}
+// ThenChain creates a .then() chain for successful request handling.
+func ThenChain(expr js.Expr) PromiseChain { return thenChain{expr} }
 
-// CatchChain creates a .catch() chain for error handling
-func CatchChain(expr js.Expr) PromiseChain {
-	return catchChain{expr}
-}
+// CatchChain creates a .catch() chain for error handling.
+func CatchChain(expr js.Expr) PromiseChain { return catchChain{expr} }
 
-// WithChains adds promise chains to a Datastar action, returning a new Callable
-func WithChains(action js.Callable, chains ...PromiseChain) js.Callable {
+// WithChains adds promise chains to a Datastar action.
+func WithChains(action js.Expr, chains ...PromiseChain) js.Expr {
 	if len(chains) == 0 {
 		return action
 	}
@@ -305,19 +214,4 @@ func WithChains(action js.Callable, chains ...PromiseChain) js.Callable {
 		chain.appendChain(&sb)
 	}
 	return js.Raw(sb.String())
-}
-
-// ExprMutator wraps a js.Expr to satisfy AttrMutator
-type ExprMutator struct {
-	Expr js.Expr
-}
-
-func (e ExprMutator) Modify(attr *attrBuilder) {
-	attr.AppendStatement(js.ToJS(e.Expr))
-}
-
-// E wraps a js.Expr to use as an AttrMutator
-// Example: OnClick(PreventDefault(), E(Signal("count")))
-func E(expr js.Expr) ExprMutator {
-	return ExprMutator{Expr: expr}
 }

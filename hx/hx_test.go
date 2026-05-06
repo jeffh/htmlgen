@@ -242,7 +242,7 @@ func TestSwapStrategies(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.expected, func(t *testing.T) {
-			attr := Swap(tt.strategy)
+			attr := Swap(tt.strategy).Attribute()
 			if attr.Name != "hx-swap" {
 				t.Errorf("Name = %q, want %q", attr.Name, "hx-swap")
 			}
@@ -259,19 +259,19 @@ func TestSwapWithModifiers(t *testing.T) {
 		attr     h.Attribute
 		contains string
 	}{
-		{"transition", Swap(InnerHTML, Transition()), "transition:true"},
-		{"swap delay", Swap(InnerHTML, SwapDelay(100*time.Millisecond)), "swap:100ms"},
-		{"settle delay", Swap(InnerHTML, SettleDelay(200*time.Millisecond)), "settle:200ms"},
-		{"ignore title", Swap(InnerHTML, IgnoreTitle()), "ignoreTitle:true"},
-		{"scroll top", Swap(InnerHTML, Scroll(Top)), "scroll:top"},
-		{"scroll bottom", Swap(InnerHTML, Scroll(Bottom)), "scroll:bottom"},
-		{"scroll target", Swap(InnerHTML, ScrollTarget("#div", Top)), "scroll:#div:top"},
-		{"show top", Swap(InnerHTML, Show(Top)), "show:top"},
-		{"show target", Swap(InnerHTML, ShowTarget("#div", Bottom)), "show:#div:bottom"},
-		{"show window", Swap(InnerHTML, ShowWindow(Top)), "show:window:top"},
-		{"show none", Swap(InnerHTML, ShowNone()), "show:none"},
-		{"focus scroll true", Swap(InnerHTML, FocusScroll(true)), "focus-scroll:true"},
-		{"focus scroll false", Swap(InnerHTML, FocusScroll(false)), "focus-scroll:false"},
+		{"transition", Swap(InnerHTML).Transition().Attribute(), "transition:true"},
+		{"swap delay", Swap(InnerHTML).Delay(100 * time.Millisecond).Attribute(), "swap:100ms"},
+		{"settle delay", Swap(InnerHTML).SettleDelay(200 * time.Millisecond).Attribute(), "settle:200ms"},
+		{"ignore title", Swap(InnerHTML).IgnoreTitle().Attribute(), "ignoreTitle:true"},
+		{"scroll top", Swap(InnerHTML).Scroll(Top).Attribute(), "scroll:top"},
+		{"scroll bottom", Swap(InnerHTML).Scroll(Bottom).Attribute(), "scroll:bottom"},
+		{"scroll target", Swap(InnerHTML).ScrollTarget("#div", Top).Attribute(), "scroll:#div:top"},
+		{"show top", Swap(InnerHTML).Show(Top).Attribute(), "show:top"},
+		{"show target", Swap(InnerHTML).ShowTarget("#div", Bottom).Attribute(), "show:#div:bottom"},
+		{"show window", Swap(InnerHTML).ShowWindow(Top).Attribute(), "show:window:top"},
+		{"show none", Swap(InnerHTML).ShowNone().Attribute(), "show:none"},
+		{"focus scroll true", Swap(InnerHTML).FocusScroll(true).Attribute(), "focus-scroll:true"},
+		{"focus scroll false", Swap(InnerHTML).FocusScroll(false).Attribute(), "focus-scroll:false"},
 	}
 
 	for _, tt := range tests {
@@ -287,7 +287,7 @@ func TestSwapWithModifiers(t *testing.T) {
 }
 
 func TestSwapMultipleModifiers(t *testing.T) {
-	attr := Swap(OuterHTML, Transition(), SwapDelay(100*time.Millisecond), SettleDelay(200*time.Millisecond))
+	attr := Swap(OuterHTML).Transition().Delay(100 * time.Millisecond).SettleDelay(200 * time.Millisecond).Attribute()
 	if attr.Name != "hx-swap" {
 		t.Errorf("Name = %q, want %q", attr.Name, "hx-swap")
 	}
@@ -305,7 +305,7 @@ func TestSwapMultipleModifiers(t *testing.T) {
 // ============ trigger.go tests ============
 
 func TestTriggerSimple(t *testing.T) {
-	attr := Trigger("click").Attr()
+	attr := Trigger("click").Attribute()
 	if attr.Name != "hx-trigger" {
 		t.Errorf("Name = %q, want %q", attr.Name, "hx-trigger")
 	}
@@ -330,23 +330,23 @@ func TestTriggerWithModifiers(t *testing.T) {
 		attr     h.Attribute
 		contains string
 	}{
-		{"once", Trigger("click", Once()).Attr(), "once"},
-		{"changed", Trigger("keyup", Changed()).Attr(), "changed"},
-		{"delay", Trigger("keyup", Delay(500*time.Millisecond)).Attr(), "delay:500ms"},
-		{"throttle", Trigger("scroll", Throttle(100*time.Millisecond)).Attr(), "throttle:100ms"},
-		{"from", Trigger("click", From("#btn")).Attr(), "from:#btn"},
-		{"from document", Trigger("keyup", FromDocument()).Attr(), "from:document"},
-		{"from window", Trigger("resize", FromWindow()).Attr(), "from:window"},
-		{"from closest", Trigger("click", FromClosest("form")).Attr(), "from:closest form"},
-		{"from find", Trigger("click", FromFind(".item")).Attr(), "from:find .item"},
-		{"from next", Trigger("click", FromNext()).Attr(), "from:next"},
-		{"from previous", Trigger("click", FromPrevious()).Attr(), "from:previous"},
-		{"target", Trigger("click", TriggerTarget("button")).Attr(), "target:button"},
-		{"consume", Trigger("click", Consume()).Attr(), "consume"},
-		{"queue first", Trigger("click", Queue(QueueFirst)).Attr(), "queue:first"},
-		{"queue last", Trigger("click", Queue(QueueLast)).Attr(), "queue:last"},
-		{"queue all", Trigger("click", Queue(QueueAll)).Attr(), "queue:all"},
-		{"queue none", Trigger("click", Queue(QueueNone)).Attr(), "queue:none"},
+		{"once", Trigger("click").Once().Attribute(), "once"},
+		{"changed", Trigger("keyup").Changed().Attribute(), "changed"},
+		{"delay", Trigger("keyup").Delay(500 * time.Millisecond).Attribute(), "delay:500ms"},
+		{"throttle", Trigger("scroll").Throttle(100 * time.Millisecond).Attribute(), "throttle:100ms"},
+		{"from", Trigger("click").From("#btn").Attribute(), "from:#btn"},
+		{"from document", Trigger("keyup").FromDocument().Attribute(), "from:document"},
+		{"from window", Trigger("resize").FromWindow().Attribute(), "from:window"},
+		{"from closest", Trigger("click").FromClosest("form").Attribute(), "from:closest form"},
+		{"from find", Trigger("click").FromFind(".item").Attribute(), "from:find .item"},
+		{"from next", Trigger("click").FromNext().Attribute(), "from:next"},
+		{"from previous", Trigger("click").FromPrevious().Attribute(), "from:previous"},
+		{"target", Trigger("click").TriggerTarget("button").Attribute(), "target:button"},
+		{"consume", Trigger("click").Consume().Attribute(), "consume"},
+		{"queue first", Trigger("click").Queue(QueueFirst).Attribute(), "queue:first"},
+		{"queue last", Trigger("click").Queue(QueueLast).Attribute(), "queue:last"},
+		{"queue all", Trigger("click").Queue(QueueAll).Attribute(), "queue:all"},
+		{"queue none", Trigger("click").Queue(QueueNone).Attribute(), "queue:none"},
 	}
 
 	for _, tt := range tests {
@@ -359,42 +359,42 @@ func TestTriggerWithModifiers(t *testing.T) {
 }
 
 func TestTriggerFilter(t *testing.T) {
-	attr := Trigger("click", Filter("ctrlKey")).Attr()
+	attr := Trigger("click").Filter("ctrlKey").Attribute()
 	if attr.Value != "click[ctrlKey]" {
 		t.Errorf("Value = %q, want %q", attr.Value, "click[ctrlKey]")
 	}
 }
 
 func TestTriggerFilterComplex(t *testing.T) {
-	attr := Trigger("keyup", Filter("keyCode==13")).Attr()
+	attr := Trigger("keyup").Filter("keyCode==13").Attribute()
 	if attr.Value != "keyup[keyCode==13]" {
 		t.Errorf("Value = %q, want %q", attr.Value, "keyup[keyCode==13]")
 	}
 }
 
 func TestTriggerMultiple(t *testing.T) {
-	attr := Trigger("load").And("click", Delay(1*time.Second)).Attr()
+	attr := Trigger("load").And("click").Delay(1 * time.Second).Attribute()
 	if attr.Value != "load, click delay:1s" {
 		t.Errorf("Value = %q, want %q", attr.Value, "load, click delay:1s")
 	}
 }
 
 func TestTriggerLoad(t *testing.T) {
-	attr := TriggerLoad().Attr()
+	attr := TriggerLoad()
 	if attr.Value != "load" {
 		t.Errorf("Value = %q, want %q", attr.Value, "load")
 	}
 }
 
 func TestTriggerRevealed(t *testing.T) {
-	attr := TriggerRevealed().Attr()
+	attr := TriggerRevealed()
 	if attr.Value != "revealed" {
 		t.Errorf("Value = %q, want %q", attr.Value, "revealed")
 	}
 }
 
 func TestTriggerIntersect(t *testing.T) {
-	attr := TriggerIntersect(IntersectThreshold(0.5)).Attr()
+	attr := TriggerIntersect().Threshold(0.5).Attribute()
 	if !containsString(attr.Value, "intersect") {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "intersect")
 	}
@@ -404,14 +404,14 @@ func TestTriggerIntersect(t *testing.T) {
 }
 
 func TestTriggerEvery(t *testing.T) {
-	attr := TriggerEvery(2 * time.Second).Attr()
+	attr := TriggerEvery(2 * time.Second).Attribute()
 	if attr.Value != "every 2s" {
 		t.Errorf("Value = %q, want %q", attr.Value, "every 2s")
 	}
 }
 
 func TestTriggerEveryWithFilter(t *testing.T) {
-	attr := TriggerEvery(1*time.Second, Filter("document.visibilityState == 'visible'")).Attr()
+	attr := TriggerEvery(1 * time.Second).Filter("document.visibilityState == 'visible'").Attribute()
 	if !containsString(attr.Value, "every 1s") {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "every 1s")
 	}
@@ -421,7 +421,7 @@ func TestTriggerEveryWithFilter(t *testing.T) {
 }
 
 func TestFromWithSpaces(t *testing.T) {
-	attr := Trigger("click", From("form input")).Attr()
+	attr := Trigger("click").From("form input").Attribute()
 	if !containsString(attr.Value, "from:(form input)") {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "from:(form input)")
 	}

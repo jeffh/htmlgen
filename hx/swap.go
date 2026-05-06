@@ -31,76 +31,6 @@ const (
 	None SwapStrategy = "none"
 )
 
-// SwapMod is a modifier for swap behavior.
-type SwapMod interface {
-	applySwap(*swapBuilder)
-}
-
-type swapModFunc func(*swapBuilder)
-
-func (f swapModFunc) applySwap(b *swapBuilder) { f(b) }
-
-type swapBuilder struct {
-	strategy  SwapStrategy
-	modifiers []string
-}
-
-// Swap creates an hx-swap attribute with the given strategy and optional modifiers.
-//
-// Example:
-//
-//	hx.Swap(hx.InnerHTML)
-//	hx.Swap(hx.OuterHTML, hx.Transition())
-//	hx.Swap(hx.InnerHTML, hx.SwapDelay(100*time.Millisecond), hx.SettleDelay(200*time.Millisecond))
-func Swap(strategy SwapStrategy, mods ...SwapMod) h.Attribute {
-	b := &swapBuilder{strategy: strategy}
-	for _, mod := range mods {
-		mod.applySwap(b)
-	}
-	return h.Attr("hx-swap", b.String())
-}
-
-func (b *swapBuilder) String() string {
-	if len(b.modifiers) == 0 {
-		return string(b.strategy)
-	}
-	var sb strings.Builder
-	sb.WriteString(string(b.strategy))
-	for _, mod := range b.modifiers {
-		sb.WriteString(" ")
-		sb.WriteString(mod)
-	}
-	return sb.String()
-}
-
-// Transition enables the View Transitions API for this swap.
-func Transition() SwapMod {
-	return swapModFunc(func(b *swapBuilder) {
-		b.modifiers = append(b.modifiers, "transition:true")
-	})
-}
-
-// SwapDelay adds a delay before the swap is performed.
-func SwapDelay(d time.Duration) SwapMod {
-	return swapModFunc(func(b *swapBuilder) {
-		b.modifiers = append(b.modifiers, "swap:"+formatDuration(d))
-	})
-}
-
-// SettleDelay adds a delay after the swap before the settle phase.
-func SettleDelay(d time.Duration) SwapMod {
-	return swapModFunc(func(b *swapBuilder) {
-		b.modifiers = append(b.modifiers, "settle:"+formatDuration(d))
-	})
-}
-
-// IgnoreTitle prevents HTMX from updating the page title from the response.
-func IgnoreTitle() SwapMod {
-	return swapModFunc(func(b *swapBuilder) {
-		b.modifiers = append(b.modifiers, "ignoreTitle:true")
-	})
-}
-
 // ScrollPosition represents a scroll position.
 type ScrollPosition string
 
@@ -111,63 +41,118 @@ const (
 	Bottom ScrollPosition = "bottom"
 )
 
+// SwapBuilder builds an hx-swap attribute value.
+//
+// SwapBuilder implements h.AttrBuilder, so it can be passed directly to tag
+// functions like h.Div without an explicit terminator method.
+type SwapBuilder struct {
+	strategy  SwapStrategy
+	modifiers []string
+}
+
+func (s *SwapBuilder) isTagArg() {}
+
+// Attribute returns the hx-swap attribute.
+func (s *SwapBuilder) Attribute() h.Attribute {
+	return h.Attr("hx-swap", s.String())
+}
+
+// String returns the rendered hx-swap value (strategy plus modifiers).
+func (s *SwapBuilder) String() string {
+	if len(s.modifiers) == 0 {
+		return string(s.strategy)
+	}
+	var sb strings.Builder
+	sb.WriteString(string(s.strategy))
+	for _, mod := range s.modifiers {
+		sb.WriteString(" ")
+		sb.WriteString(mod)
+	}
+	return sb.String()
+}
+
+// Swap creates an hx-swap builder with the given strategy.
+//
+// Example:
+//
+//	hx.Swap(hx.InnerHTML)
+//	hx.Swap(hx.OuterHTML).Transition()
+//	hx.Swap(hx.InnerHTML).Delay(100*time.Millisecond).SettleDelay(200*time.Millisecond)
+func Swap(strategy SwapStrategy) *SwapBuilder {
+	return &SwapBuilder{strategy: strategy}
+}
+
+// Transition enables the View Transitions API for this swap.
+func (s *SwapBuilder) Transition() *SwapBuilder {
+	s.modifiers = append(s.modifiers, "transition:true")
+	return s
+}
+
+// Delay adds a delay before the swap is performed.
+func (s *SwapBuilder) Delay(d time.Duration) *SwapBuilder {
+	s.modifiers = append(s.modifiers, "swap:"+formatDuration(d))
+	return s
+}
+
+// SettleDelay adds a delay after the swap before the settle phase.
+func (s *SwapBuilder) SettleDelay(d time.Duration) *SwapBuilder {
+	s.modifiers = append(s.modifiers, "settle:"+formatDuration(d))
+	return s
+}
+
+// IgnoreTitle prevents HTMX from updating the page title from the response.
+func (s *SwapBuilder) IgnoreTitle() *SwapBuilder {
+	s.modifiers = append(s.modifiers, "ignoreTitle:true")
+	return s
+}
+
 // Scroll scrolls the target element to the specified position after swap.
-func Scroll(pos ScrollPosition) SwapMod {
-	return swapModFunc(func(b *swapBuilder) {
-		b.modifiers = append(b.modifiers, "scroll:"+string(pos))
-	})
+func (s *SwapBuilder) Scroll(pos ScrollPosition) *SwapBuilder {
+	s.modifiers = append(s.modifiers, "scroll:"+string(pos))
+	return s
 }
 
 // ScrollTarget scrolls a specific element to the specified position after swap.
-func ScrollTarget(selector string, pos ScrollPosition) SwapMod {
-	return swapModFunc(func(b *swapBuilder) {
-		b.modifiers = append(b.modifiers, "scroll:"+selector+":"+string(pos))
-	})
+func (s *SwapBuilder) ScrollTarget(selector string, pos ScrollPosition) *SwapBuilder {
+	s.modifiers = append(s.modifiers, "scroll:"+selector+":"+string(pos))
+	return s
 }
 
 // Show scrolls the viewport to show the target element at the specified position.
-func Show(pos ScrollPosition) SwapMod {
-	return swapModFunc(func(b *swapBuilder) {
-		b.modifiers = append(b.modifiers, "show:"+string(pos))
-	})
+func (s *SwapBuilder) Show(pos ScrollPosition) *SwapBuilder {
+	s.modifiers = append(s.modifiers, "show:"+string(pos))
+	return s
 }
 
 // ShowTarget scrolls the viewport to show a specific element at the specified position.
-func ShowTarget(selector string, pos ScrollPosition) SwapMod {
-	return swapModFunc(func(b *swapBuilder) {
-		b.modifiers = append(b.modifiers, "show:"+selector+":"+string(pos))
-	})
+func (s *SwapBuilder) ShowTarget(selector string, pos ScrollPosition) *SwapBuilder {
+	s.modifiers = append(s.modifiers, "show:"+selector+":"+string(pos))
+	return s
 }
 
 // ShowWindow scrolls the window to the specified position.
-func ShowWindow(pos ScrollPosition) SwapMod {
-	return swapModFunc(func(b *swapBuilder) {
-		b.modifiers = append(b.modifiers, "show:window:"+string(pos))
-	})
+func (s *SwapBuilder) ShowWindow(pos ScrollPosition) *SwapBuilder {
+	s.modifiers = append(s.modifiers, "show:window:"+string(pos))
+	return s
 }
 
 // ShowNone disables automatic scrolling to show the swapped content.
-func ShowNone() SwapMod {
-	return swapModFunc(func(b *swapBuilder) {
-		b.modifiers = append(b.modifiers, "show:none")
-	})
+func (s *SwapBuilder) ShowNone() *SwapBuilder {
+	s.modifiers = append(s.modifiers, "show:none")
+	return s
 }
 
 // FocusScroll controls whether HTMX scrolls to bring a focused element into view.
-func FocusScroll(enabled bool) SwapMod {
-	return swapModFunc(func(b *swapBuilder) {
-		if enabled {
-			b.modifiers = append(b.modifiers, "focus-scroll:true")
-		} else {
-			b.modifiers = append(b.modifiers, "focus-scroll:false")
-		}
-	})
+func (s *SwapBuilder) FocusScroll(enabled bool) *SwapBuilder {
+	if enabled {
+		s.modifiers = append(s.modifiers, "focus-scroll:true")
+	} else {
+		s.modifiers = append(s.modifiers, "focus-scroll:false")
+	}
+	return s
 }
 
 // formatDuration formats a duration for HTMX (e.g., "500ms", "1s").
 func formatDuration(d time.Duration) string {
-	if d%time.Second == 0 {
-		return d.String()
-	}
 	return d.String()
 }

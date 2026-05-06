@@ -8,12 +8,6 @@ import (
 	"github.com/jeffh/htmlgen/js"
 )
 
-// Helper to build attribute and return name and value
-func buildTestAttr(name string, options ...AttrMutator) (string, string) {
-	attr := buildAttr(name, options...)
-	return attr.name.String(), strings.Join(attr.statements, "; ")
-}
-
 // ============ values.go tests ============
 
 func TestRaw(t *testing.T) {
@@ -36,13 +30,13 @@ func TestRaw(t *testing.T) {
 				t.Errorf("ToJS(Raw(%q)) = %q, want %q", tt.input, got, tt.expected)
 			}
 
-			// Test AttrMutator
-			attrName, attrValue := buildTestAttr("test", v)
-			if attrValue != tt.expected {
-				t.Errorf("Modify() value = %q, want %q", attrValue, tt.expected)
+			// Test via OnClick attribute value
+			attr := OnClick(v).Attribute()
+			if attr.Value != tt.expected {
+				t.Errorf("OnClick(Raw(%q)).Value = %q, want %q", tt.input, attr.Value, tt.expected)
 			}
-			if attrName != "test" {
-				t.Errorf("Modify() name = %q, want %q", attrName, "test")
+			if attr.Name != "data-on:click" {
+				t.Errorf("OnClick(Raw(%q)).Name = %q, want %q", tt.input, attr.Name, "data-on:click")
 			}
 		})
 	}
@@ -62,7 +56,7 @@ func TestStr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := Str(tt.input)
-			if got := ToJS(v); got != tt.expected {
+			if got := ToJS(v.expr); got != tt.expected {
 				t.Errorf("Str(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
@@ -92,10 +86,10 @@ func TestJsonValue(t *testing.T) {
 				t.Errorf("JsonValue(%v) = %q, want %q", tt.input, got, tt.expected)
 			}
 
-			// Also test AttrMutator path
-			_, attrValue := buildTestAttr("test", v)
-			if attrValue != tt.expected {
-				t.Errorf("JsonValue(%v).Modify() = %q, want %q", tt.input, attrValue, tt.expected)
+			// Also test via OnClick attribute value
+			attr := OnClick(v).Attribute()
+			if attr.Value != tt.expected {
+				t.Errorf("OnClick(JsonValue(%v)).Value = %q, want %q", tt.input, attr.Value, tt.expected)
 			}
 		})
 	}
@@ -168,9 +162,9 @@ func TestConsoleLog(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			action := ConsoleLog(tt.values...)
-			_, attrValue := buildTestAttr("test", action)
-			if attrValue != tt.expected {
-				t.Errorf("ConsoleLog() = %q, want %q", attrValue, tt.expected)
+			attr := OnClick(action).Attribute()
+			if attr.Value != tt.expected {
+				t.Errorf("ConsoleLog() = %q, want %q", attr.Value, tt.expected)
 			}
 		})
 	}
@@ -195,10 +189,10 @@ func TestAnd(t *testing.T) {
 				t.Errorf("And() = %q, want %q", got, tt.expected)
 			}
 
-			// Test AttrMutator
-			_, attrValue := buildTestAttr("test", AndMutator(tt.actions...))
-			if attrValue != tt.expected {
-				t.Errorf("And().Modify() = %q, want %q", attrValue, tt.expected)
+			// Test as a Value via OnClick
+			attr := OnClick(AndValue(tt.actions...)).Attribute()
+			if attr.Value != tt.expected {
+				t.Errorf("OnClick(AndValue(...)).Value = %q, want %q", attr.Value, tt.expected)
 			}
 		})
 	}
@@ -207,30 +201,30 @@ func TestAnd(t *testing.T) {
 // ============ modifiers.go tests ============
 
 func TestPreventDefault(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on:click", PreventDefault())
-	if !strings.Contains(attrName, "__prevent") {
-		t.Errorf("PreventDefault() should add __prevent, got %q", attrName)
+	attr := OnClick().PreventDefault().Attribute()
+	if !strings.Contains(attr.Name, "__prevent") {
+		t.Errorf("PreventDefault() should add __prevent, got %q", attr.Name)
 	}
 }
 
 func TestOnce(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on:click", Once())
-	if !strings.Contains(attrName, "__once") {
-		t.Errorf("Once() should add __once, got %q", attrName)
+	attr := OnClick().Once().Attribute()
+	if !strings.Contains(attr.Name, "__once") {
+		t.Errorf("Once() should add __once, got %q", attr.Name)
 	}
 }
 
 func TestPassive(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on:scroll", Passive())
-	if !strings.Contains(attrName, "__passive") {
-		t.Errorf("Passive() should add __passive, got %q", attrName)
+	attr := On("scroll").Passive().Attribute()
+	if !strings.Contains(attr.Name, "__passive") {
+		t.Errorf("Passive() should add __passive, got %q", attr.Name)
 	}
 }
 
 func TestCapture(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on:click", Capture())
-	if !strings.Contains(attrName, "__capture") {
-		t.Errorf("Capture() should add __capture, got %q", attrName)
+	attr := OnClick().Capture().Attribute()
+	if !strings.Contains(attr.Name, "__capture") {
+		t.Errorf("Capture() should add __capture, got %q", attr.Name)
 	}
 }
 
@@ -247,18 +241,18 @@ func TestCase(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.casing), func(t *testing.T) {
-			attrName, _ := buildTestAttr("data-signals:", Case(tt.casing))
-			if !strings.Contains(attrName, tt.expected) {
-				t.Errorf("Case(%s) should add %s, got %q", tt.casing, tt.expected, attrName)
+			attr := Signals(map[string]any{}).Case(tt.casing).Attribute()
+			if !strings.Contains(attr.Name, tt.expected) {
+				t.Errorf("Case(%s) should add %s, got %q", tt.casing, tt.expected, attr.Name)
 			}
 		})
 	}
 }
 
 func TestDelay(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on:click", Delay(500*time.Millisecond))
-	if !strings.Contains(attrName, "__delay.500ms") {
-		t.Errorf("Delay() should add __delay.500ms, got %q", attrName)
+	attr := OnClick().Delay(500 * time.Millisecond).Attribute()
+	if !strings.Contains(attr.Name, "__delay.500ms") {
+		t.Errorf("Delay() should add __delay.500ms, got %q", attr.Name)
 	}
 }
 
@@ -266,20 +260,20 @@ func TestDebounce(t *testing.T) {
 	tests := []struct {
 		name     string
 		duration time.Duration
-		opts     []TimingMutatorFunc
+		opts     []TimingOption
 		expected string
 	}{
 		{"basic", 300 * time.Millisecond, nil, "__debounce.300ms"},
-		{"with noleading", 500 * time.Millisecond, []TimingMutatorFunc{NoLeading()}, "__debounce.500ms.noleading"},
-		{"with notrailing", 500 * time.Millisecond, []TimingMutatorFunc{NoTrailing()}, "__debounce.500ms.notrailing"},
-		{"with both", 500 * time.Millisecond, []TimingMutatorFunc{NoLeading(), NoTrailing()}, "__debounce.500ms.noleading.notrailing"},
+		{"with noleading", 500 * time.Millisecond, []TimingOption{NoLeading()}, "__debounce.500ms.noleading"},
+		{"with notrailing", 500 * time.Millisecond, []TimingOption{NoTrailing()}, "__debounce.500ms.notrailing"},
+		{"with both", 500 * time.Millisecond, []TimingOption{NoLeading(), NoTrailing()}, "__debounce.500ms.noleading.notrailing"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			attrName, _ := buildTestAttr("data-on:input", Debounce(tt.duration, tt.opts...))
-			if !strings.Contains(attrName, tt.expected) {
-				t.Errorf("Debounce() should contain %s, got %q", tt.expected, attrName)
+			attr := OnInput().Debounce(tt.duration, tt.opts...).Attribute()
+			if !strings.Contains(attr.Name, tt.expected) {
+				t.Errorf("Debounce() should contain %s, got %q", tt.expected, attr.Name)
 			}
 		})
 	}
@@ -289,84 +283,84 @@ func TestThrottle(t *testing.T) {
 	tests := []struct {
 		name     string
 		duration time.Duration
-		opts     []TimingMutatorFunc
+		opts     []TimingOption
 		expected string
 	}{
 		{"basic", 100 * time.Millisecond, nil, "__throttle.100ms"},
-		{"with leading", 200 * time.Millisecond, []TimingMutatorFunc{Leading()}, "__throttle.200ms.leading"},
-		{"with trailing", 200 * time.Millisecond, []TimingMutatorFunc{Trailing()}, "__throttle.200ms.trailing"},
+		{"with leading", 200 * time.Millisecond, []TimingOption{Leading()}, "__throttle.200ms.leading"},
+		{"with trailing", 200 * time.Millisecond, []TimingOption{Trailing()}, "__throttle.200ms.trailing"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			attrName, _ := buildTestAttr("data-on:scroll", Throttle(tt.duration, tt.opts...))
-			if !strings.Contains(attrName, tt.expected) {
-				t.Errorf("Throttle() should contain %s, got %q", tt.expected, attrName)
+			attr := On("scroll").Throttle(tt.duration, tt.opts...).Attribute()
+			if !strings.Contains(attr.Name, tt.expected) {
+				t.Errorf("Throttle() should contain %s, got %q", tt.expected, attr.Name)
 			}
 		})
 	}
 }
 
 func TestViewTransition(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on:click", ViewTransition())
-	if !strings.Contains(attrName, "__viewtransition") {
-		t.Errorf("ViewTransition() should add __viewtransition, got %q", attrName)
+	attr := OnClick().ViewTransition().Attribute()
+	if !strings.Contains(attr.Name, "__viewtransition") {
+		t.Errorf("ViewTransition() should add __viewtransition, got %q", attr.Name)
 	}
 }
 
 func TestWindow(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on:scroll", Window())
-	if !strings.Contains(attrName, "__window") {
-		t.Errorf("Window() should add __window, got %q", attrName)
+	attr := On("scroll").Window().Attribute()
+	if !strings.Contains(attr.Name, "__window") {
+		t.Errorf("Window() should add __window, got %q", attr.Name)
 	}
 }
 
 func TestOutside(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on:click", Outside())
-	if !strings.Contains(attrName, "__outside") {
-		t.Errorf("Outside() should add __outside, got %q", attrName)
+	attr := OnClick().Outside().Attribute()
+	if !strings.Contains(attr.Name, "__outside") {
+		t.Errorf("Outside() should add __outside, got %q", attr.Name)
 	}
 }
 
 func TestStopPropagation(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on:click", StopPropagation())
-	if !strings.Contains(attrName, "__stop") {
-		t.Errorf("StopPropagation() should add __stop, got %q", attrName)
+	attr := OnClick().StopPropagation().Attribute()
+	if !strings.Contains(attr.Name, "__stop") {
+		t.Errorf("StopPropagation() should add __stop, got %q", attr.Name)
 	}
 }
 
 func TestIfMissing(t *testing.T) {
-	attrName, _ := buildTestAttr("data-signals:", IfMissing())
-	if !strings.Contains(attrName, "__ifmissing") {
-		t.Errorf("IfMissing() should add __ifmissing, got %q", attrName)
+	attr := Signals(map[string]any{}).IfMissing().Attribute()
+	if !strings.Contains(attr.Name, "__ifmissing") {
+		t.Errorf("IfMissing() should add __ifmissing, got %q", attr.Name)
 	}
 }
 
 func TestSelf(t *testing.T) {
-	attrName, _ := buildTestAttr("data-ignore", Self())
-	if !strings.Contains(attrName, "__self") {
-		t.Errorf("Self() should add __self, got %q", attrName)
+	attr := OnClick().Self().Attribute()
+	if !strings.Contains(attr.Name, "__self") {
+		t.Errorf("Self() should add __self, got %q", attr.Name)
 	}
 }
 
 func TestTerse(t *testing.T) {
-	attrName, _ := buildTestAttr("data-json-signals", Terse())
-	if !strings.Contains(attrName, "__terse") {
-		t.Errorf("Terse() should add __terse, got %q", attrName)
+	attr := JsonSignalsDebug(nil).Terse().Attribute()
+	if !strings.Contains(attr.Name, "__terse") {
+		t.Errorf("Terse() should add __terse, got %q", attr.Name)
 	}
 }
 
 func TestHalf(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on-intersect", Half())
-	if !strings.Contains(attrName, "__half") {
-		t.Errorf("Half() should add __half, got %q", attrName)
+	attr := OnIntersect().Half().Attribute()
+	if !strings.Contains(attr.Name, "__half") {
+		t.Errorf("Half() should add __half, got %q", attr.Name)
 	}
 }
 
 func TestFull(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on-intersect", Full())
-	if !strings.Contains(attrName, "__full") {
-		t.Errorf("Full() should add __full, got %q", attrName)
+	attr := OnIntersect().Full().Attribute()
+	if !strings.Contains(attr.Name, "__full") {
+		t.Errorf("Full() should add __full, got %q", attr.Name)
 	}
 }
 
@@ -374,27 +368,27 @@ func TestDuration(t *testing.T) {
 	tests := []struct {
 		name     string
 		duration time.Duration
-		opts     []DurationMutatorFunc
+		opts     []TimingOption
 		expected string
 	}{
 		{"basic", 500 * time.Millisecond, nil, "__duration.500ms"},
-		{"with leading", 2 * time.Second, []DurationMutatorFunc{DurationLeading()}, "__duration.2s.leading"},
+		{"with leading", 2 * time.Second, []TimingOption{DurationLeading()}, "__duration.2s.leading"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			attrName, _ := buildTestAttr("data-on-interval", Duration(tt.duration, tt.opts...))
-			if !strings.Contains(attrName, tt.expected) {
-				t.Errorf("Duration() should contain %s, got %q", tt.expected, attrName)
+			attr := OnInterval().Duration(tt.duration, tt.opts...).Attribute()
+			if !strings.Contains(attr.Name, tt.expected) {
+				t.Errorf("Duration() should contain %s, got %q", tt.expected, attr.Name)
 			}
 		})
 	}
 }
 
 func TestExit(t *testing.T) {
-	attrName, _ := buildTestAttr("data-on-intersect", Exit())
-	if !strings.Contains(attrName, "__exit") {
-		t.Errorf("Exit() should add __exit, got %q", attrName)
+	attr := OnIntersect().Exit().Attribute()
+	if !strings.Contains(attr.Name, "__exit") {
+		t.Errorf("Exit() should add __exit, got %q", attr.Name)
 	}
 }
 
@@ -412,9 +406,9 @@ func TestThreshold(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			attrName, _ := buildTestAttr("data-on-intersect", Threshold(tt.value))
-			if !strings.Contains(attrName, tt.expected) {
-				t.Errorf("Threshold(%v) should contain %s, got %q", tt.value, tt.expected, attrName)
+			attr := OnIntersect().Threshold(tt.value).Attribute()
+			if !strings.Contains(attr.Name, tt.expected) {
+				t.Errorf("Threshold(%v) should contain %s, got %q", tt.value, tt.expected, attr.Name)
 			}
 		})
 	}
@@ -436,9 +430,9 @@ func TestSetSignalExpr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			action := SetSignalExpr(tt.signalName, tt.expr)
-			_, attrValue := buildTestAttr("test", action)
-			if attrValue != tt.expected {
-				t.Errorf("SetSignalExpr() = %q, want %q", attrValue, tt.expected)
+			attr := OnClick(action).Attribute()
+			if attr.Value != tt.expected {
+				t.Errorf("SetSignalExpr() = %q, want %q", attr.Value, tt.expected)
 			}
 		})
 	}
@@ -460,16 +454,16 @@ func TestSetSignal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			action := SetSignal(tt.signalName, tt.value)
-			_, attrValue := buildTestAttr("test", action)
-			if attrValue != tt.expected {
-				t.Errorf("SetSignal() = %q, want %q", attrValue, tt.expected)
+			attr := OnClick(action).Attribute()
+			if attr.Value != tt.expected {
+				t.Errorf("SetSignal() = %q, want %q", attr.Value, tt.expected)
 			}
 		})
 	}
 }
 
 func TestOnSubmit(t *testing.T) {
-	attr := OnSubmit(Raw("$submit()"))
+	attr := OnSubmit(Raw("$submit()")).Attribute()
 	if attr.Name != "data-on:submit" {
 		t.Errorf("OnSubmit().Name = %q, want %q", attr.Name, "data-on:submit")
 	}
@@ -479,21 +473,21 @@ func TestOnSubmit(t *testing.T) {
 }
 
 func TestOnInput(t *testing.T) {
-	attr := OnInput(Raw("$validate()"))
+	attr := OnInput(Raw("$validate()")).Attribute()
 	if attr.Name != "data-on:input" {
 		t.Errorf("OnInput().Name = %q, want %q", attr.Name, "data-on:input")
 	}
 }
 
 func TestOnChange(t *testing.T) {
-	attr := OnChange(Raw("$update()"))
+	attr := OnChange(Raw("$update()")).Attribute()
 	if attr.Name != "data-on:change" {
 		t.Errorf("OnChange().Name = %q, want %q", attr.Name, "data-on:change")
 	}
 }
 
 func TestOnClick(t *testing.T) {
-	attr := OnClick(Raw("$count++"))
+	attr := OnClick(Raw("$count++")).Attribute()
 	if attr.Name != "data-on:click" {
 		t.Errorf("OnClick().Name = %q, want %q", attr.Name, "data-on:click")
 	}
@@ -503,14 +497,14 @@ func TestOnClick(t *testing.T) {
 }
 
 func TestOnLoad(t *testing.T) {
-	attr := OnLoad(Raw("$init()"))
+	attr := OnLoad(Raw("$init()")).Attribute()
 	if attr.Name != "data-on:load" {
 		t.Errorf("OnLoad().Name = %q, want %q", attr.Name, "data-on:load")
 	}
 }
 
 func TestOn(t *testing.T) {
-	attr := On("keydown", Raw("$handleKey(event)"))
+	attr := On("keydown", Raw("$handleKey(event)")).Attribute()
 	if attr.Name != "data-on:keydown" {
 		t.Errorf("On().Name = %q, want %q", attr.Name, "data-on:keydown")
 	}
@@ -520,7 +514,7 @@ func TestOn(t *testing.T) {
 }
 
 func TestOnIntersect(t *testing.T) {
-	attr := OnIntersect(Once(), Raw("$seen = true"))
+	attr := OnIntersect(Raw("$seen = true")).Once().Attribute()
 	if !strings.HasPrefix(attr.Name, "data-on-intersect") {
 		t.Errorf("OnIntersect().Name should start with data-on-intersect, got %q", attr.Name)
 	}
@@ -530,7 +524,7 @@ func TestOnIntersect(t *testing.T) {
 }
 
 func TestOnInterval(t *testing.T) {
-	attr := OnInterval(Duration(500*time.Millisecond), Raw("$tick()"))
+	attr := OnInterval(Raw("$tick()")).Duration(500 * time.Millisecond).Attribute()
 	if !strings.HasPrefix(attr.Name, "data-on-interval") {
 		t.Errorf("OnInterval().Name should start with data-on-interval, got %q", attr.Name)
 	}
@@ -540,7 +534,7 @@ func TestOnInterval(t *testing.T) {
 }
 
 func TestOnSignalPatch(t *testing.T) {
-	attr := OnSignalPatch(Raw("console.log('changed')"))
+	attr := OnSignalPatch(Raw("console.log('changed')")).Attribute()
 	if attr.Name != "data-on-signal-patch" {
 		t.Errorf("OnSignalPatch().Name = %q, want %q", attr.Name, "data-on-signal-patch")
 	}
@@ -564,18 +558,17 @@ func TestOnSignalPatchFilter(t *testing.T) {
 }
 
 func TestSignalExpr(t *testing.T) {
-	attr := SignalExpr("count", Raw("0"))
-	// The expression is appended to the name, value is empty
-	if attr.Name != "data-signals:count0" {
-		t.Errorf("SignalExpr().Name = %q, want %q", attr.Name, "data-signals:count0")
+	attr := SignalExpr("count", Raw("0")).Attribute()
+	if attr.Name != "data-signals:count" {
+		t.Errorf("SignalExpr().Name = %q, want %q", attr.Name, "data-signals:count")
 	}
-	if attr.Value != "" {
-		t.Errorf("SignalExpr().Value = %q, want empty", attr.Value)
+	if attr.Value != "0" {
+		t.Errorf("SignalExpr().Value = %q, want %q", attr.Value, "0")
 	}
 }
 
 func TestSignal(t *testing.T) {
-	attr := Signal("count", 0)
+	attr := Signal("count", 0).Attribute()
 	if attr.Name != "data-signals:count" {
 		t.Errorf("Signal().Name = %q, want %q", attr.Name, "data-signals:count")
 	}
@@ -583,14 +576,14 @@ func TestSignal(t *testing.T) {
 		t.Errorf("Signal().Value = %q, want %q", attr.Value, "0")
 	}
 
-	attr = Signal("name", "hello")
+	attr = Signal("name", "hello").Attribute()
 	if attr.Value != `"hello"` {
 		t.Errorf("Signal().Value = %q, want %q", attr.Value, `"hello"`)
 	}
 }
 
 func TestSignals(t *testing.T) {
-	attr := Signals(map[string]any{"foo": 1, "bar": "hello"})
+	attr := Signals(map[string]any{"foo": 1, "bar": "hello"}).Attribute()
 	if attr.Name != "data-signals" {
 		t.Errorf("Signals().Name = %q, want %q", attr.Name, "data-signals")
 	}
@@ -601,7 +594,7 @@ func TestSignals(t *testing.T) {
 }
 
 func TestBind(t *testing.T) {
-	attr := Bind("username")
+	attr := Bind("username").Attribute()
 	if attr.Name != "data-bind" {
 		t.Errorf("Bind().Name = %q, want %q", attr.Name, "data-bind")
 	}
@@ -612,8 +605,8 @@ func TestBind(t *testing.T) {
 
 func TestClass(t *testing.T) {
 	attr := Class("active", Raw("$isActive"))
-	if attr.Name != "data-classactive" {
-		t.Errorf("Class().Name = %q, want %q", attr.Name, "data-classactive")
+	if attr.Name != "data-class:active" {
+		t.Errorf("Class().Name = %q, want %q", attr.Name, "data-class:active")
 	}
 	if attr.Value != "$isActive" {
 		t.Errorf("Class().Value = %q, want %q", attr.Value, "$isActive")
@@ -703,18 +696,17 @@ func TestPeek(t *testing.T) {
 }
 
 func TestComputed(t *testing.T) {
-	attr := Computed("total", Raw("$price * $qty"))
-	// The expression is appended to the name, value is empty
-	if attr.Name != "data-computed:total$price * $qty" {
-		t.Errorf("Computed().Name = %q, want %q", attr.Name, "data-computed:total$price * $qty")
+	attr := Computed("total", Raw("$price * $qty")).Attribute()
+	if attr.Name != "data-computed:total" {
+		t.Errorf("Computed().Name = %q, want %q", attr.Name, "data-computed:total")
 	}
-	if attr.Value != "" {
-		t.Errorf("Computed().Value = %q, want empty", attr.Value)
+	if attr.Value != "$price * $qty" {
+		t.Errorf("Computed().Value = %q, want %q", attr.Value, "$price * $qty")
 	}
 }
 
 func TestComputedExpr(t *testing.T) {
-	attr := ComputedExpr("total", Case(CamelCase), Raw("$price * $qty"))
+	attr := Computed("total", Raw("$price * $qty")).Case(CamelCase).Attribute()
 	if !strings.HasPrefix(attr.Name, "data-computed:") {
 		t.Errorf("ComputedExpr().Name should start with data-computed:, got %q", attr.Name)
 	}
@@ -734,7 +726,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestRef(t *testing.T) {
-	attr := Ref("myElement")
+	attr := Ref("myElement").Attribute()
 	if attr.Name != "data-ref:myElement" {
 		t.Errorf("Ref().Name = %q, want %q", attr.Name, "data-ref:myElement")
 	}
@@ -790,27 +782,27 @@ func TestPreserveAttr(t *testing.T) {
 
 func TestJsonSignalsDebug(t *testing.T) {
 	// Without options
-	attr := JsonSignalsDebug(nil)
+	attr := JsonSignalsDebug(nil).Attribute()
 	if attr.Name != "data-json-signals" {
 		t.Errorf("JsonSignalsDebug(nil).Name = %q, want %q", attr.Name, "data-json-signals")
 	}
 
 	// With options
 	pattern := "user"
-	attr = JsonSignalsDebug(&FilterOptions{IncludeReg: &pattern})
+	attr = JsonSignalsDebug(&FilterOptions{IncludeReg: &pattern}).Attribute()
 	if !strings.Contains(attr.Value, "include: /user/") {
 		t.Errorf("JsonSignalsDebug().Value should contain include regex, got %q", attr.Value)
 	}
 
 	// With modifiers only
-	attr = JsonSignalsDebug(nil, Terse())
+	attr = JsonSignalsDebug(nil).Terse().Attribute()
 	if !strings.Contains(attr.Name, "__terse") {
-		t.Errorf("JsonSignalsDebug(nil, Terse()).Name should contain __terse, got %q", attr.Name)
+		t.Errorf("JsonSignalsDebug(nil).Terse().Name should contain __terse, got %q", attr.Name)
 	}
 }
 
 func TestBindKey(t *testing.T) {
-	attr := BindKey("foo", Case(CamelCase))
+	attr := BindKey("foo").Case(CamelCase).Attribute()
 	if !strings.HasPrefix(attr.Name, "data-bind:") {
 		t.Errorf("BindKey().Name should start with data-bind:, got %q", attr.Name)
 	}
@@ -820,7 +812,7 @@ func TestBindKey(t *testing.T) {
 }
 
 func TestIndicatorKey(t *testing.T) {
-	attr := IndicatorKey("fetching", Case(CamelCase))
+	attr := IndicatorKey("fetching").Case(CamelCase).Attribute()
 	if !strings.HasPrefix(attr.Name, "data-indicator:") {
 		t.Errorf("IndicatorKey().Name should start with data-indicator:, got %q", attr.Name)
 	}
@@ -829,7 +821,7 @@ func TestIndicatorKey(t *testing.T) {
 	}
 
 	// With $ prefix
-	attr = IndicatorKey("$fetching")
+	attr = IndicatorKey("$fetching").Attribute()
 	if !strings.Contains(attr.Name, "fetching") {
 		t.Errorf("IndicatorKey($fetching).Name should contain fetching (without $), got %q", attr.Name)
 	}
@@ -865,17 +857,6 @@ func TestFilterOptions(t *testing.T) {
 				t.Errorf("appendJS() = %q, want %q", got, tt.expected)
 			}
 		})
-	}
-}
-
-func TestFilterOptionsValue(t *testing.T) {
-	include := "^user"
-	opts := &FilterOptions{IncludeReg: &include}
-	v := FilterOptionsValue(opts)
-
-	_, attrValue := buildTestAttr("test", v)
-	if !strings.Contains(attrValue, "include: /^user/") {
-		t.Errorf("FilterOptionsValue().Modify() = %q, should contain include regex", attrValue)
 	}
 }
 
@@ -924,10 +905,10 @@ func TestGet(t *testing.T) {
 		t.Errorf("Get() = %q, want %q", got, expected)
 	}
 
-	// Test as AttrMutator
-	_, attrValue := buildTestAttr("test", v)
-	if attrValue != expected {
-		t.Errorf("Get().Modify() = %q, want %q", attrValue, expected)
+	// Test as event-handler value
+	attr := OnClick(v).Attribute()
+	if attr.Value != expected {
+		t.Errorf("OnClick(Get()).Value = %q, want %q", attr.Value, expected)
 	}
 }
 
@@ -971,10 +952,10 @@ func TestGetDynamic(t *testing.T) {
 		t.Errorf("GetDynamic() = %q, want %q", got, expected)
 	}
 
-	// Test as AttrMutator
-	_, attrValue := buildTestAttr("test", v)
-	if attrValue != expected {
-		t.Errorf("GetDynamic().Modify() = %q, want %q", attrValue, expected)
+	// Test as event-handler value
+	attr := OnClick(v).Attribute()
+	if attr.Value != expected {
+		t.Errorf("OnClick(GetDynamic()).Value = %q, want %q", attr.Value, expected)
 	}
 }
 
@@ -1113,28 +1094,8 @@ func TestPayload(t *testing.T) {
 
 // ============ builders.go tests ============
 
-func TestBuildAttr(t *testing.T) {
-	attr := buildAttr("data-test", Raw("$foo"), Raw("$bar"))
-	if attr.name.String() != "data-test" {
-		t.Errorf("buildAttr().name = %q, want %q", attr.name.String(), "data-test")
-	}
-	if len(attr.statements) != 2 {
-		t.Errorf("buildAttr().statements length = %d, want 2", len(attr.statements))
-	}
-}
-
-func TestExprAttr(t *testing.T) {
-	attr := exprAttr("data-on:click", PreventDefault(), Raw("$count++"))
-	if !strings.HasPrefix(attr.Name, "data-on:click") {
-		t.Errorf("exprAttr().Name = %q, should start with data-on:click", attr.Name)
-	}
-	if attr.Value != "$count++" {
-		t.Errorf("exprAttr().Value = %q, want %q", attr.Value, "$count++")
-	}
-}
-
 func TestMultipleStatements(t *testing.T) {
-	attr := exprAttr("data-on:click", Raw("$a = 1"), Raw("$b = 2"))
+	attr := OnClick(Raw("$a = 1"), Raw("$b = 2")).Attribute()
 	if attr.Value != "$a = 1; $b = 2" {
 		t.Errorf("multiple statements = %q, want %q", attr.Value, "$a = 1; $b = 2")
 	}

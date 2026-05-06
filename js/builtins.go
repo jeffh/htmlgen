@@ -1,501 +1,365 @@
 package js
 
-// Pre-defined global identifiers
+// Pre-defined global identifiers.
 var (
-	// Console is the console object
+	// Console is the console object.
 	Console = Ident("console")
-	// Document is the document object
+	// Document is the document object.
 	Document = Ident("document")
-	// Window is the window object
+	// Window is the window object.
 	Window = Ident("window")
-	// Event is the event object in handlers (the event parameter)
+	// Event is the event object in handlers (the event parameter).
 	Event = Ident("event")
-	// EventThis is the 'this' value in event handlers (the element)
+	// EventThis is the 'this' value in event handlers (the element).
 	EventThis = This()
-	// Location is the window.location object
+	// Location is the window.location object.
 	Location = Ident("location")
-	// History is the window.history object
+	// History is the window.history object.
 	History = Ident("history")
-	// Navigator is the window.navigator object
+	// Navigator is the window.navigator object.
 	Navigator = Ident("navigator")
-	// LocalStorage is the localStorage object
+	// LocalStorage is the localStorage object.
 	LocalStorage = Ident("localStorage")
-	// SessionStorage is the sessionStorage object
+	// SessionStorage is the sessionStorage object.
 	SessionStorage = Ident("sessionStorage")
-	// JSON_ is the JSON global object (underscore to avoid conflict with JSON() function)
+	// JSON_ is the JSON global object (underscore to avoid conflict with JSON()).
 	JSON_ = Ident("JSON")
-	// Math is the Math global object
+	// Math is the Math global object.
 	Math = Ident("Math")
-	// Date is the Date constructor
+	// Date is the Date constructor.
 	Date = Ident("Date")
-	// Promise is the Promise constructor
+	// Promise is the Promise constructor.
 	Promise = Ident("Promise")
-	// Object_ is the Object constructor
+	// Object_ is the Object constructor.
 	Object_ = Ident("Object")
-	// Array_ is the Array constructor
+	// Array_ is the Array constructor.
 	Array_ = Ident("Array")
 )
 
 // Console methods
 
-// ConsoleLog creates console.log(args...)
-func ConsoleLog(args ...Expr) Callable {
-	return Method(Console, "log", args...)
-}
+// ConsoleLog creates console.log(args...).
+func ConsoleLog(args ...Expr) Expr { return Console.Method("log", args...) }
 
-// ConsoleError creates console.error(args...)
-func ConsoleError(args ...Expr) Callable {
-	return Method(Console, "error", args...)
-}
+// ConsoleError creates console.error(args...).
+func ConsoleError(args ...Expr) Expr { return Console.Method("error", args...) }
 
-// ConsoleWarn creates console.warn(args...)
-func ConsoleWarn(args ...Expr) Callable {
-	return Method(Console, "warn", args...)
-}
+// ConsoleWarn creates console.warn(args...).
+func ConsoleWarn(args ...Expr) Expr { return Console.Method("warn", args...) }
 
-// ConsoleInfo creates console.info(args...)
-func ConsoleInfo(args ...Expr) Callable {
-	return Method(Console, "info", args...)
-}
+// ConsoleInfo creates console.info(args...).
+func ConsoleInfo(args ...Expr) Expr { return Console.Method("info", args...) }
 
-// ConsoleDebug creates console.debug(args...)
-func ConsoleDebug(args ...Expr) Callable {
-	return Method(Console, "debug", args...)
-}
+// ConsoleDebug creates console.debug(args...).
+func ConsoleDebug(args ...Expr) Expr { return Console.Method("debug", args...) }
 
-// ConsoleTable creates console.table(data)
-func ConsoleTable(data Expr) Callable {
-	return Method(Console, "table", data)
-}
+// ConsoleTable creates console.table(data).
+func ConsoleTable(data Expr) Expr { return Console.Method("table", data) }
 
-// ConsoleClear creates console.clear()
-func ConsoleClear() Callable {
-	return Method(Console, "clear")
-}
+// ConsoleClear creates console.clear().
+func ConsoleClear() Expr { return Console.Method("clear") }
 
 // Document methods
 
-// GetElementById creates document.getElementById(id)
-func GetElementById(id Expr) Callable {
-	return Method(Document, "getElementById", id)
+// GetElementById creates document.getElementById(id).
+func GetElementById(id Expr) Expr { return Document.Method("getElementById", id) }
+
+// QuerySelector creates document.querySelector(selector).
+func QuerySelector(selector Expr) Expr { return Document.Method("querySelector", selector) }
+
+// QuerySelectorAll creates document.querySelectorAll(selector).
+func QuerySelectorAll(selector Expr) Expr { return Document.Method("querySelectorAll", selector) }
+
+// CreateElement creates document.createElement(tag).
+func CreateElement(tag Expr) Expr { return Document.Method("createElement", tag) }
+
+// CreateTextNode creates document.createTextNode(text).
+func CreateTextNode(text Expr) Expr { return Document.Method("createTextNode", text) }
+
+// GetElementsByClassName creates document.getElementsByClassName(className).
+func GetElementsByClassName(className Expr) Expr {
+	return Document.Method("getElementsByClassName", className)
 }
 
-// QuerySelector creates document.querySelector(selector)
-func QuerySelector(selector Expr) Callable {
-	return Method(Document, "querySelector", selector)
-}
-
-// QuerySelectorAll creates document.querySelectorAll(selector)
-func QuerySelectorAll(selector Expr) Callable {
-	return Method(Document, "querySelectorAll", selector)
-}
-
-// CreateElement creates document.createElement(tag)
-func CreateElement(tag Expr) Callable {
-	return Method(Document, "createElement", tag)
-}
-
-// CreateTextNode creates document.createTextNode(text)
-func CreateTextNode(text Expr) Callable {
-	return Method(Document, "createTextNode", text)
-}
-
-// GetElementsByClassName creates document.getElementsByClassName(className)
-func GetElementsByClassName(className Expr) Callable {
-	return Method(Document, "getElementsByClassName", className)
-}
-
-// GetElementsByTagName creates document.getElementsByTagName(tagName)
-func GetElementsByTagName(tagName Expr) Callable {
-	return Method(Document, "getElementsByTagName", tagName)
+// GetElementsByTagName creates document.getElementsByTagName(tagName).
+func GetElementsByTagName(tagName Expr) Expr {
+	return Document.Method("getElementsByTagName", tagName)
 }
 
 // Window methods
 
-// Alert creates alert(message)
-func Alert(message Expr) Callable {
-	return Call(Ident("alert"), message)
-}
+// Alert creates alert(message).
+func Alert(message Expr) Expr { return Ident("alert").Call(message) }
 
-// Confirm creates confirm(message)
-func Confirm(message Expr) Callable {
-	return Call(Ident("confirm"), message)
-}
+// Confirm creates confirm(message).
+func Confirm(message Expr) Expr { return Ident("confirm").Call(message) }
 
-// Prompt creates prompt(message, defaultValue)
-func Prompt(message Expr, defaultValue ...Expr) Callable {
+// Prompt creates prompt(message, defaultValue?).
+func Prompt(message Expr, defaultValue ...Expr) Expr {
 	args := make([]Expr, 1, 1+len(defaultValue))
 	args[0] = message
 	args = append(args, defaultValue...)
-	return Call(Ident("prompt"), args...)
+	return Ident("prompt").Call(args...)
 }
 
-// SetTimeout creates setTimeout(callback, delay)
-func SetTimeout(callback, delay Expr) Callable {
-	return Call(Ident("setTimeout"), callback, delay)
+// SetTimeout creates setTimeout(callback, delay).
+func SetTimeout(callback, delay Expr) Expr {
+	return Ident("setTimeout").Call(callback, delay)
 }
 
-// SetInterval creates setInterval(callback, interval)
-func SetInterval(callback, interval Expr) Callable {
-	return Call(Ident("setInterval"), callback, interval)
+// SetInterval creates setInterval(callback, interval).
+func SetInterval(callback, interval Expr) Expr {
+	return Ident("setInterval").Call(callback, interval)
 }
 
-// ClearTimeout creates clearTimeout(id)
-func ClearTimeout(id Expr) Callable {
-	return Call(Ident("clearTimeout"), id)
+// ClearTimeout creates clearTimeout(id).
+func ClearTimeout(id Expr) Expr { return Ident("clearTimeout").Call(id) }
+
+// ClearInterval creates clearInterval(id).
+func ClearInterval(id Expr) Expr { return Ident("clearInterval").Call(id) }
+
+// RequestAnimationFrame creates requestAnimationFrame(callback).
+func RequestAnimationFrame(callback Expr) Expr {
+	return Ident("requestAnimationFrame").Call(callback)
 }
 
-// ClearInterval creates clearInterval(id)
-func ClearInterval(id Expr) Callable {
-	return Call(Ident("clearInterval"), id)
-}
+// CancelAnimationFrame creates cancelAnimationFrame(id).
+func CancelAnimationFrame(id Expr) Expr { return Ident("cancelAnimationFrame").Call(id) }
 
-// RequestAnimationFrame creates requestAnimationFrame(callback)
-func RequestAnimationFrame(callback Expr) Callable {
-	return Call(Ident("requestAnimationFrame"), callback)
-}
-
-// CancelAnimationFrame creates cancelAnimationFrame(id)
-func CancelAnimationFrame(id Expr) Callable {
-	return Call(Ident("cancelAnimationFrame"), id)
-}
-
-// Fetch creates fetch(url, options)
-func Fetch(url Expr, options ...Expr) Callable {
+// Fetch creates fetch(url, options?).
+func Fetch(url Expr, options ...Expr) Expr {
 	args := make([]Expr, 1, 1+len(options))
 	args[0] = url
 	args = append(args, options...)
-	return Call(Ident("fetch"), args...)
+	return Ident("fetch").Call(args...)
 }
 
 // Event helpers
 
-// PreventDefault creates event.preventDefault()
-func PreventDefault() Callable {
-	return Method(Event, "preventDefault")
-}
+// PreventDefault creates event.preventDefault().
+func PreventDefault() Expr { return Event.Method("preventDefault") }
 
-// StopPropagation creates event.stopPropagation()
-func StopPropagation() Callable {
-	return Method(Event, "stopPropagation")
-}
+// StopPropagation creates event.stopPropagation().
+func StopPropagation() Expr { return Event.Method("stopPropagation") }
 
-// StopImmediatePropagation creates event.stopImmediatePropagation()
-func StopImmediatePropagation() Callable {
-	return Method(Event, "stopImmediatePropagation")
-}
+// StopImmediatePropagation creates event.stopImmediatePropagation().
+func StopImmediatePropagation() Expr { return Event.Method("stopImmediatePropagation") }
 
-// EventTarget creates event.target
-func EventTarget() Callable {
-	return Prop(Event, "target")
-}
+// EventTarget creates event.target.
+func EventTarget() Expr { return Event.Prop("target") }
 
-// EventCurrentTarget creates event.currentTarget
-func EventCurrentTarget() Callable {
-	return Prop(Event, "currentTarget")
-}
+// EventCurrentTarget creates event.currentTarget.
+func EventCurrentTarget() Expr { return Event.Prop("currentTarget") }
 
-// EventValue creates event.target.value (common for input handlers)
-func EventValue() Callable {
-	return Prop(Prop(Event, "target"), "value")
-}
+// EventValue creates event.target.value.
+func EventValue() Expr { return Event.Prop("target").Prop("value") }
 
-// EventChecked creates event.target.checked (common for checkbox handlers)
-func EventChecked() Callable {
-	return Prop(Prop(Event, "target"), "checked")
-}
+// EventChecked creates event.target.checked.
+func EventChecked() Expr { return Event.Prop("target").Prop("checked") }
 
-// EventKey creates event.key (for keyboard events)
-func EventKey() Callable {
-	return Prop(Event, "key")
-}
+// EventKey creates event.key.
+func EventKey() Expr { return Event.Prop("key") }
 
-// EventCode creates event.code (for keyboard events)
-func EventCode() Callable {
-	return Prop(Event, "code")
-}
+// EventCode creates event.code.
+func EventCode() Expr { return Event.Prop("code") }
 
-// EventKeyCode creates event.keyCode (for keyboard events, deprecated but common)
-func EventKeyCode() Callable {
-	return Prop(Event, "keyCode")
-}
+// EventKeyCode creates event.keyCode (deprecated but common).
+func EventKeyCode() Expr { return Event.Prop("keyCode") }
 
-// EventWhich creates event.which (for keyboard events, deprecated but common)
-func EventWhich() Callable {
-	return Prop(Event, "which")
-}
+// EventWhich creates event.which (deprecated but common).
+func EventWhich() Expr { return Event.Prop("which") }
 
-// EventShiftKey creates event.shiftKey
-func EventShiftKey() Callable {
-	return Prop(Event, "shiftKey")
-}
+// EventShiftKey creates event.shiftKey.
+func EventShiftKey() Expr { return Event.Prop("shiftKey") }
 
-// EventCtrlKey creates event.ctrlKey
-func EventCtrlKey() Callable {
-	return Prop(Event, "ctrlKey")
-}
+// EventCtrlKey creates event.ctrlKey.
+func EventCtrlKey() Expr { return Event.Prop("ctrlKey") }
 
-// EventAltKey creates event.altKey
-func EventAltKey() Callable {
-	return Prop(Event, "altKey")
-}
+// EventAltKey creates event.altKey.
+func EventAltKey() Expr { return Event.Prop("altKey") }
 
-// EventMetaKey creates event.metaKey
-func EventMetaKey() Callable {
-	return Prop(Event, "metaKey")
-}
+// EventMetaKey creates event.metaKey.
+func EventMetaKey() Expr { return Event.Prop("metaKey") }
 
 // Navigation helpers
 
-// Navigate creates location.href = url
-func Navigate(url Expr) Stmt {
-	return Assign(Prop(Location, "href"), url)
+// Navigate creates location.href = url.
+func Navigate(url Expr) Stmt { return Location.Prop("href").Assign(url) }
+
+// Reload creates location.reload().
+func Reload() Expr { return Location.Method("reload") }
+
+// HistoryBack creates history.back().
+func HistoryBack() Expr { return History.Method("back") }
+
+// HistoryForward creates history.forward().
+func HistoryForward() Expr { return History.Method("forward") }
+
+// HistoryGo creates history.go(delta).
+func HistoryGo(delta Expr) Expr { return History.Method("go", delta) }
+
+// HistoryPushState creates history.pushState(state, title, url).
+func HistoryPushState(state, title, url Expr) Expr {
+	return History.Method("pushState", state, title, url)
 }
 
-// Reload creates location.reload()
-func Reload() Callable {
-	return Method(Location, "reload")
+// HistoryReplaceState creates history.replaceState(state, title, url).
+func HistoryReplaceState(state, title, url Expr) Expr {
+	return History.Method("replaceState", state, title, url)
 }
 
-// HistoryBack creates history.back()
-func HistoryBack() Callable {
-	return Method(History, "back")
+// Storage helpers — methods on a storage Expr.
+
+// GetItem creates storage.getItem(key).
+func (e Expr) GetItem(key Expr) Expr { return e.Method("getItem", key) }
+
+// SetItem creates storage.setItem(key, value).
+func (e Expr) SetItem(key, value Expr) Expr { return e.Method("setItem", key, value) }
+
+// RemoveItem creates storage.removeItem(key).
+func (e Expr) RemoveItem(key Expr) Expr { return e.Method("removeItem", key) }
+
+// ClearStorage creates storage.clear().
+func (e Expr) ClearStorage() Expr { return e.Method("clear") }
+
+// Element helpers — methods on an element Expr.
+
+// Focus creates element.focus().
+func (e Expr) Focus() Expr { return e.Method("focus") }
+
+// Blur creates element.blur().
+func (e Expr) Blur() Expr { return e.Method("blur") }
+
+// Click creates element.click().
+func (e Expr) Click() Expr { return e.Method("click") }
+
+// SelectElement creates element.select().
+func (e Expr) SelectElement() Expr { return e.Method("select") }
+
+// AppendChild creates parent.appendChild(child).
+func (e Expr) AppendChild(child Expr) Expr { return e.Method("appendChild", child) }
+
+// RemoveChild creates parent.removeChild(child).
+func (e Expr) RemoveChild(child Expr) Expr { return e.Method("removeChild", child) }
+
+// InsertBefore creates parent.insertBefore(newNode, referenceNode).
+func (e Expr) InsertBefore(newNode, referenceNode Expr) Expr {
+	return e.Method("insertBefore", newNode, referenceNode)
 }
 
-// HistoryForward creates history.forward()
-func HistoryForward() Callable {
-	return Method(History, "forward")
+// ReplaceChild creates parent.replaceChild(newChild, oldChild).
+func (e Expr) ReplaceChild(newChild, oldChild Expr) Expr {
+	return e.Method("replaceChild", newChild, oldChild)
 }
 
-// HistoryGo creates history.go(delta)
-func HistoryGo(delta Expr) Callable {
-	return Method(History, "go", delta)
+// Remove creates element.remove().
+func (e Expr) Remove() Expr { return e.Method("remove") }
+
+// CloneNode creates element.cloneNode(deep).
+func (e Expr) CloneNode(deep Expr) Expr { return e.Method("cloneNode", deep) }
+
+// ClassList creates element.classList.
+func (e Expr) ClassList() Expr { return e.Prop("classList") }
+
+// ClassListAdd creates element.classList.add(classes...).
+func (e Expr) ClassListAdd(classes ...Expr) Expr {
+	return e.ClassList().Method("add", classes...)
 }
 
-// HistoryPushState creates history.pushState(state, title, url)
-func HistoryPushState(state, title, url Expr) Callable {
-	return Method(History, "pushState", state, title, url)
+// ClassListRemove creates element.classList.remove(classes...).
+func (e Expr) ClassListRemove(classes ...Expr) Expr {
+	return e.ClassList().Method("remove", classes...)
 }
 
-// HistoryReplaceState creates history.replaceState(state, title, url)
-func HistoryReplaceState(state, title, url Expr) Callable {
-	return Method(History, "replaceState", state, title, url)
-}
-
-// Storage helpers
-
-// GetItem creates storage.getItem(key)
-func GetItem(storage Callable, key Expr) Callable {
-	return Method(storage, "getItem", key)
-}
-
-// SetItem creates storage.setItem(key, value)
-func SetItem(storage Callable, key, value Expr) Callable {
-	return Method(storage, "setItem", key, value)
-}
-
-// RemoveItem creates storage.removeItem(key)
-func RemoveItem(storage Callable, key Expr) Callable {
-	return Method(storage, "removeItem", key)
-}
-
-// ClearStorage creates storage.clear()
-func ClearStorage(storage Callable) Callable {
-	return Method(storage, "clear")
-}
-
-// Focus/Blur helpers
-
-// Focus creates element.focus()
-func Focus(element Callable) Callable {
-	return Method(element, "focus")
-}
-
-// Blur creates element.blur()
-func Blur(element Callable) Callable {
-	return Method(element, "blur")
-}
-
-// FocusThis creates this.focus() (for use in event handlers)
-func FocusThis() Callable {
-	return Method(EventThis, "focus")
-}
-
-// BlurThis creates this.blur() (for use in event handlers)
-func BlurThis() Callable {
-	return Method(EventThis, "blur")
-}
-
-// Click creates element.click()
-func Click(element Callable) Callable {
-	return Method(element, "click")
-}
-
-// Select creates element.select()
-func Select(element Callable) Callable {
-	return Method(element, "select")
-}
-
-// DOM manipulation helpers
-
-// AppendChild creates parent.appendChild(child)
-func AppendChild(parent, child Callable) Callable {
-	return Method(parent, "appendChild", child)
-}
-
-// RemoveChild creates parent.removeChild(child)
-func RemoveChild(parent, child Callable) Callable {
-	return Method(parent, "removeChild", child)
-}
-
-// InsertBefore creates parent.insertBefore(newNode, referenceNode)
-func InsertBefore(parent, newNode, referenceNode Callable) Callable {
-	return Method(parent, "insertBefore", newNode, referenceNode)
-}
-
-// ReplaceChild creates parent.replaceChild(newChild, oldChild)
-func ReplaceChild(parent, newChild, oldChild Callable) Callable {
-	return Method(parent, "replaceChild", newChild, oldChild)
-}
-
-// Remove creates element.remove()
-func Remove(element Callable) Callable {
-	return Method(element, "remove")
-}
-
-// CloneNode creates element.cloneNode(deep)
-func CloneNode(element Callable, deep Expr) Callable {
-	return Method(element, "cloneNode", deep)
-}
-
-// ClassList helpers
-
-// ClassList creates element.classList
-func ClassList(element Callable) Callable {
-	return Prop(element, "classList")
-}
-
-// ClassListAdd creates element.classList.add(classes...)
-func ClassListAdd(element Callable, classes ...Expr) Callable {
-	return Method(ClassList(element), "add", classes...)
-}
-
-// ClassListRemove creates element.classList.remove(classes...)
-func ClassListRemove(element Callable, classes ...Expr) Callable {
-	return Method(ClassList(element), "remove", classes...)
-}
-
-// ClassListToggle creates element.classList.toggle(className, force?)
-func ClassListToggle(element Callable, className Expr, force ...Expr) Callable {
+// ClassListToggle creates element.classList.toggle(className, force?).
+func (e Expr) ClassListToggle(className Expr, force ...Expr) Expr {
 	args := make([]Expr, 1, 1+len(force))
 	args[0] = className
 	args = append(args, force...)
-	return Method(ClassList(element), "toggle", args...)
+	return e.ClassList().Method("toggle", args...)
 }
 
-// ClassListContains creates element.classList.contains(className)
-func ClassListContains(element Callable, className Expr) Callable {
-	return Method(ClassList(element), "contains", className)
+// ClassListContains creates element.classList.contains(className).
+func (e Expr) ClassListContains(className Expr) Expr {
+	return e.ClassList().Method("contains", className)
 }
 
-// ClassListReplace creates element.classList.replace(oldClass, newClass)
-func ClassListReplace(element Callable, oldClass, newClass Expr) Callable {
-	return Method(ClassList(element), "replace", oldClass, newClass)
+// ClassListReplace creates element.classList.replace(oldClass, newClass).
+func (e Expr) ClassListReplace(oldClass, newClass Expr) Expr {
+	return e.ClassList().Method("replace", oldClass, newClass)
 }
 
-// Attribute helpers
+// GetAttribute creates element.getAttribute(name).
+func (e Expr) GetAttribute(name Expr) Expr { return e.Method("getAttribute", name) }
 
-// GetAttribute creates element.getAttribute(name)
-func GetAttribute(element Callable, name Expr) Callable {
-	return Method(element, "getAttribute", name)
+// SetAttribute creates element.setAttribute(name, value).
+func (e Expr) SetAttribute(name, value Expr) Expr {
+	return e.Method("setAttribute", name, value)
 }
 
-// SetAttribute creates element.setAttribute(name, value)
-func SetAttribute(element, name, value Expr) Callable {
-	return Method(element.(Callable), "setAttribute", name, value)
-}
+// RemoveAttribute creates element.removeAttribute(name).
+func (e Expr) RemoveAttribute(name Expr) Expr { return e.Method("removeAttribute", name) }
 
-// RemoveAttribute creates element.removeAttribute(name)
-func RemoveAttribute(element Callable, name Expr) Callable {
-	return Method(element, "removeAttribute", name)
-}
+// HasAttribute creates element.hasAttribute(name).
+func (e Expr) HasAttribute(name Expr) Expr { return e.Method("hasAttribute", name) }
 
-// HasAttribute creates element.hasAttribute(name)
-func HasAttribute(element Callable, name Expr) Callable {
-	return Method(element, "hasAttribute", name)
-}
+// Style creates element.style.
+func (e Expr) Style() Expr { return e.Prop("style") }
 
-// Style helpers
-
-// Style creates element.style
-func Style(element Callable) Callable {
-	return Prop(element, "style")
-}
-
-// SetStyle creates element.style.property = value
-func SetStyle(element Callable, property string, value Expr) Stmt {
-	return Assign(Prop(Style(element), property), value)
+// SetStyle creates element.style.property = value.
+func (e Expr) SetStyle(property string, value Expr) Stmt {
+	return e.Style().Prop(property).Assign(value)
 }
 
 // JSON helpers
 
-// JSONStringify creates JSON.stringify(value, replacer?, space?)
-func JSONStringify(value Expr, args ...Expr) Callable {
+// JSONStringify creates JSON.stringify(value, replacer?, space?).
+func JSONStringify(value Expr, args ...Expr) Expr {
 	allArgs := make([]Expr, 1, 1+len(args))
 	allArgs[0] = value
 	allArgs = append(allArgs, args...)
-	return Method(JSON_, "stringify", allArgs...)
+	return JSON_.Method("stringify", allArgs...)
 }
 
-// JSONParse creates JSON.parse(text, reviver?)
-func JSONParse(text Expr, reviver ...Expr) Callable {
+// JSONParse creates JSON.parse(text, reviver?).
+func JSONParse(text Expr, reviver ...Expr) Expr {
 	args := make([]Expr, 1, 1+len(reviver))
 	args[0] = text
 	args = append(args, reviver...)
-	return Method(JSON_, "parse", args...)
+	return JSON_.Method("parse", args...)
 }
 
 // Common patterns
 
-// ParseInt creates parseInt(string, radix)
-func ParseInt(str Expr, radix ...Expr) Callable {
+// ParseInt creates parseInt(string, radix).
+func ParseInt(str Expr, radix ...Expr) Expr {
 	args := make([]Expr, 1, 1+len(radix))
 	args[0] = str
 	args = append(args, radix...)
-	return Call(Ident("parseInt"), args...)
+	return Ident("parseInt").Call(args...)
 }
 
-// ParseFloat creates parseFloat(string)
-func ParseFloat(str Expr) Callable {
-	return Call(Ident("parseFloat"), str)
+// ParseFloat creates parseFloat(string).
+func ParseFloat(str Expr) Expr { return Ident("parseFloat").Call(str) }
+
+// IsNaN creates isNaN(value).
+func IsNaN(value Expr) Expr { return Ident("isNaN").Call(value) }
+
+// IsFinite creates isFinite(value).
+func IsFinite(value Expr) Expr { return Ident("isFinite").Call(value) }
+
+// EncodeURI creates encodeURI(uri).
+func EncodeURI(uri Expr) Expr { return Ident("encodeURI").Call(uri) }
+
+// DecodeURI creates decodeURI(uri).
+func DecodeURI(uri Expr) Expr { return Ident("decodeURI").Call(uri) }
+
+// EncodeURIComponent creates encodeURIComponent(component).
+func EncodeURIComponent(component Expr) Expr {
+	return Ident("encodeURIComponent").Call(component)
 }
 
-// IsNaN creates isNaN(value)
-func IsNaN(value Expr) Callable {
-	return Call(Ident("isNaN"), value)
-}
-
-// IsFinite creates isFinite(value)
-func IsFinite(value Expr) Callable {
-	return Call(Ident("isFinite"), value)
-}
-
-// Encodeuri creates encodeURI(uri)
-func EncodeURI(uri Expr) Callable {
-	return Call(Ident("encodeURI"), uri)
-}
-
-// DecodeURI creates decodeURI(uri)
-func DecodeURI(uri Expr) Callable {
-	return Call(Ident("decodeURI"), uri)
-}
-
-// EncodeURIComponent creates encodeURIComponent(component)
-func EncodeURIComponent(component Expr) Callable {
-	return Call(Ident("encodeURIComponent"), component)
-}
-
-// DecodeURIComponent creates decodeURIComponent(component)
-func DecodeURIComponent(component Expr) Callable {
-	return Call(Ident("decodeURIComponent"), component)
+// DecodeURIComponent creates decodeURIComponent(component).
+func DecodeURIComponent(component Expr) Expr {
+	return Ident("decodeURIComponent").Call(component)
 }

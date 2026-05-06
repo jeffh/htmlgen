@@ -175,14 +175,14 @@ func TestRaw(t *testing.T) {
 // === Access Tests ===
 
 func TestProp(t *testing.T) {
-	got := exprString(Prop(Ident("document"), "body"))
+	got := exprString(Ident("document").Prop("body"))
 	if got != "document.body" {
 		t.Errorf("Prop() = %q, want %q", got, "document.body")
 	}
 }
 
 func TestPropChained(t *testing.T) {
-	got := exprString(Prop(Prop(Ident("window"), "document"), "body"))
+	got := exprString(Ident("window").Prop("document").Prop("body"))
 	if got != "window.document.body" {
 		t.Errorf("Prop chained = %q, want %q", got, "window.document.body")
 	}
@@ -194,17 +194,17 @@ func TestPropSpecialChars(t *testing.T) {
 		expr     Expr
 		expected string
 	}{
-		{"hyphen", Prop(Ident("obj"), "foo-bar"), `obj["foo-bar"]`},
-		{"space", Prop(Ident("obj"), "foo bar"), `obj["foo bar"]`},
-		{"leading digit", Prop(Ident("obj"), "1foo"), `obj["1foo"]`},
-		{"only digits", Prop(Ident("arr"), "0"), `arr["0"]`},
-		{"empty", Prop(Ident("obj"), ""), `obj[""]`},
-		{"dot", Prop(Ident("obj"), "a.b"), `obj["a.b"]`},
-		{"unicode", Prop(Ident("obj"), "héllo"), `obj["héllo"]`},
-		{"quote", Prop(Ident("obj"), `a"b`), `obj["a\"b"]`},
-		{"valid underscore", Prop(Ident("obj"), "_foo"), "obj._foo"},
-		{"valid dollar", Prop(Ident("obj"), "$foo"), "obj.$foo"},
-		{"valid mixed", Prop(Ident("obj"), "a1_$"), "obj.a1_$"},
+		{"hyphen", Ident("obj").Prop("foo-bar"), `obj["foo-bar"]`},
+		{"space", Ident("obj").Prop("foo bar"), `obj["foo bar"]`},
+		{"leading digit", Ident("obj").Prop("1foo"), `obj["1foo"]`},
+		{"only digits", Ident("arr").Prop("0"), `arr["0"]`},
+		{"empty", Ident("obj").Prop(""), `obj[""]`},
+		{"dot", Ident("obj").Prop("a.b"), `obj["a.b"]`},
+		{"unicode", Ident("obj").Prop("héllo"), `obj["héllo"]`},
+		{"quote", Ident("obj").Prop(`a"b`), `obj["a\"b"]`},
+		{"valid underscore", Ident("obj").Prop("_foo"), "obj._foo"},
+		{"valid dollar", Ident("obj").Prop("$foo"), "obj.$foo"},
+		{"valid mixed", Ident("obj").Prop("a1_$"), "obj.a1_$"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -217,7 +217,7 @@ func TestPropSpecialChars(t *testing.T) {
 }
 
 func TestOptionalPropSpecialChars(t *testing.T) {
-	got := exprString(OptionalProp(Ident("obj"), "foo-bar"))
+	got := exprString(Ident("obj").OptionalProp("foo-bar"))
 	expected := `obj?.["foo-bar"]`
 	if got != expected {
 		t.Errorf("OptionalProp() = %q, want %q", got, expected)
@@ -225,7 +225,7 @@ func TestOptionalPropSpecialChars(t *testing.T) {
 }
 
 func TestMethodSpecialChars(t *testing.T) {
-	got := exprString(Method(Ident("obj"), "weird-name", Int(1)))
+	got := exprString(Ident("obj").Method("weird-name", Int(1)))
 	expected := `obj["weird-name"](1)`
 	if got != expected {
 		t.Errorf("Method() = %q, want %q", got, expected)
@@ -233,7 +233,7 @@ func TestMethodSpecialChars(t *testing.T) {
 }
 
 func TestOptionalCallSpecialChars(t *testing.T) {
-	got := exprString(OptionalCall(Ident("obj"), "weird-name", Int(1)))
+	got := exprString(Ident("obj").OptionalCall("weird-name", Int(1)))
 	expected := `obj?.["weird-name"](1)`
 	if got != expected {
 		t.Errorf("OptionalCall() = %q, want %q", got, expected)
@@ -241,14 +241,14 @@ func TestOptionalCallSpecialChars(t *testing.T) {
 }
 
 func TestIndex(t *testing.T) {
-	got := exprString(Index(Ident("arr"), Int(0)))
+	got := exprString(Ident("arr").Index(Int(0)))
 	if got != "arr[0]" {
 		t.Errorf("Index() = %q, want %q", got, "arr[0]")
 	}
 }
 
 func TestIndexWithString(t *testing.T) {
-	got := exprString(Index(Ident("obj"), String("key")))
+	got := exprString(Ident("obj").Index(String("key")))
 	expected := `obj["key"]`
 	if got != expected {
 		t.Errorf("Index() = %q, want %q", got, expected)
@@ -256,7 +256,7 @@ func TestIndexWithString(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	got := exprString(Call(Ident("alert"), String("hello")))
+	got := exprString(Ident("alert").Call(String("hello")))
 	expected := `alert("hello")`
 	if got != expected {
 		t.Errorf("Call() = %q, want %q", got, expected)
@@ -264,7 +264,7 @@ func TestCall(t *testing.T) {
 }
 
 func TestCallNoArgs(t *testing.T) {
-	got := exprString(Call(Ident("doSomething")))
+	got := exprString(Ident("doSomething").Call())
 	expected := `doSomething()`
 	if got != expected {
 		t.Errorf("Call() = %q, want %q", got, expected)
@@ -272,7 +272,7 @@ func TestCallNoArgs(t *testing.T) {
 }
 
 func TestMethod(t *testing.T) {
-	got := exprString(Method(Ident("console"), "log", String("msg")))
+	got := exprString(Ident("console").Method("log", String("msg")))
 	expected := `console.log("msg")`
 	if got != expected {
 		t.Errorf("Method() = %q, want %q", got, expected)
@@ -280,7 +280,7 @@ func TestMethod(t *testing.T) {
 }
 
 func TestMethodMultipleArgs(t *testing.T) {
-	got := exprString(Method(Ident("console"), "log", String("a"), Int(1), Bool(true)))
+	got := exprString(Ident("console").Method("log", String("a"), Int(1), Bool(true)))
 	expected := `console.log("a", 1, true)`
 	if got != expected {
 		t.Errorf("Method() = %q, want %q", got, expected)
@@ -288,7 +288,7 @@ func TestMethodMultipleArgs(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
-	got := exprString(New(Ident("Date")))
+	got := exprString(Ident("Date").New())
 	expected := `new Date()`
 	if got != expected {
 		t.Errorf("New() = %q, want %q", got, expected)
@@ -296,7 +296,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewWithArgs(t *testing.T) {
-	got := exprString(New(Ident("Date"), Int(2024), Int(0), Int(1)))
+	got := exprString(Ident("Date").New(Int(2024), Int(0), Int(1)))
 	expected := `new Date(2024, 0, 1)`
 	if got != expected {
 		t.Errorf("New() = %q, want %q", got, expected)
@@ -304,7 +304,7 @@ func TestNewWithArgs(t *testing.T) {
 }
 
 func TestOptionalProp(t *testing.T) {
-	got := exprString(OptionalProp(Ident("obj"), "foo"))
+	got := exprString(Ident("obj").OptionalProp("foo"))
 	expected := `obj?.foo`
 	if got != expected {
 		t.Errorf("OptionalProp() = %q, want %q", got, expected)
@@ -312,7 +312,7 @@ func TestOptionalProp(t *testing.T) {
 }
 
 func TestOptionalCall(t *testing.T) {
-	got := exprString(OptionalCall(Ident("obj"), "method", Int(1)))
+	got := exprString(Ident("obj").OptionalCall("method", Int(1)))
 	expected := `obj?.method(1)`
 	if got != expected {
 		t.Errorf("OptionalCall() = %q, want %q", got, expected)
@@ -326,24 +326,24 @@ func TestBinaryOps(t *testing.T) {
 		expr     Expr
 		expected string
 	}{
-		{Add(Int(1), Int(2)), "(1 + 2)"},
-		{Sub(Int(5), Int(3)), "(5 - 3)"},
-		{Mul(Int(4), Int(2)), "(4 * 2)"},
-		{Div(Int(10), Int(2)), "(10 / 2)"},
-		{Mod(Int(10), Int(3)), "(10 % 3)"},
-		{Eq(Ident("x"), Int(5)), "(x === 5)"},
-		{NotEq(Ident("x"), Null()), "(x !== null)"},
-		{LooseEq(Ident("x"), Int(5)), "(x == 5)"},
-		{LooseNotEq(Ident("x"), Null()), "(x != null)"},
-		{Lt(Ident("x"), Int(10)), "(x < 10)"},
-		{LtEq(Ident("x"), Int(10)), "(x <= 10)"},
-		{Gt(Ident("x"), Int(0)), "(x > 0)"},
-		{GtEq(Ident("x"), Int(0)), "(x >= 0)"},
-		{And(Bool(true), Bool(false)), "(true && false)"},
-		{Or(Ident("a"), Ident("b")), "(a || b)"},
-		{NullishCoalesce(Ident("x"), String("default")), `(x ?? "default")`},
-		{Instanceof(Ident("obj"), Ident("Date")), "(obj instanceof Date)"},
-		{In(String("key"), Ident("obj")), `("key" in obj)`},
+		{Int(1).Add(Int(2)), "(1 + 2)"},
+		{Int(5).Sub(Int(3)), "(5 - 3)"},
+		{Int(4).Mul(Int(2)), "(4 * 2)"},
+		{Int(10).Div(Int(2)), "(10 / 2)"},
+		{Int(10).Mod(Int(3)), "(10 % 3)"},
+		{Ident("x").Eq(Int(5)), "(x === 5)"},
+		{Ident("x").NotEq(Null()), "(x !== null)"},
+		{Ident("x").LooseEq(Int(5)), "(x == 5)"},
+		{Ident("x").LooseNotEq(Null()), "(x != null)"},
+		{Ident("x").Lt(Int(10)), "(x < 10)"},
+		{Ident("x").LtEq(Int(10)), "(x <= 10)"},
+		{Ident("x").Gt(Int(0)), "(x > 0)"},
+		{Ident("x").GtEq(Int(0)), "(x >= 0)"},
+		{Bool(true).And(Bool(false)), "(true && false)"},
+		{Ident("a").Or(Ident("b")), "(a || b)"},
+		{Ident("x").NullishCoalesce(String("default")), `(x ?? "default")`},
+		{Ident("obj").InstanceOf(Ident("Date")), "(obj instanceof Date)"},
+		{String("key").In(Ident("obj")), `("key" in obj)`},
 	}
 	for _, tt := range tests {
 		got := exprString(tt.expr)
@@ -358,13 +358,13 @@ func TestUnaryOps(t *testing.T) {
 		expr     Expr
 		expected string
 	}{
-		{Not(Ident("x")), "!x"},
-		{Neg(Int(5)), "-5"},
-		{Pos(Ident("x")), "+x"},
-		{BitwiseNot(Int(5)), "~5"},
-		{Typeof(Ident("x")), "typeof x"},
-		{Void(Int(0)), "void 0"},
-		{Delete(Prop(Ident("obj"), "key")), "delete obj.key"},
+		{Ident("x").Not(), "!x"},
+		{Int(5).Neg(), "-5"},
+		{Ident("x").Pos(), "+x"},
+		{Int(5).BitwiseNot(), "~5"},
+		{Ident("x").Typeof(), "typeof x"},
+		{Int(0).Void(), "void 0"},
+		{Ident("obj").Prop("key").Delete(), "delete obj.key"},
 	}
 	for _, tt := range tests {
 		got := exprString(tt.expr)
@@ -375,7 +375,7 @@ func TestUnaryOps(t *testing.T) {
 }
 
 func TestTernary(t *testing.T) {
-	got := exprString(Ternary(Ident("cond"), String("yes"), String("no")))
+	got := exprString(Ident("cond").Ternary(String("yes"), String("no")))
 	expected := `(cond ? "yes" : "no")`
 	if got != expected {
 		t.Errorf("Ternary() = %q, want %q", got, expected)
@@ -383,7 +383,7 @@ func TestTernary(t *testing.T) {
 }
 
 func TestSpread(t *testing.T) {
-	got := exprString(Spread(Ident("arr")))
+	got := exprString(Ident("arr").Spread())
 	expected := `...arr`
 	if got != expected {
 		t.Errorf("Spread() = %q, want %q", got, expected)
@@ -391,7 +391,7 @@ func TestSpread(t *testing.T) {
 }
 
 func TestGroup(t *testing.T) {
-	got := exprString(Group(Add(Int(1), Int(2))))
+	got := exprString(Int(1).Add(Int(2)).Group())
 	expected := `((1 + 2))`
 	if got != expected {
 		t.Errorf("Group() = %q, want %q", got, expected)
@@ -409,7 +409,7 @@ func TestComma(t *testing.T) {
 // === Statement Tests ===
 
 func TestAssign(t *testing.T) {
-	got := stmtString(Assign(Ident("x"), Int(5)))
+	got := stmtString(Ident("x").Assign(Int(5)))
 	if got != "x = 5" {
 		t.Errorf("Assign() = %q, want %q", got, "x = 5")
 	}
@@ -420,14 +420,14 @@ func TestCompoundAssign(t *testing.T) {
 		stmt     Stmt
 		expected string
 	}{
-		{AddAssign(Ident("x"), Int(1)), "x += 1"},
-		{SubAssign(Ident("x"), Int(1)), "x -= 1"},
-		{MulAssign(Ident("x"), Int(2)), "x *= 2"},
-		{DivAssign(Ident("x"), Int(2)), "x /= 2"},
-		{ModAssign(Ident("x"), Int(3)), "x %= 3"},
-		{AndAssign(Ident("x"), Ident("y")), "x &&= y"},
-		{OrAssign(Ident("x"), Ident("y")), "x ||= y"},
-		{NullishAssign(Ident("x"), String("default")), `x ??= "default"`},
+		{Ident("x").AddAssign(Int(1)), "x += 1"},
+		{Ident("x").SubAssign(Int(1)), "x -= 1"},
+		{Ident("x").MulAssign(Int(2)), "x *= 2"},
+		{Ident("x").DivAssign(Int(2)), "x /= 2"},
+		{Ident("x").ModAssign(Int(3)), "x %= 3"},
+		{Ident("x").AndAssign(Ident("y")), "x &&= y"},
+		{Ident("x").OrAssign(Ident("y")), "x ||= y"},
+		{Ident("x").NullishAssign(String("default")), `x ??= "default"`},
 	}
 	for _, tt := range tests {
 		got := stmtString(tt.stmt)
@@ -466,28 +466,28 @@ func TestVar(t *testing.T) {
 }
 
 func TestIncr(t *testing.T) {
-	got := stmtString(Incr(Ident("count")))
+	got := stmtString(Ident("count").Incr())
 	if got != "count++" {
 		t.Errorf("Incr() = %q, want %q", got, "count++")
 	}
 }
 
 func TestDecr(t *testing.T) {
-	got := stmtString(Decr(Ident("count")))
+	got := stmtString(Ident("count").Decr())
 	if got != "count--" {
 		t.Errorf("Decr() = %q, want %q", got, "count--")
 	}
 }
 
 func TestPreIncr(t *testing.T) {
-	got := exprString(PreIncr(Ident("x")))
+	got := exprString(Ident("x").PreIncrExpr())
 	if got != "++x" {
 		t.Errorf("PreIncr() = %q, want %q", got, "++x")
 	}
 }
 
 func TestPreDecr(t *testing.T) {
-	got := exprString(PreDecr(Ident("x")))
+	got := exprString(Ident("x").PreDecrExpr())
 	if got != "--x" {
 		t.Errorf("PreDecr() = %q, want %q", got, "--x")
 	}
@@ -508,7 +508,7 @@ func TestReturnVoid(t *testing.T) {
 }
 
 func TestThrow(t *testing.T) {
-	got := stmtString(Throw(New(Ident("Error"), String("oops"))))
+	got := stmtString(Throw(Ident("Error").New(String("oops"))))
 	expected := `throw new Error("oops")`
 	if got != expected {
 		t.Errorf("Throw() = %q, want %q", got, expected)
@@ -537,7 +537,7 @@ func TestContinue(t *testing.T) {
 }
 
 func TestIf(t *testing.T) {
-	got := stmtString(If(Ident("cond"), Assign(Ident("x"), Int(1))))
+	got := stmtString(If(Ident("cond"), Ident("x").Assign(Int(1))))
 	expected := "if (cond) { x = 1 }"
 	if got != expected {
 		t.Errorf("If() = %q, want %q", got, expected)
@@ -546,8 +546,8 @@ func TestIf(t *testing.T) {
 
 func TestIfMultipleStmts(t *testing.T) {
 	got := stmtString(If(Ident("cond"),
-		Assign(Ident("x"), Int(1)),
-		Incr(Ident("count")),
+		Ident("x").Assign(Int(1)),
+		Ident("count").Incr(),
 	))
 	expected := "if (cond) { x = 1; count++ }"
 	if got != expected {
@@ -558,8 +558,8 @@ func TestIfMultipleStmts(t *testing.T) {
 func TestIfElse(t *testing.T) {
 	got := stmtString(IfElse(
 		Ident("cond"),
-		[]Stmt{Assign(Ident("x"), Int(1))},
-		[]Stmt{Assign(Ident("x"), Int(0))},
+		[]Stmt{Ident("x").Assign(Int(1))},
+		[]Stmt{Ident("x").Assign(Int(0))},
 	))
 	expected := "if (cond) { x = 1 } else { x = 0 }"
 	if got != expected {
@@ -570,7 +570,7 @@ func TestIfElse(t *testing.T) {
 func TestStmts(t *testing.T) {
 	got := stmtString(Stmts(
 		Let("x", Int(1)),
-		Incr(Ident("x")),
+		Ident("x").Incr(),
 	))
 	expected := "let x = 1; x++"
 	if got != expected {
@@ -581,7 +581,7 @@ func TestStmts(t *testing.T) {
 func TestBlock(t *testing.T) {
 	got := stmtString(Block(
 		Let("x", Int(1)),
-		Incr(Ident("x")),
+		Ident("x").Incr(),
 	))
 	expected := "{ let x = 1; x++ }"
 	if got != expected {
@@ -609,7 +609,7 @@ func TestExprStmt(t *testing.T) {
 func TestHandler(t *testing.T) {
 	got := Handler(
 		ExprStmt(PreventDefault()),
-		Assign(Ident("x"), Int(5)),
+		Ident("x").Assign(Int(5)),
 	)
 	expected := "event.preventDefault(); x = 5"
 	if got != expected {
@@ -644,7 +644,7 @@ func TestOnClick(t *testing.T) {
 }
 
 func TestOnInput(t *testing.T) {
-	attr := OnInput(Assign(Prop(EventTarget(), "value"), Method(EventValue(), "toUpperCase")))
+	attr := OnInput(EventTarget().Prop("value").Assign(EventValue().Method("toUpperCase")))
 	if attr.Name != "oninput" {
 		t.Errorf("OnInput().Name = %q, want %q", attr.Name, "oninput")
 	}
@@ -657,7 +657,7 @@ func TestOnInput(t *testing.T) {
 func TestOnSubmit(t *testing.T) {
 	attr := OnSubmit(
 		ExprStmt(PreventDefault()),
-		ExprStmt(Method(This(), "submit")),
+		ExprStmt(This().Method("submit")),
 	)
 	if attr.Name != "onsubmit" {
 		t.Errorf("OnSubmit().Name = %q, want %q", attr.Name, "onsubmit")
@@ -790,7 +790,7 @@ func TestFetch(t *testing.T) {
 }
 
 func TestClassListAdd(t *testing.T) {
-	got := exprString(ClassListAdd(Ident("el"), String("active"), String("visible")))
+	got := exprString(Ident("el").ClassListAdd(String("active"), String("visible")))
 	expected := `el.classList.add("active", "visible")`
 	if got != expected {
 		t.Errorf("ClassListAdd() = %q, want %q", got, expected)
@@ -798,7 +798,7 @@ func TestClassListAdd(t *testing.T) {
 }
 
 func TestSetStyle(t *testing.T) {
-	got := stmtString(SetStyle(Ident("el"), "backgroundColor", String("red")))
+	got := stmtString(Ident("el").SetStyle("backgroundColor", String("red")))
 	expected := `el.style.backgroundColor = "red"`
 	if got != expected {
 		t.Errorf("SetStyle() = %q, want %q", got, expected)
@@ -824,7 +824,7 @@ func TestJSONParse(t *testing.T) {
 // === Arrow Function Tests ===
 
 func TestArrowFunc(t *testing.T) {
-	got := exprString(ArrowFunc([]string{"x"}, Mul(Ident("x"), Int(2))))
+	got := exprString(ArrowFunc([]string{"x"}, Ident("x").Mul(Int(2))))
 	expected := "x => (x * 2)"
 	if got != expected {
 		t.Errorf("ArrowFunc() = %q, want %q", got, expected)
@@ -832,7 +832,7 @@ func TestArrowFunc(t *testing.T) {
 }
 
 func TestArrowFuncMultiParams(t *testing.T) {
-	got := exprString(ArrowFunc([]string{"a", "b"}, Add(Ident("a"), Ident("b"))))
+	got := exprString(ArrowFunc([]string{"a", "b"}, Ident("a").Add(Ident("b"))))
 	expected := "(a, b) => (a + b)"
 	if got != expected {
 		t.Errorf("ArrowFunc() = %q, want %q", got, expected)
@@ -849,7 +849,7 @@ func TestArrowFuncNoParams(t *testing.T) {
 
 func TestArrowFuncStmts(t *testing.T) {
 	got := exprString(ArrowFuncStmts([]string{"x"},
-		Let("result", Mul(Ident("x"), Int(2))),
+		Let("result", Ident("x").Mul(Int(2))),
 		Return(Ident("result")),
 	))
 	expected := "x => { let result = (x * 2); return result }"
@@ -859,7 +859,7 @@ func TestArrowFuncStmts(t *testing.T) {
 }
 
 func TestFunc(t *testing.T) {
-	got := exprString(Func([]string{"x", "y"}, Return(Add(Ident("x"), Ident("y")))))
+	got := exprString(Func([]string{"x", "y"}, Return(Ident("x").Add(Ident("y")))))
 	expected := "function(x, y) { return (x + y) }"
 	if got != expected {
 		t.Errorf("Func() = %q, want %q", got, expected)
@@ -891,7 +891,7 @@ func TestTemplateEscaping(t *testing.T) {
 }
 
 func TestAwait(t *testing.T) {
-	got := exprString(Await(Fetch(String("/api"))))
+	got := exprString(Fetch(String("/api")).Await())
 	expected := `await fetch("/api")`
 	if got != expected {
 		t.Errorf("Await() = %q, want %q", got, expected)
@@ -899,7 +899,7 @@ func TestAwait(t *testing.T) {
 }
 
 func TestAsyncArrowFunc(t *testing.T) {
-	got := exprString(AsyncArrowFunc(nil, Await(Fetch(String("/api")))))
+	got := exprString(AsyncArrowFunc(nil, Fetch(String("/api")).Await()))
 	expected := `async () => await fetch("/api")`
 	if got != expected {
 		t.Errorf("AsyncArrowFunc() = %q, want %q", got, expected)
@@ -908,8 +908,8 @@ func TestAsyncArrowFunc(t *testing.T) {
 
 func TestAsyncArrowFuncStmts(t *testing.T) {
 	got := exprString(AsyncArrowFuncStmts([]string{"url"},
-		Let("response", Await(Fetch(Ident("url")))),
-		Return(Method(Ident("response"), "json")),
+		Let("response", Fetch(Ident("url")).Await()),
+		Return(Ident("response").Method("json")),
 	))
 	expected := "async url => { let response = await fetch(url); return response.json() }"
 	if got != expected {
@@ -918,7 +918,7 @@ func TestAsyncArrowFuncStmts(t *testing.T) {
 }
 
 func TestPromiseThen(t *testing.T) {
-	got := exprString(PromiseThen(Fetch(String("/api")), ArrowFunc([]string{"r"}, Method(Ident("r"), "json"))))
+	got := exprString(Fetch(String("/api")).Then(ArrowFunc([]string{"r"}, Ident("r").Method("json"))))
 	expected := `fetch("/api").then(r => r.json())`
 	if got != expected {
 		t.Errorf("PromiseThen() = %q, want %q", got, expected)
@@ -928,7 +928,7 @@ func TestPromiseThen(t *testing.T) {
 // === ToJS Tests ===
 
 func TestToJS(t *testing.T) {
-	got := ToJS(Add(Int(1), Int(2)))
+	got := ToJS(Int(1).Add(Int(2)))
 	expected := "(1 + 2)"
 	if got != expected {
 		t.Errorf("ToJS() = %q, want %q", got, expected)
@@ -950,10 +950,10 @@ func TestComplexHandler(t *testing.T) {
 	handler := Handler(
 		ExprStmt(PreventDefault()),
 		Let("value", EventValue()),
-		If(Eq(Ident("value"), String("")),
+		If(Ident("value").Eq(String("")),
 			Return(Null()),
 		),
-		ExprStmt(ClassListAdd(This(), String("submitted"))),
+		ExprStmt(This().ClassListAdd(String("submitted"))),
 		ExprStmt(ConsoleLog(String("Submitted:"), Ident("value"))),
 	)
 	// Just check it doesn't panic and produces reasonable output

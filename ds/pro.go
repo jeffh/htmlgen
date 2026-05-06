@@ -1,266 +1,201 @@
-// Pro Datastar attributes require a commercial license from https://data-star.dev/
+// Pro Datastar attributes require a commercial license from https://data-star.dev/.
 // These attributes provide additional functionality beyond the free tier.
 package ds
 
-import "github.com/jeffh/htmlgen/h"
+import (
+	"strings"
+
+	"github.com/jeffh/htmlgen/h"
+	"github.com/jeffh/htmlgen/js"
+)
 
 // Animate enables reactive animations on element attributes.
-// Requires Datastar Pro license.
-// Produces: data-animate
-func Animate(options ...AttrMutator) h.Attribute {
-	return exprAttr("data-animate", options...)
+// Requires Datastar Pro.
+func Animate(values ...Value) h.Attribute {
+	stmts := make([]string, len(values))
+	for i, v := range values {
+		stmts[i] = js.ToJS(v.expr)
+	}
+	return h.Attr("data-animate", strings.Join(stmts, "; "))
 }
 
-// CustomValidity adds custom validation messages to form inputs.
+// CustomValidity adds a custom validation message expression to a form input.
 // Empty strings indicate valid; non-empty strings are shown as validation errors.
-// Requires Datastar Pro license.
-// Example: CustomValidity(Raw("$password === $confirmPassword ? '' : 'Passwords must match'"))
-// Produces: data-custom-validity="$password === $confirmPassword ? '' : 'Passwords must match'"
-func CustomValidity(expression ...AttrMutator) h.Attribute {
-	return exprAttr("data-custom-validity", expression...)
+// Requires Datastar Pro.
+func CustomValidity(expression Value) h.Attribute {
+	return h.Attr("data-custom-validity", js.ToJS(expression.expr))
 }
 
-// OnRAF executes an expression on every requestAnimationFrame event.
-// Requires Datastar Pro license.
-// Example: OnRAF(Throttle(100*time.Millisecond), Raw("$frameCount++"))
-// Produces: data-on-raf__throttle.100ms="$frameCount++"
-func OnRAF(options ...AttrMutator) h.Attribute {
-	return exprAttr("data-on-raf", options...)
+// OnRAF executes an expression on every requestAnimationFrame.
+// Returns an EventBuilder that supports the standard event modifiers.
+// Requires Datastar Pro.
+func OnRAF(actions ...Value) *EventBuilder {
+	return newEventBuilder("data-on-raf", actions)
 }
 
-// OnResize runs an expression when element dimensions change.
-// Requires Datastar Pro license.
-// Example: OnResize(Debounce(200*time.Millisecond), Raw("$width = el.offsetWidth"))
-// Produces: data-on-resize__debounce.200ms="$width = el.offsetWidth"
-func OnResize(options ...AttrMutator) h.Attribute {
-	return exprAttr("data-on-resize", options...)
+// OnResize runs an expression when the element's dimensions change.
+// Returns an EventBuilder that supports the standard event modifiers.
+// Requires Datastar Pro.
+func OnResize(actions ...Value) *EventBuilder {
+	return newEventBuilder("data-on-resize", actions)
 }
 
-// Persist persists signals in local or session storage.
-// Use Session() modifier for session storage instead of local storage.
-// Requires Datastar Pro license.
-// Example: Persist(nil) or Persist(&FilterOptions{IncludeReg: ptr("user")})
-// Produces: data-persist or data-persist="{include: /user/}"
-func Persist(options *FilterOptions, modifiers ...AttrMutator) h.Attribute {
-	if options == nil && len(modifiers) == 0 {
-		return h.Attr("data-persist", "")
+// PersistBuilder builds the data-persist attribute.
+type PersistBuilder struct {
+	*attrBase
+}
+
+// Session appends "__session" — use session storage instead of local storage.
+func (b *PersistBuilder) Session() *PersistBuilder {
+	b.name.WriteString("__session")
+	return b
+}
+
+// Persist persists signals in local storage. Use Session() for session storage.
+// Requires Datastar Pro.
+func Persist(options *FilterOptions) *PersistBuilder {
+	b := &PersistBuilder{attrBase: newAttr("data-persist")}
+	if options != nil && (options.IncludeReg != nil || options.ExcludeReg != nil) {
+		var sb strings.Builder
+		options.appendJS(&sb)
+		b.addStmt(sb.String())
 	}
-	if options == nil {
-		return exprAttr("data-persist", modifiers...)
-	}
-	opts := append([]AttrMutator{FilterOptionsValue(options)}, modifiers...)
-	return exprAttr("data-persist", opts...)
+	return b
 }
 
 // PersistKey persists signals using a custom storage key.
-// Requires Datastar Pro license.
-// Example: PersistKey("mykey", Session())
-// Produces: data-persist:mykey__session
-func PersistKey(key string, modifiers ...AttrMutator) h.Attribute {
-	opts := append([]AttrMutator{appendName(key)}, modifiers...)
-	return exprAttr("data-persist:", opts...)
+// Requires Datastar Pro.
+func PersistKey(key string) *PersistBuilder {
+	return &PersistBuilder{attrBase: newAttr("data-persist:" + key)}
+}
+
+// QueryStringBuilder builds the data-query-string attribute.
+type QueryStringBuilder struct {
+	*attrBase
+}
+
+// Filter appends "__filter" — filters out empty values.
+func (b *QueryStringBuilder) Filter() *QueryStringBuilder {
+	b.name.WriteString("__filter")
+	return b
+}
+
+// History appends "__history" — enables browser history integration.
+func (b *QueryStringBuilder) History() *QueryStringBuilder {
+	b.name.WriteString("__history")
+	return b
 }
 
 // QueryString syncs query parameters to/from signal values.
-// Use Filter() to filter empty values, History() for browser history integration.
-// Requires Datastar Pro license.
-// Example: QueryString(nil) or QueryString(&FilterOptions{IncludeReg: ptr("search")})
-// Produces: data-query-string or data-query-string="{include: /search/}"
-func QueryString(options *FilterOptions, modifiers ...AttrMutator) h.Attribute {
-	if options == nil && len(modifiers) == 0 {
-		return h.Attr("data-query-string", "")
+// Requires Datastar Pro.
+func QueryString(options *FilterOptions) *QueryStringBuilder {
+	b := &QueryStringBuilder{attrBase: newAttr("data-query-string")}
+	if options != nil && (options.IncludeReg != nil || options.ExcludeReg != nil) {
+		var sb strings.Builder
+		options.appendJS(&sb)
+		b.addStmt(sb.String())
 	}
-	if options == nil {
-		return exprAttr("data-query-string", modifiers...)
-	}
-	opts := append([]AttrMutator{FilterOptionsValue(options)}, modifiers...)
-	return exprAttr("data-query-string", opts...)
+	return b
 }
 
 // ReplaceURL replaces the browser URL without page reload.
-// Accepts relative or absolute URLs as evaluated expressions.
-// Requires Datastar Pro license.
-// Example: ReplaceURL(Raw("`/page${$page}`"))
-// Produces: data-replace-url="`/page${$page}`"
-func ReplaceURL(expression ...AttrMutator) h.Attribute {
-	return exprAttr("data-replace-url", expression...)
+// Requires Datastar Pro.
+func ReplaceURL(expression Value) h.Attribute {
+	return h.Attr("data-replace-url", js.ToJS(expression.expr))
 }
 
-// ScrollIntoView scrolls the element into viewport view.
-// Use scroll behavior and alignment modifiers.
-// Requires Datastar Pro license.
-// Example: ScrollIntoView(Smooth(), VCenter())
-// Produces: data-scroll-into-view__smooth__vcenter
-func ScrollIntoView(options ...AttrMutator) h.Attribute {
-	return exprAttr("data-scroll-into-view", options...)
+// ScrollBuilder builds the data-scroll-into-view attribute.
+type ScrollBuilder struct {
+	*attrBase
 }
 
-// ViewTransitionName sets explicit view-transition-name for CSS animations.
-// Requires Datastar Pro license.
-// Example: ViewTransitionName(Raw("$itemId"))
-// Produces: data-view-transition="$itemId"
-func ViewTransitionName(expression ...AttrMutator) h.Attribute {
-	return exprAttr("data-view-transition", expression...)
+// Smooth appends "__smooth".
+func (b *ScrollBuilder) Smooth() *ScrollBuilder { b.name.WriteString("__smooth"); return b }
+
+// Instant appends "__instant".
+func (b *ScrollBuilder) Instant() *ScrollBuilder { b.name.WriteString("__instant"); return b }
+
+// Auto appends "__auto" — browser default scrolling behavior.
+func (b *ScrollBuilder) Auto() *ScrollBuilder { b.name.WriteString("__auto"); return b }
+
+// HStart aligns to start of horizontal viewport.
+func (b *ScrollBuilder) HStart() *ScrollBuilder { b.name.WriteString("__hstart"); return b }
+
+// HCenter aligns to center of horizontal viewport.
+func (b *ScrollBuilder) HCenter() *ScrollBuilder { b.name.WriteString("__hcenter"); return b }
+
+// HEnd aligns to end of horizontal viewport.
+func (b *ScrollBuilder) HEnd() *ScrollBuilder { b.name.WriteString("__hend"); return b }
+
+// HNearest aligns to nearest edge of horizontal viewport.
+func (b *ScrollBuilder) HNearest() *ScrollBuilder { b.name.WriteString("__hnearest"); return b }
+
+// VStart aligns to start of vertical viewport.
+func (b *ScrollBuilder) VStart() *ScrollBuilder { b.name.WriteString("__vstart"); return b }
+
+// VCenter aligns to center of vertical viewport.
+func (b *ScrollBuilder) VCenter() *ScrollBuilder { b.name.WriteString("__vcenter"); return b }
+
+// VEnd aligns to end of vertical viewport.
+func (b *ScrollBuilder) VEnd() *ScrollBuilder { b.name.WriteString("__vend")
+	return b
 }
 
-// Pro modifiers
-
-// Session uses session storage instead of local storage for Persist.
-func Session() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__session")
-	})
-}
-
-// Filter filters out empty values for QueryString.
-func Filter() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__filter")
-	})
-}
-
-// History enables browser history integration for QueryString.
-func History() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__history")
-	})
-}
-
-// Scroll behavior modifiers for ScrollIntoView
-
-// Smooth enables smooth scrolling behavior.
-func Smooth() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__smooth")
-	})
-}
-
-// Instant enables instant scrolling behavior.
-func Instant() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__instant")
-	})
-}
-
-// Auto uses browser default scrolling behavior.
-func Auto() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__auto")
-	})
-}
-
-// Horizontal alignment modifiers for ScrollIntoView
-
-// HStart aligns element to start of horizontal viewport.
-func HStart() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__hstart")
-	})
-}
-
-// HCenter aligns element to center of horizontal viewport.
-func HCenter() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__hcenter")
-	})
-}
-
-// HEnd aligns element to end of horizontal viewport.
-func HEnd() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__hend")
-	})
-}
-
-// HNearest aligns element to nearest edge of horizontal viewport.
-func HNearest() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__hnearest")
-	})
-}
-
-// Vertical alignment modifiers for ScrollIntoView
-
-// VStart aligns element to start of vertical viewport.
-func VStart() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__vstart")
-	})
-}
-
-// VCenter aligns element to center of vertical viewport.
-func VCenter() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__vcenter")
-	})
-}
-
-// VEnd aligns element to end of vertical viewport.
-func VEnd() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__vend")
-	})
-}
-
-// VNearest aligns element to nearest edge of vertical viewport.
-func VNearest() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__vnearest")
-	})
+// VNearest aligns to nearest edge of vertical viewport.
+func (b *ScrollBuilder) VNearest() *ScrollBuilder {
+	b.name.WriteString("__vnearest")
+	return b
 }
 
 // Focus focuses the element after scrolling into view.
-func Focus() AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString("__focus")
-	})
+func (b *ScrollBuilder) Focus() *ScrollBuilder { b.name.WriteString("__focus"); return b }
+
+// ScrollIntoView scrolls the element into the viewport.
+// Requires Datastar Pro.
+func ScrollIntoView() *ScrollBuilder {
+	return &ScrollBuilder{attrBase: newAttr("data-scroll-into-view")}
+}
+
+// ViewTransitionName sets an explicit view-transition-name.
+// Requires Datastar Pro.
+func ViewTransitionName(expression Value) h.Attribute {
+	return h.Attr("data-view-transition", js.ToJS(expression.expr))
 }
 
 // Pro Actions
 
-// Clipboard copies text to the clipboard.
-// Requires Datastar Pro license.
-// Example: OnClick(Clipboard(Str("Hello, world!")))
-// Produces: data-on:click="@clipboard('Hello, world!')"
+// Clipboard copies text to the clipboard via @clipboard(text).
+// Requires Datastar Pro.
 func Clipboard(text Value) Value {
 	return V(ActionClipboard(text.expr))
 }
 
 // ClipboardBase64 copies Base64-decoded text to the clipboard.
-// Useful for content with special characters, quotes, or code fragments.
-// Requires Datastar Pro license.
-// Example: OnClick(ClipboardBase64(Str("SGVsbG8sIHdvcmxkIQ==")))
-// Produces: data-on:click="@clipboard('SGVsbG8sIHdvcmxkIQ==', true)"
+// Requires Datastar Pro.
 func ClipboardBase64(text Value) Value {
 	return V(ActionClipboardBase64(text.expr))
 }
 
 // Fit linearly interpolates a value from one range to another.
-// Requires Datastar Pro license.
-// Syntax: @fit(v, oldMin, oldMax, newMin, newMax)
-// Example: Computed("rgb", Fit(Raw("$slider"), Raw("0"), Raw("100"), Raw("0"), Raw("255")))
+// Requires Datastar Pro.
 func Fit(v, oldMin, oldMax, newMin, newMax Value) Value {
 	return V(ActionFit(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
-// FitClamped linearly interpolates with clamping to keep results within the target range.
-// Requires Datastar Pro license.
-// Syntax: @fit(v, oldMin, oldMax, newMin, newMax, true)
+// FitClamped is like Fit but clamps the result to the target range.
+// Requires Datastar Pro.
 func FitClamped(v, oldMin, oldMax, newMin, newMax Value) Value {
 	return V(ActionFitClamped(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
-// FitRounded linearly interpolates with rounding to nearest integer.
-// Requires Datastar Pro license.
-// Syntax: @fit(v, oldMin, oldMax, newMin, newMax, false, true)
+// FitRounded is like Fit but rounds the result to the nearest integer.
+// Requires Datastar Pro.
 func FitRounded(v, oldMin, oldMax, newMin, newMax Value) Value {
 	return V(ActionFitRounded(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
-// FitClampedRounded linearly interpolates with both clamping and rounding.
-// Requires Datastar Pro license.
-// Syntax: @fit(v, oldMin, oldMax, newMin, newMax, true, true)
+// FitClampedRounded is like Fit with both clamping and rounding.
+// Requires Datastar Pro.
 func FitClampedRounded(v, oldMin, oldMax, newMin, newMax Value) Value {
 	return V(ActionFitClampedRounded(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
-

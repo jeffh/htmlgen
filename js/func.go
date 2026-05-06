@@ -3,8 +3,8 @@ package js
 import "strings"
 
 // writeArrowParams writes arrow function parameters in the format:
-// - Single param: x
-// - Zero or multiple params: (a, b)
+//   - Single param: x
+//   - Zero or multiple params: (a, b)
 func writeArrowParams(sb *strings.Builder, params []string) {
 	if len(params) == 1 {
 		sb.WriteString(params[0])
@@ -20,7 +20,7 @@ func writeArrowParams(sb *strings.Builder, params []string) {
 	}
 }
 
-// writeParenParams writes parenthesized parameters: (a, b)
+// writeParenParams writes parenthesized parameters: (a, b).
 func writeParenParams(sb *strings.Builder, params []string) {
 	sb.WriteString("(")
 	for i, p := range params {
@@ -32,7 +32,7 @@ func writeParenParams(sb *strings.Builder, params []string) {
 	sb.WriteString(")")
 }
 
-// writeStmtList writes statements separated by "; "
+// writeStmtList writes statements separated by "; ".
 func writeStmtList(sb *strings.Builder, stmts []Stmt) {
 	for i, s := range stmts {
 		if i > 0 {
@@ -42,14 +42,7 @@ func writeStmtList(sb *strings.Builder, stmts []Stmt) {
 	}
 }
 
-// ArrowFunc creates an arrow function expression with a single expression body.
-// Example: ArrowFunc([]string{"x", "y"}, Add(Ident("x"), Ident("y")))
-//
-//	=> (x, y) => (x + y)
-func ArrowFunc(params []string, body Expr) Callable {
-	return arrowFuncExpr{params: params, body: body}
-}
-
+// arrowFuncExpr represents an arrow function with a single expression body.
 type arrowFuncExpr struct {
 	params []string
 	body   Expr
@@ -60,16 +53,16 @@ func (a arrowFuncExpr) js(sb *strings.Builder) {
 	sb.WriteString(" => ")
 	a.body.js(sb)
 }
-func (a arrowFuncExpr) callable() {}
 
-// ArrowFuncStmts creates an arrow function with a statement body.
-// Example: ArrowFuncStmts([]string{"e"}, ExprStmt(ConsoleLog(Ident("e"))))
+// ArrowFunc creates an arrow function expression with a single expression body.
 //
-//	=> (e) => { console.log(e) }
-func ArrowFuncStmts(params []string, stmts ...Stmt) Callable {
-	return arrowFuncStmtsExpr{params: params, body: stmts}
+//	ArrowFunc([]string{"x", "y"}, Ident("x").Add(Ident("y")))
+//	=> (x, y) => (x + y)
+func ArrowFunc(params []string, body Expr) Expr {
+	return Expr{node: arrowFuncExpr{params: params, body: body}}
 }
 
+// arrowFuncStmtsExpr represents an arrow function with a statement body.
 type arrowFuncStmtsExpr struct {
 	params []string
 	body   []Stmt
@@ -81,16 +74,16 @@ func (a arrowFuncStmtsExpr) js(sb *strings.Builder) {
 	writeStmtList(sb, a.body)
 	sb.WriteString(" }")
 }
-func (a arrowFuncStmtsExpr) callable() {}
 
-// Func creates an anonymous function expression.
-// Example: Func([]string{"x", "y"}, Return(Add(Ident("x"), Ident("y"))))
+// ArrowFuncStmts creates an arrow function with a statement body.
 //
-//	=> function(x, y) { return (x + y) }
-func Func(params []string, stmts ...Stmt) Callable {
-	return funcExpr{params: params, body: stmts}
+//	ArrowFuncStmts([]string{"e"}, ConsoleLog(Ident("e")).Stmt())
+//	=> (e) => { console.log(e) }
+func ArrowFuncStmts(params []string, stmts ...Stmt) Expr {
+	return Expr{node: arrowFuncStmtsExpr{params: params, body: stmts}}
 }
 
+// funcExpr represents an anonymous function expression.
 type funcExpr struct {
 	params []string
 	body   []Stmt
@@ -103,16 +96,16 @@ func (f funcExpr) js(sb *strings.Builder) {
 	writeStmtList(sb, f.body)
 	sb.WriteString(" }")
 }
-func (f funcExpr) callable() {}
 
-// IIFE creates an immediately invoked function expression.
-// Example: IIFE(ExprStmt(ConsoleLog(String("hello"))))
+// Func creates an anonymous function expression.
 //
-//	=> (function() { console.log("hello") })()
-func IIFE(stmts ...Stmt) Callable {
-	return iifeExpr{body: stmts}
+//	Func([]string{"x", "y"}, Return(Ident("x").Add(Ident("y"))))
+//	=> function(x, y) { return (x + y) }
+func Func(params []string, stmts ...Stmt) Expr {
+	return Expr{node: funcExpr{params: params, body: stmts}}
 }
 
+// iifeExpr represents an immediately invoked function expression.
 type iifeExpr struct {
 	body []Stmt
 }
@@ -122,17 +115,16 @@ func (i iifeExpr) js(sb *strings.Builder) {
 	writeStmtList(sb, i.body)
 	sb.WriteString(" })()")
 }
-func (i iifeExpr) callable() {}
 
-// Template creates a template literal expression.
-// Alternates between string parts and expression parts.
-// Example: Template("Hello, ", Ident("name"), "!")
+// IIFE creates an immediately invoked function expression.
 //
-//	=> `Hello, ${name}!`
-func Template(parts ...any) Callable {
-	return templateLiteral{parts}
+//	IIFE(ConsoleLog(String("hello")).Stmt())
+//	=> (function() { console.log("hello") })()
+func IIFE(stmts ...Stmt) Expr {
+	return Expr{node: iifeExpr{body: stmts}}
 }
 
+// templateLiteral represents a template literal with interpolation.
 type templateLiteral struct {
 	parts []any // alternating strings and Expr
 }
@@ -142,7 +134,6 @@ func (t templateLiteral) js(sb *strings.Builder) {
 	for _, part := range t.parts {
 		switch v := part.(type) {
 		case string:
-			// Escape backticks, backslashes, and ${
 			for _, r := range v {
 				switch r {
 				case '`':
@@ -150,7 +141,6 @@ func (t templateLiteral) js(sb *strings.Builder) {
 				case '\\':
 					sb.WriteString("\\\\")
 				case '$':
-					// Escape $ to prevent accidental interpolation
 					sb.WriteString("\\$")
 				default:
 					sb.WriteRune(r)
@@ -164,34 +154,28 @@ func (t templateLiteral) js(sb *strings.Builder) {
 	}
 	sb.WriteString("`")
 }
-func (t templateLiteral) callable() {}
 
-// Await creates an await expression.
-// Example: Await(Fetch(String("/api/data")))
+// Template creates a template literal expression.
+// Alternates between string parts and expression parts.
 //
-//	=> await fetch("/api/data")
-func Await(expr Expr) Callable {
-	return awaitExpr{expr}
+//	Template("Hello, ", Ident("name"), "!") => `Hello, ${name}!`
+func Template(parts ...any) Expr {
+	return Expr{node: templateLiteral{parts}}
 }
 
-type awaitExpr struct {
-	expr Expr
-}
+// awaitExpr represents an await expression.
+type awaitExpr struct{ expr Expr }
 
 func (a awaitExpr) js(sb *strings.Builder) {
 	sb.WriteString("await ")
 	a.expr.js(sb)
 }
-func (a awaitExpr) callable() {}
 
-// AsyncArrowFunc creates an async arrow function with a single expression body.
-// Example: AsyncArrowFunc([]string{}, Await(Fetch(String("/api"))))
-//
-//	=> async () => await fetch("/api")
-func AsyncArrowFunc(params []string, body Expr) Callable {
-	return asyncArrowFuncExpr{params: params, body: body}
-}
+// Await wraps the expression in an await expression: await e.
+func (e Expr) Await() Expr { return Expr{node: awaitExpr{e}} }
 
+// asyncArrowFuncExpr represents an async arrow function with a single
+// expression body.
 type asyncArrowFuncExpr struct {
 	params []string
 	body   Expr
@@ -203,16 +187,16 @@ func (a asyncArrowFuncExpr) js(sb *strings.Builder) {
 	sb.WriteString(" => ")
 	a.body.js(sb)
 }
-func (a asyncArrowFuncExpr) callable() {}
 
-// AsyncArrowFuncStmts creates an async arrow function with a statement body.
-// Example: AsyncArrowFuncStmts([]string{}, Let("data", Await(Fetch(String("/api")))))
+// AsyncArrowFunc creates an async arrow function with a single expression body.
 //
-//	=> async () => { let data = await fetch("/api") }
-func AsyncArrowFuncStmts(params []string, stmts ...Stmt) Callable {
-	return asyncArrowFuncStmtsExpr{params: params, body: stmts}
+//	AsyncArrowFunc([]string{}, Fetch(String("/api")).Await())
+//	=> async () => await fetch("/api")
+func AsyncArrowFunc(params []string, body Expr) Expr {
+	return Expr{node: asyncArrowFuncExpr{params: params, body: body}}
 }
 
+// asyncArrowFuncStmtsExpr represents an async arrow function with a statement body.
 type asyncArrowFuncStmtsExpr struct {
 	params []string
 	body   []Stmt
@@ -225,39 +209,43 @@ func (a asyncArrowFuncStmtsExpr) js(sb *strings.Builder) {
 	writeStmtList(sb, a.body)
 	sb.WriteString(" }")
 }
-func (a asyncArrowFuncStmtsExpr) callable() {}
 
-// PromiseThen creates expr.then(onFulfilled)
-func PromiseThen(promise Callable, onFulfilled Expr) Callable {
-	return Method(promise, "then", onFulfilled)
+// AsyncArrowFuncStmts creates an async arrow function with a statement body.
+func AsyncArrowFuncStmts(params []string, stmts ...Stmt) Expr {
+	return Expr{node: asyncArrowFuncStmtsExpr{params: params, body: stmts}}
 }
 
-// PromiseCatch creates expr.catch(onRejected)
-func PromiseCatch(promise Callable, onRejected Expr) Callable {
-	return Method(promise, "catch", onRejected)
+// Then creates e.then(onFulfilled).
+func (e Expr) Then(onFulfilled Expr) Expr {
+	return e.Method("then", onFulfilled)
 }
 
-// PromiseFinally creates expr.finally(onFinally)
-func PromiseFinally(promise Callable, onFinally Expr) Callable {
-	return Method(promise, "finally", onFinally)
+// Catch creates e.catch(onRejected).
+func (e Expr) Catch(onRejected Expr) Expr {
+	return e.Method("catch", onRejected)
 }
 
-// PromiseResolve creates Promise.resolve(value)
-func PromiseResolve(value Expr) Callable {
-	return Method(Promise, "resolve", value)
+// Finally creates e.finally(onFinally).
+func (e Expr) Finally(onFinally Expr) Expr {
+	return e.Method("finally", onFinally)
 }
 
-// PromiseReject creates Promise.reject(reason)
-func PromiseReject(reason Expr) Callable {
-	return Method(Promise, "reject", reason)
+// PromiseResolve creates Promise.resolve(value).
+func PromiseResolve(value Expr) Expr {
+	return Promise.Method("resolve", value)
 }
 
-// PromiseAll creates Promise.all(iterable)
-func PromiseAll(iterable Expr) Callable {
-	return Method(Promise, "all", iterable)
+// PromiseReject creates Promise.reject(reason).
+func PromiseReject(reason Expr) Expr {
+	return Promise.Method("reject", reason)
 }
 
-// PromiseRace creates Promise.race(iterable)
-func PromiseRace(iterable Expr) Callable {
-	return Method(Promise, "race", iterable)
+// PromiseAll creates Promise.all(iterable).
+func PromiseAll(iterable Expr) Expr {
+	return Promise.Method("all", iterable)
+}
+
+// PromiseRace creates Promise.race(iterable).
+func PromiseRace(iterable Expr) Expr {
+	return Promise.Method("race", iterable)
 }

@@ -14,6 +14,15 @@ type Attribute struct {
 
 func (a Attribute) isTagArg() {}
 
+// AttrBuilder is a TagArg that produces a single Attribute on demand.
+// Fluent attribute builders (in companion packages like ds and hx) implement
+// this interface so that they can be passed directly to tag functions without
+// an explicit terminator method.
+type AttrBuilder interface {
+	TagArg
+	Attribute() Attribute
+}
+
 // Attr creates a new Attribute with the given name and value.
 // Panics if name is empty.
 func Attr(name, value string) Attribute {

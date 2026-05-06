@@ -27,17 +27,9 @@ func isValidIdentifier(name string) bool {
 	return true
 }
 
-// Prop accesses a property on a callable expression.
-// Example: Prop(Ident("document"), "body") => document.body
-// If name contains characters that are invalid for dot-notation access,
-// bracket notation with a quoted string is used instead.
-// Example: Prop(Ident("obj"), "foo-bar") => obj["foo-bar"]
-func Prop(obj Callable, name string) Callable {
-	return propAccess{obj: obj, prop: name}
-}
-
+// propAccess represents obj.prop or obj["prop"].
 type propAccess struct {
-	obj  Callable
+	obj  Expr
 	prop string
 }
 
@@ -52,17 +44,19 @@ func (p propAccess) js(sb *strings.Builder) {
 		sb.WriteString("]")
 	}
 }
-func (p propAccess) callable() {}
 
-// Index accesses an element by index or computed property.
-// Example: Index(Ident("arr"), Int(0)) => arr[0]
-// Example: Index(Ident("obj"), String("key")) => obj["key"]
-func Index(obj Callable, index Expr) Callable {
-	return indexAccess{obj: obj, index: index}
+// Prop accesses a named property on the expression.
+//
+//	Ident("document").Prop("body") => document.body
+//
+// If name is not a valid JS identifier, bracket notation is used instead.
+func (e Expr) Prop(name string) Expr {
+	return Expr{node: propAccess{obj: e, prop: name}}
 }
 
+// indexAccess represents obj[index].
 type indexAccess struct {
-	obj   Callable
+	obj   Expr
 	index Expr
 }
 
@@ -72,16 +66,15 @@ func (i indexAccess) js(sb *strings.Builder) {
 	i.index.js(sb)
 	sb.WriteString("]")
 }
-func (i indexAccess) callable() {}
 
-// Call invokes a callable with arguments.
-// Example: Call(Ident("alert"), String("hello")) => alert("hello")
-func Call(fn Callable, args ...Expr) Callable {
-	return funcCall{fn: fn, args: args}
+// Index returns e[index] — computed property access.
+func (e Expr) Index(index Expr) Expr {
+	return Expr{node: indexAccess{obj: e, index: index}}
 }
 
+// funcCall represents fn(args...).
 type funcCall struct {
-	fn   Callable
+	fn   Expr
 	args []Expr
 }
 
@@ -96,25 +89,29 @@ func (f funcCall) js(sb *strings.Builder) {
 	}
 	sb.WriteString(")")
 }
-func (f funcCall) callable() {}
 
-// Method calls a method on an object with arguments.
-// Example: Method(Ident("console"), "log", String("hello")) => console.log("hello")
-func Method(obj Callable, method string, args ...Expr) Callable {
-	return funcCall{
-		fn:   propAccess{obj: obj, prop: method},
-		args: args,
+// Call invokes the expression as a function with the given arguments.
+//
+//	Ident("alert").Call(String("hello")) => alert("hello")
+func (e Expr) Call(args ...Expr) Expr {
+	return Expr{node: funcCall{fn: e, args: args}}
+}
+
+// Method calls a method on the expression.
+//
+//	Ident("console").Method("log", String("hello")) => console.log("hello")
+func (e Expr) Method(name string, args ...Expr) Expr {
+	return Expr{
+		node: funcCall{
+			fn:   Expr{node: propAccess{obj: e, prop: name}},
+			args: args,
+		},
 	}
 }
 
-// New creates a new instance with the new keyword.
-// Example: New(Ident("Date")) => new Date()
-func New(constructor Callable, args ...Expr) Callable {
-	return newExpr{constructor: constructor, args: args}
-}
-
+// newExpr represents `new Constructor(args...)`.
 type newExpr struct {
-	constructor Callable
+	constructor Expr
 	args        []Expr
 }
 
@@ -130,16 +127,17 @@ func (n newExpr) js(sb *strings.Builder) {
 	}
 	sb.WriteString(")")
 }
-func (n newExpr) callable() {}
 
-// OptionalProp accesses a property with optional chaining.
-// Example: OptionalProp(Ident("obj"), "foo") => obj?.foo
-func OptionalProp(obj Callable, name string) Callable {
-	return optionalChain{obj, name}
+// New constructs a new instance using the expression as the constructor.
+//
+//	Ident("Date").New() => new Date()
+func (e Expr) New(args ...Expr) Expr {
+	return Expr{node: newExpr{constructor: e, args: args}}
 }
 
+// optionalChain represents obj?.prop or obj?.["prop"].
 type optionalChain struct {
-	obj  Callable
+	obj  Expr
 	prop string
 }
 
@@ -154,16 +152,17 @@ func (o optionalChain) js(sb *strings.Builder) {
 		sb.WriteString("]")
 	}
 }
-func (o optionalChain) callable() {}
 
-// OptionalCall calls a method with optional chaining.
-// Example: OptionalCall(Ident("obj"), "method", args...) => obj?.method(args...)
-func OptionalCall(obj Callable, method string, args ...Expr) Callable {
-	return optionalMethodCall{obj, method, args}
+// OptionalProp accesses a property using optional chaining.
+//
+//	Ident("obj").OptionalProp("foo") => obj?.foo
+func (e Expr) OptionalProp(name string) Expr {
+	return Expr{node: optionalChain{obj: e, prop: name}}
 }
 
+// optionalMethodCall represents obj?.method(args...).
 type optionalMethodCall struct {
-	obj    Callable
+	obj    Expr
 	method string
 	args   []Expr
 }
@@ -187,4 +186,10 @@ func (o optionalMethodCall) js(sb *strings.Builder) {
 	}
 	sb.WriteString(")")
 }
-func (o optionalMethodCall) callable() {}
+
+// OptionalCall calls a method using optional chaining.
+//
+//	Ident("obj").OptionalCall("method", args...) => obj?.method(args...)
+func (e Expr) OptionalCall(method string, args ...Expr) Expr {
+	return Expr{node: optionalMethodCall{obj: e, method: method, args: args}}
+}
