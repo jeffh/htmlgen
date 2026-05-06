@@ -308,12 +308,11 @@ tmpl.Render(w,
     ),
     h.Body(
         h.Div(h.Attrs("id", "app"),
-            h.Button(h.Attributes{
+            h.Button(
                 ds.Signal("count", 0),
                 ds.OnClick(ds.SetSignal("count", ds.Raw("$count + 1"))),
-            },
                 h.Text("Count: "),
-                h.Span(h.Attributes{ds.Text(ds.Raw("$count"))}),
+                h.Span(ds.Text(ds.Raw("$count"))),
             ),
         ),
     ),
@@ -332,24 +331,20 @@ h.Render(os.Stdout, page)</code></pre>
                         <div class="code-block">
                             <pre><code class="language-go">// Type-safe event handlers
 attr := js.OnClick(
-    js.ExprStmt(js.PreventDefault()),
-    js.ExprStmt(js.ConsoleLog(js.String("clicked"))),
+    js.PreventDefault().Stmt(),
+    js.ConsoleLog(js.String("clicked")).Stmt(),
 )
 // &rarr; onclick="event.preventDefault(); console.log(\"clicked\")"
 
 // Promise chains
-fetch := js.PromiseThen(
-    js.Fetch(js.String("/api/users")),
-    js.ArrowFunc([]string{"r"}, js.Method(js.Ident("r"), "json")),
-)
+fetch := js.Fetch(js.String("/api/users")).
+    Then(js.ArrowFunc([]string{"r"}, js.Ident("r").Method("json")))
 // &rarr; fetch("/api/users").then(r =&gt; r.json())
 
 // DOM manipulation
 handler := js.Handler(
-    js.Assign(
-        js.Prop(js.EventTarget(), "value"),
-        js.Method(js.EventValue(), "toUpperCase"),
-    ),
+    js.EventTarget().Prop("value").
+        Assign(js.EventValue().Method("toUpperCase")),
 )
 // &rarr; event.target.value = event.target.value.toUpperCase()</code></pre>
                             <div class="code-caption">
