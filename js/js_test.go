@@ -188,6 +188,58 @@ func TestPropChained(t *testing.T) {
 	}
 }
 
+func TestPropSpecialChars(t *testing.T) {
+	tests := []struct {
+		name     string
+		expr     Expr
+		expected string
+	}{
+		{"hyphen", Prop(Ident("obj"), "foo-bar"), `obj["foo-bar"]`},
+		{"space", Prop(Ident("obj"), "foo bar"), `obj["foo bar"]`},
+		{"leading digit", Prop(Ident("obj"), "1foo"), `obj["1foo"]`},
+		{"only digits", Prop(Ident("arr"), "0"), `arr["0"]`},
+		{"empty", Prop(Ident("obj"), ""), `obj[""]`},
+		{"dot", Prop(Ident("obj"), "a.b"), `obj["a.b"]`},
+		{"unicode", Prop(Ident("obj"), "héllo"), `obj["héllo"]`},
+		{"quote", Prop(Ident("obj"), `a"b`), `obj["a\"b"]`},
+		{"valid underscore", Prop(Ident("obj"), "_foo"), "obj._foo"},
+		{"valid dollar", Prop(Ident("obj"), "$foo"), "obj.$foo"},
+		{"valid mixed", Prop(Ident("obj"), "a1_$"), "obj.a1_$"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := exprString(tt.expr)
+			if got != tt.expected {
+				t.Errorf("Prop() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestOptionalPropSpecialChars(t *testing.T) {
+	got := exprString(OptionalProp(Ident("obj"), "foo-bar"))
+	expected := `obj?.["foo-bar"]`
+	if got != expected {
+		t.Errorf("OptionalProp() = %q, want %q", got, expected)
+	}
+}
+
+func TestMethodSpecialChars(t *testing.T) {
+	got := exprString(Method(Ident("obj"), "weird-name", Int(1)))
+	expected := `obj["weird-name"](1)`
+	if got != expected {
+		t.Errorf("Method() = %q, want %q", got, expected)
+	}
+}
+
+func TestOptionalCallSpecialChars(t *testing.T) {
+	got := exprString(OptionalCall(Ident("obj"), "weird-name", Int(1)))
+	expected := `obj?.["weird-name"](1)`
+	if got != expected {
+		t.Errorf("OptionalCall() = %q, want %q", got, expected)
+	}
+}
+
 func TestIndex(t *testing.T) {
 	got := exprString(Index(Ident("arr"), Int(0)))
 	if got != "arr[0]" {
