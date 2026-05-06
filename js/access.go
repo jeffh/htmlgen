@@ -2,8 +2,36 @@ package js
 
 import "strings"
 
+// isValidIdentifier reports whether name is a valid JavaScript identifier
+// suitable for dot-notation property access. Empty strings and names
+// containing characters outside [A-Za-z0-9_$] (or starting with a digit)
+// are rejected so the caller can fall back to bracket notation.
+func isValidIdentifier(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z',
+			r >= 'A' && r <= 'Z',
+			r == '_', r == '$':
+			// always allowed
+		case r >= '0' && r <= '9':
+			if i == 0 {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 // Prop accesses a property on a callable expression.
 // Example: Prop(Ident("document"), "body") => document.body
+// If name contains characters that are invalid for dot-notation access,
+// bracket notation with a quoted string is used instead.
+// Example: Prop(Ident("obj"), "foo-bar") => obj["foo-bar"]
 func Prop(obj Callable, name string) Callable {
 	return propAccess{obj: obj, prop: name}
 }
@@ -15,8 +43,14 @@ type propAccess struct {
 
 func (p propAccess) js(sb *strings.Builder) {
 	p.obj.js(sb)
-	sb.WriteString(".")
-	sb.WriteString(p.prop)
+	if isValidIdentifier(p.prop) {
+		sb.WriteString(".")
+		sb.WriteString(p.prop)
+	} else {
+		sb.WriteString("[")
+		writeJSONString(sb, p.prop)
+		sb.WriteString("]")
+	}
 }
 func (p propAccess) callable() {}
 
@@ -111,8 +145,14 @@ type optionalChain struct {
 
 func (o optionalChain) js(sb *strings.Builder) {
 	o.obj.js(sb)
-	sb.WriteString("?.")
-	sb.WriteString(o.prop)
+	if isValidIdentifier(o.prop) {
+		sb.WriteString("?.")
+		sb.WriteString(o.prop)
+	} else {
+		sb.WriteString("?.[")
+		writeJSONString(sb, o.prop)
+		sb.WriteString("]")
+	}
 }
 func (o optionalChain) callable() {}
 
@@ -130,8 +170,14 @@ type optionalMethodCall struct {
 
 func (o optionalMethodCall) js(sb *strings.Builder) {
 	o.obj.js(sb)
-	sb.WriteString("?.")
-	sb.WriteString(o.method)
+	if isValidIdentifier(o.method) {
+		sb.WriteString("?.")
+		sb.WriteString(o.method)
+	} else {
+		sb.WriteString("?.[")
+		writeJSONString(sb, o.method)
+		sb.WriteString("]")
+	}
 	sb.WriteString("(")
 	for i, arg := range o.args {
 		if i > 0 {
