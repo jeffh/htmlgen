@@ -20,14 +20,14 @@ func TestCustomValidity(t *testing.T) {
 }
 
 func TestOnRAF(t *testing.T) {
-	attr := OnRAF(Raw("$frameCount++"))
+	attr := OnRAF(Raw("$frameCount++")).Attribute()
 	if attr.Name != "data-on-raf" {
 		t.Errorf("OnRAF().Name = %q, want %q", attr.Name, "data-on-raf")
 	}
 }
 
 func TestOnResize(t *testing.T) {
-	attr := OnResize(Raw("$width = el.offsetWidth"))
+	attr := OnResize(Raw("$width = el.offsetWidth")).Attribute()
 	if attr.Name != "data-on-resize" {
 		t.Errorf("OnResize().Name = %q, want %q", attr.Name, "data-on-resize")
 	}
@@ -35,7 +35,7 @@ func TestOnResize(t *testing.T) {
 
 func TestPersist(t *testing.T) {
 	// Without options
-	attr := Persist(nil)
+	attr := Persist(nil).Attribute()
 	if attr.Name != "data-persist" {
 		t.Errorf("Persist(nil).Name = %q, want %q", attr.Name, "data-persist")
 	}
@@ -45,20 +45,20 @@ func TestPersist(t *testing.T) {
 
 	// With filter options
 	include := "^user"
-	attr = Persist(&FilterOptions{IncludeReg: &include})
+	attr = Persist(&FilterOptions{IncludeReg: &include}).Attribute()
 	if !strings.Contains(attr.Value, "include: /^user/") {
 		t.Errorf("Persist().Value = %q, should contain filter", attr.Value)
 	}
 
 	// With modifiers only
-	attr = Persist(nil, Session())
+	attr = Persist(nil).Session().Attribute()
 	if !strings.Contains(attr.Name, "__session") {
-		t.Errorf("Persist(nil, Session()).Name = %q, should contain __session", attr.Name)
+		t.Errorf("Persist(nil).Session().Name = %q, should contain __session", attr.Name)
 	}
 }
 
 func TestPersistKey(t *testing.T) {
-	attr := PersistKey("mykey")
+	attr := PersistKey("mykey").Attribute()
 	if !strings.HasPrefix(attr.Name, "data-persist:") {
 		t.Errorf("PersistKey().Name = %q, should start with data-persist:", attr.Name)
 	}
@@ -67,15 +67,15 @@ func TestPersistKey(t *testing.T) {
 	}
 
 	// With session modifier
-	attr = PersistKey("mykey", Session())
+	attr = PersistKey("mykey").Session().Attribute()
 	if !strings.Contains(attr.Name, "__session") {
-		t.Errorf("PersistKey(mykey, Session()).Name = %q, should contain __session", attr.Name)
+		t.Errorf("PersistKey(mykey).Session().Name = %q, should contain __session", attr.Name)
 	}
 }
 
 func TestQueryString(t *testing.T) {
 	// Without options
-	attr := QueryString(nil)
+	attr := QueryString(nil).Attribute()
 	if attr.Name != "data-query-string" {
 		t.Errorf("QueryString(nil).Name = %q, want %q", attr.Name, "data-query-string")
 	}
@@ -85,18 +85,18 @@ func TestQueryString(t *testing.T) {
 
 	// With filter options
 	include := "^search"
-	attr = QueryString(&FilterOptions{IncludeReg: &include})
+	attr = QueryString(&FilterOptions{IncludeReg: &include}).Attribute()
 	if !strings.Contains(attr.Value, "include: /^search/") {
 		t.Errorf("QueryString().Value = %q, should contain filter", attr.Value)
 	}
 
 	// With modifiers only
-	attr = QueryString(nil, Filter(), History())
+	attr = QueryString(nil).Filter().History().Attribute()
 	if !strings.Contains(attr.Name, "__filter") {
-		t.Errorf("QueryString(nil, Filter()).Name = %q, should contain __filter", attr.Name)
+		t.Errorf("QueryString(nil).Filter().Name = %q, should contain __filter", attr.Name)
 	}
 	if !strings.Contains(attr.Name, "__history") {
-		t.Errorf("QueryString(nil, History()).Name = %q, should contain __history", attr.Name)
+		t.Errorf("QueryString(nil).History().Name = %q, should contain __history", attr.Name)
 	}
 }
 
@@ -108,7 +108,7 @@ func TestReplaceURL(t *testing.T) {
 }
 
 func TestScrollIntoView(t *testing.T) {
-	attr := ScrollIntoView(Smooth(), VCenter())
+	attr := ScrollIntoView().Smooth().VCenter().Attribute()
 	if !strings.HasPrefix(attr.Name, "data-scroll-into-view") {
 		t.Errorf("ScrollIntoView().Name = %q, should start with data-scroll-into-view", attr.Name)
 	}
@@ -128,107 +128,107 @@ func TestViewTransitionName(t *testing.T) {
 }
 
 func TestSession(t *testing.T) {
-	attrName, _ := buildTestAttr("data-persist", Session())
-	if !strings.Contains(attrName, "__session") {
-		t.Errorf("Session() should add __session, got %q", attrName)
+	attr := Persist(nil).Session().Attribute()
+	if !strings.Contains(attr.Name, "__session") {
+		t.Errorf("Session() should add __session, got %q", attr.Name)
 	}
 }
 
 func TestFilter(t *testing.T) {
-	attrName, _ := buildTestAttr("data-query-string", Filter())
-	if !strings.Contains(attrName, "__filter") {
-		t.Errorf("Filter() should add __filter, got %q", attrName)
+	attr := QueryString(nil).Filter().Attribute()
+	if !strings.Contains(attr.Name, "__filter") {
+		t.Errorf("Filter() should add __filter, got %q", attr.Name)
 	}
 }
 
 func TestHistory(t *testing.T) {
-	attrName, _ := buildTestAttr("data-query-string", History())
-	if !strings.Contains(attrName, "__history") {
-		t.Errorf("History() should add __history, got %q", attrName)
+	attr := QueryString(nil).History().Attribute()
+	if !strings.Contains(attr.Name, "__history") {
+		t.Errorf("History() should add __history, got %q", attr.Name)
 	}
 }
 
 func TestSmooth(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", Smooth())
-	if !strings.Contains(attrName, "__smooth") {
-		t.Errorf("Smooth() should add __smooth, got %q", attrName)
+	attr := ScrollIntoView().Smooth().Attribute()
+	if !strings.Contains(attr.Name, "__smooth") {
+		t.Errorf("Smooth() should add __smooth, got %q", attr.Name)
 	}
 }
 
 func TestInstant(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", Instant())
-	if !strings.Contains(attrName, "__instant") {
-		t.Errorf("Instant() should add __instant, got %q", attrName)
+	attr := ScrollIntoView().Instant().Attribute()
+	if !strings.Contains(attr.Name, "__instant") {
+		t.Errorf("Instant() should add __instant, got %q", attr.Name)
 	}
 }
 
 func TestAuto(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", Auto())
-	if !strings.Contains(attrName, "__auto") {
-		t.Errorf("Auto() should add __auto, got %q", attrName)
+	attr := ScrollIntoView().Auto().Attribute()
+	if !strings.Contains(attr.Name, "__auto") {
+		t.Errorf("Auto() should add __auto, got %q", attr.Name)
 	}
 }
 
 func TestHStart(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", HStart())
-	if !strings.Contains(attrName, "__hstart") {
-		t.Errorf("HStart() should add __hstart, got %q", attrName)
+	attr := ScrollIntoView().HStart().Attribute()
+	if !strings.Contains(attr.Name, "__hstart") {
+		t.Errorf("HStart() should add __hstart, got %q", attr.Name)
 	}
 }
 
 func TestHCenter(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", HCenter())
-	if !strings.Contains(attrName, "__hcenter") {
-		t.Errorf("HCenter() should add __hcenter, got %q", attrName)
+	attr := ScrollIntoView().HCenter().Attribute()
+	if !strings.Contains(attr.Name, "__hcenter") {
+		t.Errorf("HCenter() should add __hcenter, got %q", attr.Name)
 	}
 }
 
 func TestHEnd(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", HEnd())
-	if !strings.Contains(attrName, "__hend") {
-		t.Errorf("HEnd() should add __hend, got %q", attrName)
+	attr := ScrollIntoView().HEnd().Attribute()
+	if !strings.Contains(attr.Name, "__hend") {
+		t.Errorf("HEnd() should add __hend, got %q", attr.Name)
 	}
 }
 
 func TestHNearest(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", HNearest())
-	if !strings.Contains(attrName, "__hnearest") {
-		t.Errorf("HNearest() should add __hnearest, got %q", attrName)
+	attr := ScrollIntoView().HNearest().Attribute()
+	if !strings.Contains(attr.Name, "__hnearest") {
+		t.Errorf("HNearest() should add __hnearest, got %q", attr.Name)
 	}
 }
 
 func TestVStart(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", VStart())
-	if !strings.Contains(attrName, "__vstart") {
-		t.Errorf("VStart() should add __vstart, got %q", attrName)
+	attr := ScrollIntoView().VStart().Attribute()
+	if !strings.Contains(attr.Name, "__vstart") {
+		t.Errorf("VStart() should add __vstart, got %q", attr.Name)
 	}
 }
 
 func TestVCenter(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", VCenter())
-	if !strings.Contains(attrName, "__vcenter") {
-		t.Errorf("VCenter() should add __vcenter, got %q", attrName)
+	attr := ScrollIntoView().VCenter().Attribute()
+	if !strings.Contains(attr.Name, "__vcenter") {
+		t.Errorf("VCenter() should add __vcenter, got %q", attr.Name)
 	}
 }
 
 func TestVEnd(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", VEnd())
-	if !strings.Contains(attrName, "__vend") {
-		t.Errorf("VEnd() should add __vend, got %q", attrName)
+	attr := ScrollIntoView().VEnd().Attribute()
+	if !strings.Contains(attr.Name, "__vend") {
+		t.Errorf("VEnd() should add __vend, got %q", attr.Name)
 	}
 }
 
 func TestVNearest(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", VNearest())
-	if !strings.Contains(attrName, "__vnearest") {
-		t.Errorf("VNearest() should add __vnearest, got %q", attrName)
+	attr := ScrollIntoView().VNearest().Attribute()
+	if !strings.Contains(attr.Name, "__vnearest") {
+		t.Errorf("VNearest() should add __vnearest, got %q", attr.Name)
 	}
 }
 
 func TestFocus(t *testing.T) {
-	attrName, _ := buildTestAttr("data-scroll-into-view", Focus())
-	if !strings.Contains(attrName, "__focus") {
-		t.Errorf("Focus() should add __focus, got %q", attrName)
+	attr := ScrollIntoView().Focus().Attribute()
+	if !strings.Contains(attr.Name, "__focus") {
+		t.Errorf("Focus() should add __focus, got %q", attr.Name)
 	}
 }
 
@@ -241,10 +241,10 @@ func TestClipboard(t *testing.T) {
 		t.Errorf("Clipboard() = %q, want %q", got, expected)
 	}
 
-	// Test AttrMutator
-	_, attrValue := buildTestAttr("test", v)
-	if attrValue != expected {
-		t.Errorf("Clipboard().Modify() = %q, want %q", attrValue, expected)
+	// Test as event-handler value
+	attr := OnClick(v).Attribute()
+	if attr.Value != expected {
+		t.Errorf("OnClick(Clipboard()).Value = %q, want %q", attr.Value, expected)
 	}
 }
 
@@ -257,10 +257,10 @@ func TestClipboardBase64(t *testing.T) {
 		t.Errorf("ClipboardBase64() = %q, want %q", got, expected)
 	}
 
-	// Test AttrMutator
-	_, attrValue := buildTestAttr("test", v)
-	if attrValue != expected {
-		t.Errorf("ClipboardBase64().Modify() = %q, want %q", attrValue, expected)
+	// Test as event-handler value
+	attr := OnClick(v).Attribute()
+	if attr.Value != expected {
+		t.Errorf("OnClick(ClipboardBase64()).Value = %q, want %q", attr.Value, expected)
 	}
 }
 
@@ -273,10 +273,10 @@ func TestFit(t *testing.T) {
 		t.Errorf("Fit() = %q, want %q", got, expected)
 	}
 
-	// Test AttrMutator
-	_, attrValue := buildTestAttr("test", v)
-	if attrValue != expected {
-		t.Errorf("Fit().Modify() = %q, want %q", attrValue, expected)
+	// Test as event-handler value
+	attr := OnClick(v).Attribute()
+	if attr.Value != expected {
+		t.Errorf("OnClick(Fit()).Value = %q, want %q", attr.Value, expected)
 	}
 }
 
