@@ -5,7 +5,7 @@ import "strings"
 // Assignment statements
 
 type assignStmt struct {
-	target Callable
+	target Expr
 	value  Expr
 }
 
@@ -15,15 +15,15 @@ func (a assignStmt) stmt(sb *strings.Builder) {
 	a.value.js(sb)
 }
 
-// Assign creates an assignment statement: target = value
-func Assign(target Callable, value Expr) Stmt {
-	return assignStmt{target, value}
+// Assign creates an assignment statement: target = value.
+func (e Expr) Assign(value Expr) Stmt {
+	return Stmt{node: assignStmt{target: e, value: value}}
 }
 
 // Compound assignment
 
 type compoundAssign struct {
-	target Callable
+	target Expr
 	op     string
 	value  Expr
 }
@@ -36,98 +36,87 @@ func (c compoundAssign) stmt(sb *strings.Builder) {
 	c.value.js(sb)
 }
 
-// AddAssign creates: target += value
-func AddAssign(target Callable, value Expr) Stmt {
-	return compoundAssign{target, "+", value}
+func (e Expr) compoundAssign(op string, value Expr) Stmt {
+	return Stmt{node: compoundAssign{target: e, op: op, value: value}}
 }
 
-// SubAssign creates: target -= value
-func SubAssign(target Callable, value Expr) Stmt {
-	return compoundAssign{target, "-", value}
-}
+// AddAssign creates: e += value.
+func (e Expr) AddAssign(value Expr) Stmt { return e.compoundAssign("+", value) }
 
-// MulAssign creates: target *= value
-func MulAssign(target Callable, value Expr) Stmt {
-	return compoundAssign{target, "*", value}
-}
+// SubAssign creates: e -= value.
+func (e Expr) SubAssign(value Expr) Stmt { return e.compoundAssign("-", value) }
 
-// DivAssign creates: target /= value
-func DivAssign(target Callable, value Expr) Stmt {
-	return compoundAssign{target, "/", value}
-}
+// MulAssign creates: e *= value.
+func (e Expr) MulAssign(value Expr) Stmt { return e.compoundAssign("*", value) }
 
-// ModAssign creates: target %= value
-func ModAssign(target Callable, value Expr) Stmt {
-	return compoundAssign{target, "%", value}
-}
+// DivAssign creates: e /= value.
+func (e Expr) DivAssign(value Expr) Stmt { return e.compoundAssign("/", value) }
 
-// AndAssign creates: target &&= value
-func AndAssign(target Callable, value Expr) Stmt {
-	return compoundAssign{target, "&&", value}
-}
+// ModAssign creates: e %= value.
+func (e Expr) ModAssign(value Expr) Stmt { return e.compoundAssign("%", value) }
 
-// OrAssign creates: target ||= value
-func OrAssign(target Callable, value Expr) Stmt {
-	return compoundAssign{target, "||", value}
-}
+// AndAssign creates: e &&= value.
+func (e Expr) AndAssign(value Expr) Stmt { return e.compoundAssign("&&", value) }
 
-// NullishAssign creates: target ??= value
-func NullishAssign(target Callable, value Expr) Stmt {
-	return compoundAssign{target, "??", value}
-}
+// OrAssign creates: e ||= value.
+func (e Expr) OrAssign(value Expr) Stmt { return e.compoundAssign("||", value) }
+
+// NullishAssign creates: e ??= value.
+func (e Expr) NullishAssign(value Expr) Stmt { return e.compoundAssign("??", value) }
 
 // Variable declarations
 
 type varDecl struct {
 	kind  string // "let", "const", "var"
 	name  string
-	value Expr // nil for declaration without initialization
+	value Expr
+	init  bool
 }
 
 func (v varDecl) stmt(sb *strings.Builder) {
 	sb.WriteString(v.kind)
 	sb.WriteString(" ")
 	sb.WriteString(v.name)
-	if v.value != nil {
+	if v.init {
 		sb.WriteString(" = ")
 		v.value.js(sb)
 	}
 }
 
-// Let creates a let declaration: let name = value
+// Let creates a let declaration: let name = value.
 func Let(name string, value Expr) Stmt {
-	return varDecl{"let", name, value}
+	return Stmt{node: varDecl{kind: "let", name: name, value: value, init: true}}
 }
 
-// LetDecl creates a let declaration without initialization: let name
+// LetDecl creates a let declaration without initialization: let name.
 func LetDecl(name string) Stmt {
-	return varDecl{"let", name, nil}
+	return Stmt{node: varDecl{kind: "let", name: name}}
 }
 
-// Const creates a const declaration: const name = value
+// Const creates a const declaration: const name = value.
 func Const(name string, value Expr) Stmt {
-	return varDecl{"const", name, value}
+	return Stmt{node: varDecl{kind: "const", name: name, value: value, init: true}}
 }
 
-// Var creates a var declaration: var name = value
+// Var creates a var declaration: var name = value.
 func Var(name string, value Expr) Stmt {
-	return varDecl{"var", name, value}
+	return Stmt{node: varDecl{kind: "var", name: name, value: value, init: true}}
 }
 
-// VarDecl creates a var declaration without initialization: var name
+// VarDecl creates a var declaration without initialization: var name.
 func VarDecl(name string) Stmt {
-	return varDecl{"var", name, nil}
+	return Stmt{node: varDecl{kind: "var", name: name}}
 }
 
-// Increment/Decrement
+// Increment / decrement
 
 type incrDecr struct {
-	target Callable
+	target Expr
 	op     string
 	pre    bool
 }
 
-func (i incrDecr) stmt(sb *strings.Builder) {
+func (i incrDecr) write(sb *strings.Builder) {
 	if i.pre {
 		sb.WriteString(i.op)
 		i.target.js(sb)
@@ -137,73 +126,69 @@ func (i incrDecr) stmt(sb *strings.Builder) {
 	}
 }
 
-// Expressions versions for use in larger expressions
-func (i incrDecr) js(sb *strings.Builder) { i.stmt(sb) }
-func (i incrDecr) callable()              {}
+func (i incrDecr) js(sb *strings.Builder)   { i.write(sb) }
+func (i incrDecr) stmt(sb *strings.Builder) { i.write(sb) }
 
-// Incr creates: target++ (post-increment statement)
-func Incr(target Callable) Stmt { return incrDecr{target, "++", false} }
+// Incr creates a post-increment statement: e++.
+func (e Expr) Incr() Stmt { return Stmt{node: incrDecr{target: e, op: "++"}} }
 
-// Decr creates: target-- (post-decrement statement)
-func Decr(target Callable) Stmt { return incrDecr{target, "--", false} }
+// Decr creates a post-decrement statement: e--.
+func (e Expr) Decr() Stmt { return Stmt{node: incrDecr{target: e, op: "--"}} }
 
-// PreIncr creates: ++target (usable as expression)
-func PreIncr(target Callable) Callable { return incrDecr{target, "++", true} }
+// PreIncrExpr creates a pre-increment expression: ++e.
+func (e Expr) PreIncrExpr() Expr { return Expr{node: incrDecr{target: e, op: "++", pre: true}} }
 
-// PreDecr creates: --target (usable as expression)
-func PreDecr(target Callable) Callable { return incrDecr{target, "--", true} }
+// PreDecrExpr creates a pre-decrement expression: --e.
+func (e Expr) PreDecrExpr() Expr { return Expr{node: incrDecr{target: e, op: "--", pre: true}} }
 
-// PostIncr creates: target++ (usable as expression)
-func PostIncr(target Callable) Callable { return incrDecr{target, "++", false} }
+// PostIncrExpr creates a post-increment expression: e++.
+func (e Expr) PostIncrExpr() Expr { return Expr{node: incrDecr{target: e, op: "++"}} }
 
-// PostDecr creates: target-- (usable as expression)
-func PostDecr(target Callable) Callable { return incrDecr{target, "--", false} }
+// PostDecrExpr creates a post-decrement expression: e--.
+func (e Expr) PostDecrExpr() Expr { return Expr{node: incrDecr{target: e, op: "--"}} }
 
 // Return statement
 
 type returnStmt struct {
-	value Expr // nil for bare return
+	value   Expr
+	hasVal  bool
 }
 
 func (r returnStmt) stmt(sb *strings.Builder) {
 	sb.WriteString("return")
-	if r.value != nil {
+	if r.hasVal {
 		sb.WriteString(" ")
 		r.value.js(sb)
 	}
 }
 
-// Return creates a return statement: return value
+// Return creates a return statement: return value.
 func Return(value Expr) Stmt {
-	return returnStmt{value}
+	return Stmt{node: returnStmt{value: value, hasVal: true}}
 }
 
-// ReturnVoid creates a bare return statement: return
+// ReturnVoid creates a bare return statement: return.
 func ReturnVoid() Stmt {
-	return returnStmt{nil}
+	return Stmt{node: returnStmt{}}
 }
 
 // Throw statement
 
-type throwStmt struct {
-	value Expr
-}
+type throwStmt struct{ value Expr }
 
 func (t throwStmt) stmt(sb *strings.Builder) {
 	sb.WriteString("throw ")
 	t.value.js(sb)
 }
 
-// Throw creates a throw statement: throw value
+// Throw creates a throw statement: throw value.
 func Throw(value Expr) Stmt {
-	return throwStmt{value}
+	return Stmt{node: throwStmt{value}}
 }
 
-// Break statement
+// Break / Continue
 
-type breakStmt struct {
-	label string
-}
+type breakStmt struct{ label string }
 
 func (b breakStmt) stmt(sb *strings.Builder) {
 	sb.WriteString("break")
@@ -213,21 +198,13 @@ func (b breakStmt) stmt(sb *strings.Builder) {
 	}
 }
 
-// Break creates a break statement
-func Break() Stmt {
-	return breakStmt{}
-}
+// Break creates a break statement.
+func Break() Stmt { return Stmt{node: breakStmt{}} }
 
-// BreakLabel creates a break statement with a label: break label
-func BreakLabel(label string) Stmt {
-	return breakStmt{label}
-}
+// BreakLabel creates a labeled break: break label.
+func BreakLabel(label string) Stmt { return Stmt{node: breakStmt{label}} }
 
-// Continue statement
-
-type continueStmt struct {
-	label string
-}
+type continueStmt struct{ label string }
 
 func (c continueStmt) stmt(sb *strings.Builder) {
 	sb.WriteString("continue")
@@ -237,15 +214,11 @@ func (c continueStmt) stmt(sb *strings.Builder) {
 	}
 }
 
-// Continue creates a continue statement
-func Continue() Stmt {
-	return continueStmt{}
-}
+// Continue creates a continue statement.
+func Continue() Stmt { return Stmt{node: continueStmt{}} }
 
-// ContinueLabel creates a continue statement with a label: continue label
-func ContinueLabel(label string) Stmt {
-	return continueStmt{label}
-}
+// ContinueLabel creates a labeled continue: continue label.
+func ContinueLabel(label string) Stmt { return Stmt{node: continueStmt{label}} }
 
 // If statement
 
@@ -278,14 +251,14 @@ func (i ifStmt) stmt(sb *strings.Builder) {
 	}
 }
 
-// If creates an if statement: if (cond) { body... }
+// If creates an if statement: if (cond) { body... }.
 func If(cond Expr, body ...Stmt) Stmt {
-	return ifStmt{cond: cond, body: body}
+	return Stmt{node: ifStmt{cond: cond, body: body}}
 }
 
-// IfElse creates an if-else statement: if (cond) { thenBody... } else { elseBody... }
+// IfElse creates an if-else statement.
 func IfElse(cond Expr, thenBody []Stmt, elseBody []Stmt) Stmt {
-	return ifStmt{cond: cond, body: thenBody, elseBody: elseBody}
+	return Stmt{node: ifStmt{cond: cond, body: thenBody, elseBody: elseBody}}
 }
 
 // Statement list
@@ -293,24 +266,22 @@ func IfElse(cond Expr, thenBody []Stmt, elseBody []Stmt) Stmt {
 type stmtList []Stmt
 
 func (s stmtList) stmt(sb *strings.Builder) {
-	for i, stmt := range s {
+	for i, st := range s {
 		if i > 0 {
 			sb.WriteString("; ")
 		}
-		stmt.stmt(sb)
+		st.stmt(sb)
 	}
 }
 
 // Stmts combines multiple statements (semicolon-separated).
 func Stmts(stmts ...Stmt) Stmt {
-	return stmtList(stmts)
+	return Stmt{node: stmtList(stmts)}
 }
 
 // Block statement
 
-type blockStmt struct {
-	body []Stmt
-}
+type blockStmt struct{ body []Stmt }
 
 func (b blockStmt) stmt(sb *strings.Builder) {
 	sb.WriteString("{ ")
@@ -323,20 +294,16 @@ func (b blockStmt) stmt(sb *strings.Builder) {
 	sb.WriteString(" }")
 }
 
-// Block creates a block statement: { body... }
+// Block creates a block statement: { body... }.
 func Block(body ...Stmt) Stmt {
-	return blockStmt{body}
+	return Stmt{node: blockStmt{body}}
 }
 
 // Debugger statement
 
 type debuggerStmt struct{}
 
-func (d debuggerStmt) stmt(sb *strings.Builder) {
-	sb.WriteString("debugger")
-}
+func (d debuggerStmt) stmt(sb *strings.Builder) { sb.WriteString("debugger") }
 
-// Debugger creates a debugger statement
-func Debugger() Stmt {
-	return debuggerStmt{}
-}
+// Debugger creates a debugger statement.
+func Debugger() Stmt { return Stmt{node: debuggerStmt{}} }

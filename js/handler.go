@@ -19,7 +19,7 @@ func Handler(stmts ...Stmt) string {
 	}
 	sb := builderPool.Get().(*strings.Builder)
 	sb.Reset()
-	sb.Grow(64) // Pre-allocate for typical handler size
+	sb.Grow(64)
 	for i, stmt := range stmts {
 		if i > 0 {
 			sb.WriteString("; ")
@@ -65,348 +65,218 @@ func ToJSStmt(stmt Stmt) string {
 // Mouse Events
 
 // OnClick creates an onclick attribute with the given handler.
-func OnClick(stmts ...Stmt) h.Attribute {
-	return h.Attr("onclick", Handler(stmts...))
-}
+func OnClick(stmts ...Stmt) h.Attribute { return h.Attr("onclick", Handler(stmts...)) }
 
 // OnDblClick creates an ondblclick attribute with the given handler.
-func OnDblClick(stmts ...Stmt) h.Attribute {
-	return h.Attr("ondblclick", Handler(stmts...))
-}
+func OnDblClick(stmts ...Stmt) h.Attribute { return h.Attr("ondblclick", Handler(stmts...)) }
 
 // OnMouseDown creates an onmousedown attribute with the given handler.
-func OnMouseDown(stmts ...Stmt) h.Attribute {
-	return h.Attr("onmousedown", Handler(stmts...))
-}
+func OnMouseDown(stmts ...Stmt) h.Attribute { return h.Attr("onmousedown", Handler(stmts...)) }
 
 // OnMouseUp creates an onmouseup attribute with the given handler.
-func OnMouseUp(stmts ...Stmt) h.Attribute {
-	return h.Attr("onmouseup", Handler(stmts...))
-}
+func OnMouseUp(stmts ...Stmt) h.Attribute { return h.Attr("onmouseup", Handler(stmts...)) }
 
 // OnMouseOver creates an onmouseover attribute with the given handler.
-func OnMouseOver(stmts ...Stmt) h.Attribute {
-	return h.Attr("onmouseover", Handler(stmts...))
-}
+func OnMouseOver(stmts ...Stmt) h.Attribute { return h.Attr("onmouseover", Handler(stmts...)) }
 
 // OnMouseOut creates an onmouseout attribute with the given handler.
-func OnMouseOut(stmts ...Stmt) h.Attribute {
-	return h.Attr("onmouseout", Handler(stmts...))
-}
+func OnMouseOut(stmts ...Stmt) h.Attribute { return h.Attr("onmouseout", Handler(stmts...)) }
 
 // OnMouseEnter creates an onmouseenter attribute with the given handler.
-func OnMouseEnter(stmts ...Stmt) h.Attribute {
-	return h.Attr("onmouseenter", Handler(stmts...))
-}
+func OnMouseEnter(stmts ...Stmt) h.Attribute { return h.Attr("onmouseenter", Handler(stmts...)) }
 
 // OnMouseLeave creates an onmouseleave attribute with the given handler.
-func OnMouseLeave(stmts ...Stmt) h.Attribute {
-	return h.Attr("onmouseleave", Handler(stmts...))
-}
+func OnMouseLeave(stmts ...Stmt) h.Attribute { return h.Attr("onmouseleave", Handler(stmts...)) }
 
 // OnMouseMove creates an onmousemove attribute with the given handler.
-func OnMouseMove(stmts ...Stmt) h.Attribute {
-	return h.Attr("onmousemove", Handler(stmts...))
-}
+func OnMouseMove(stmts ...Stmt) h.Attribute { return h.Attr("onmousemove", Handler(stmts...)) }
 
 // OnContextMenu creates an oncontextmenu attribute with the given handler.
-func OnContextMenu(stmts ...Stmt) h.Attribute {
-	return h.Attr("oncontextmenu", Handler(stmts...))
-}
+func OnContextMenu(stmts ...Stmt) h.Attribute { return h.Attr("oncontextmenu", Handler(stmts...)) }
 
 // OnWheel creates an onwheel attribute with the given handler.
-func OnWheel(stmts ...Stmt) h.Attribute {
-	return h.Attr("onwheel", Handler(stmts...))
-}
+func OnWheel(stmts ...Stmt) h.Attribute { return h.Attr("onwheel", Handler(stmts...)) }
 
 // Keyboard Events
 
 // OnKeyDown creates an onkeydown attribute with the given handler.
-func OnKeyDown(stmts ...Stmt) h.Attribute {
-	return h.Attr("onkeydown", Handler(stmts...))
-}
+func OnKeyDown(stmts ...Stmt) h.Attribute { return h.Attr("onkeydown", Handler(stmts...)) }
 
 // OnKeyUp creates an onkeyup attribute with the given handler.
-func OnKeyUp(stmts ...Stmt) h.Attribute {
-	return h.Attr("onkeyup", Handler(stmts...))
-}
+func OnKeyUp(stmts ...Stmt) h.Attribute { return h.Attr("onkeyup", Handler(stmts...)) }
 
 // OnKeyPress creates an onkeypress attribute with the given handler.
 // Deprecated: Use OnKeyDown or OnKeyUp instead.
-func OnKeyPress(stmts ...Stmt) h.Attribute {
-	return h.Attr("onkeypress", Handler(stmts...))
-}
+func OnKeyPress(stmts ...Stmt) h.Attribute { return h.Attr("onkeypress", Handler(stmts...)) }
 
 // Focus Events
 
 // OnFocus creates an onfocus attribute with the given handler.
-func OnFocus(stmts ...Stmt) h.Attribute {
-	return h.Attr("onfocus", Handler(stmts...))
-}
+func OnFocus(stmts ...Stmt) h.Attribute { return h.Attr("onfocus", Handler(stmts...)) }
 
 // OnBlur creates an onblur attribute with the given handler.
-func OnBlur(stmts ...Stmt) h.Attribute {
-	return h.Attr("onblur", Handler(stmts...))
-}
+func OnBlur(stmts ...Stmt) h.Attribute { return h.Attr("onblur", Handler(stmts...)) }
 
 // OnFocusIn creates an onfocusin attribute with the given handler.
-func OnFocusIn(stmts ...Stmt) h.Attribute {
-	return h.Attr("onfocusin", Handler(stmts...))
-}
+func OnFocusIn(stmts ...Stmt) h.Attribute { return h.Attr("onfocusin", Handler(stmts...)) }
 
 // OnFocusOut creates an onfocusout attribute with the given handler.
-func OnFocusOut(stmts ...Stmt) h.Attribute {
-	return h.Attr("onfocusout", Handler(stmts...))
-}
+func OnFocusOut(stmts ...Stmt) h.Attribute { return h.Attr("onfocusout", Handler(stmts...)) }
 
 // Form Events
 
 // OnChange creates an onchange attribute with the given handler.
-func OnChange(stmts ...Stmt) h.Attribute {
-	return h.Attr("onchange", Handler(stmts...))
-}
+func OnChange(stmts ...Stmt) h.Attribute { return h.Attr("onchange", Handler(stmts...)) }
 
 // OnInput creates an oninput attribute with the given handler.
-func OnInput(stmts ...Stmt) h.Attribute {
-	return h.Attr("oninput", Handler(stmts...))
-}
+func OnInput(stmts ...Stmt) h.Attribute { return h.Attr("oninput", Handler(stmts...)) }
 
 // OnSubmit creates an onsubmit attribute with the given handler.
-func OnSubmit(stmts ...Stmt) h.Attribute {
-	return h.Attr("onsubmit", Handler(stmts...))
-}
+func OnSubmit(stmts ...Stmt) h.Attribute { return h.Attr("onsubmit", Handler(stmts...)) }
 
 // OnReset creates an onreset attribute with the given handler.
-func OnReset(stmts ...Stmt) h.Attribute {
-	return h.Attr("onreset", Handler(stmts...))
-}
+func OnReset(stmts ...Stmt) h.Attribute { return h.Attr("onreset", Handler(stmts...)) }
 
 // OnSelect creates an onselect attribute with the given handler.
-func OnSelect(stmts ...Stmt) h.Attribute {
-	return h.Attr("onselect", Handler(stmts...))
-}
+func OnSelect(stmts ...Stmt) h.Attribute { return h.Attr("onselect", Handler(stmts...)) }
 
 // OnInvalid creates an oninvalid attribute with the given handler.
-func OnInvalid(stmts ...Stmt) h.Attribute {
-	return h.Attr("oninvalid", Handler(stmts...))
-}
+func OnInvalid(stmts ...Stmt) h.Attribute { return h.Attr("oninvalid", Handler(stmts...)) }
 
 // Window/Document Events
 
 // OnLoad creates an onload attribute with the given handler.
-func OnLoad(stmts ...Stmt) h.Attribute {
-	return h.Attr("onload", Handler(stmts...))
-}
+func OnLoad(stmts ...Stmt) h.Attribute { return h.Attr("onload", Handler(stmts...)) }
 
 // OnUnload creates an onunload attribute with the given handler.
-func OnUnload(stmts ...Stmt) h.Attribute {
-	return h.Attr("onunload", Handler(stmts...))
-}
+func OnUnload(stmts ...Stmt) h.Attribute { return h.Attr("onunload", Handler(stmts...)) }
 
 // OnBeforeUnload creates an onbeforeunload attribute with the given handler.
-func OnBeforeUnload(stmts ...Stmt) h.Attribute {
-	return h.Attr("onbeforeunload", Handler(stmts...))
-}
+func OnBeforeUnload(stmts ...Stmt) h.Attribute { return h.Attr("onbeforeunload", Handler(stmts...)) }
 
 // OnError creates an onerror attribute with the given handler.
-func OnError(stmts ...Stmt) h.Attribute {
-	return h.Attr("onerror", Handler(stmts...))
-}
+func OnError(stmts ...Stmt) h.Attribute { return h.Attr("onerror", Handler(stmts...)) }
 
 // OnScroll creates an onscroll attribute with the given handler.
-func OnScroll(stmts ...Stmt) h.Attribute {
-	return h.Attr("onscroll", Handler(stmts...))
-}
+func OnScroll(stmts ...Stmt) h.Attribute { return h.Attr("onscroll", Handler(stmts...)) }
 
 // OnResize creates an onresize attribute with the given handler.
-func OnResize(stmts ...Stmt) h.Attribute {
-	return h.Attr("onresize", Handler(stmts...))
-}
+func OnResize(stmts ...Stmt) h.Attribute { return h.Attr("onresize", Handler(stmts...)) }
 
 // OnHashChange creates an onhashchange attribute with the given handler.
-func OnHashChange(stmts ...Stmt) h.Attribute {
-	return h.Attr("onhashchange", Handler(stmts...))
-}
+func OnHashChange(stmts ...Stmt) h.Attribute { return h.Attr("onhashchange", Handler(stmts...)) }
 
 // OnPopState creates an onpopstate attribute with the given handler.
-func OnPopState(stmts ...Stmt) h.Attribute {
-	return h.Attr("onpopstate", Handler(stmts...))
-}
+func OnPopState(stmts ...Stmt) h.Attribute { return h.Attr("onpopstate", Handler(stmts...)) }
 
 // OnStorage creates an onstorage attribute with the given handler.
-func OnStorage(stmts ...Stmt) h.Attribute {
-	return h.Attr("onstorage", Handler(stmts...))
-}
+func OnStorage(stmts ...Stmt) h.Attribute { return h.Attr("onstorage", Handler(stmts...)) }
 
 // OnOnline creates an ononline attribute with the given handler.
-func OnOnline(stmts ...Stmt) h.Attribute {
-	return h.Attr("ononline", Handler(stmts...))
-}
+func OnOnline(stmts ...Stmt) h.Attribute { return h.Attr("ononline", Handler(stmts...)) }
 
 // OnOffline creates an onoffline attribute with the given handler.
-func OnOffline(stmts ...Stmt) h.Attribute {
-	return h.Attr("onoffline", Handler(stmts...))
-}
+func OnOffline(stmts ...Stmt) h.Attribute { return h.Attr("onoffline", Handler(stmts...)) }
 
 // Clipboard Events
 
 // OnCopy creates an oncopy attribute with the given handler.
-func OnCopy(stmts ...Stmt) h.Attribute {
-	return h.Attr("oncopy", Handler(stmts...))
-}
+func OnCopy(stmts ...Stmt) h.Attribute { return h.Attr("oncopy", Handler(stmts...)) }
 
 // OnCut creates an oncut attribute with the given handler.
-func OnCut(stmts ...Stmt) h.Attribute {
-	return h.Attr("oncut", Handler(stmts...))
-}
+func OnCut(stmts ...Stmt) h.Attribute { return h.Attr("oncut", Handler(stmts...)) }
 
 // OnPaste creates an onpaste attribute with the given handler.
-func OnPaste(stmts ...Stmt) h.Attribute {
-	return h.Attr("onpaste", Handler(stmts...))
-}
+func OnPaste(stmts ...Stmt) h.Attribute { return h.Attr("onpaste", Handler(stmts...)) }
 
 // Drag Events
 
 // OnDrag creates an ondrag attribute with the given handler.
-func OnDrag(stmts ...Stmt) h.Attribute {
-	return h.Attr("ondrag", Handler(stmts...))
-}
+func OnDrag(stmts ...Stmt) h.Attribute { return h.Attr("ondrag", Handler(stmts...)) }
 
 // OnDragStart creates an ondragstart attribute with the given handler.
-func OnDragStart(stmts ...Stmt) h.Attribute {
-	return h.Attr("ondragstart", Handler(stmts...))
-}
+func OnDragStart(stmts ...Stmt) h.Attribute { return h.Attr("ondragstart", Handler(stmts...)) }
 
 // OnDragEnd creates an ondragend attribute with the given handler.
-func OnDragEnd(stmts ...Stmt) h.Attribute {
-	return h.Attr("ondragend", Handler(stmts...))
-}
+func OnDragEnd(stmts ...Stmt) h.Attribute { return h.Attr("ondragend", Handler(stmts...)) }
 
 // OnDragOver creates an ondragover attribute with the given handler.
-func OnDragOver(stmts ...Stmt) h.Attribute {
-	return h.Attr("ondragover", Handler(stmts...))
-}
+func OnDragOver(stmts ...Stmt) h.Attribute { return h.Attr("ondragover", Handler(stmts...)) }
 
 // OnDragEnter creates an ondragenter attribute with the given handler.
-func OnDragEnter(stmts ...Stmt) h.Attribute {
-	return h.Attr("ondragenter", Handler(stmts...))
-}
+func OnDragEnter(stmts ...Stmt) h.Attribute { return h.Attr("ondragenter", Handler(stmts...)) }
 
 // OnDragLeave creates an ondragleave attribute with the given handler.
-func OnDragLeave(stmts ...Stmt) h.Attribute {
-	return h.Attr("ondragleave", Handler(stmts...))
-}
+func OnDragLeave(stmts ...Stmt) h.Attribute { return h.Attr("ondragleave", Handler(stmts...)) }
 
 // OnDrop creates an ondrop attribute with the given handler.
-func OnDrop(stmts ...Stmt) h.Attribute {
-	return h.Attr("ondrop", Handler(stmts...))
-}
+func OnDrop(stmts ...Stmt) h.Attribute { return h.Attr("ondrop", Handler(stmts...)) }
 
 // Touch Events
 
 // OnTouchStart creates an ontouchstart attribute with the given handler.
-func OnTouchStart(stmts ...Stmt) h.Attribute {
-	return h.Attr("ontouchstart", Handler(stmts...))
-}
+func OnTouchStart(stmts ...Stmt) h.Attribute { return h.Attr("ontouchstart", Handler(stmts...)) }
 
 // OnTouchMove creates an ontouchmove attribute with the given handler.
-func OnTouchMove(stmts ...Stmt) h.Attribute {
-	return h.Attr("ontouchmove", Handler(stmts...))
-}
+func OnTouchMove(stmts ...Stmt) h.Attribute { return h.Attr("ontouchmove", Handler(stmts...)) }
 
 // OnTouchEnd creates an ontouchend attribute with the given handler.
-func OnTouchEnd(stmts ...Stmt) h.Attribute {
-	return h.Attr("ontouchend", Handler(stmts...))
-}
+func OnTouchEnd(stmts ...Stmt) h.Attribute { return h.Attr("ontouchend", Handler(stmts...)) }
 
 // OnTouchCancel creates an ontouchcancel attribute with the given handler.
-func OnTouchCancel(stmts ...Stmt) h.Attribute {
-	return h.Attr("ontouchcancel", Handler(stmts...))
-}
+func OnTouchCancel(stmts ...Stmt) h.Attribute { return h.Attr("ontouchcancel", Handler(stmts...)) }
 
 // Pointer Events
 
 // OnPointerDown creates an onpointerdown attribute with the given handler.
-func OnPointerDown(stmts ...Stmt) h.Attribute {
-	return h.Attr("onpointerdown", Handler(stmts...))
-}
+func OnPointerDown(stmts ...Stmt) h.Attribute { return h.Attr("onpointerdown", Handler(stmts...)) }
 
 // OnPointerUp creates an onpointerup attribute with the given handler.
-func OnPointerUp(stmts ...Stmt) h.Attribute {
-	return h.Attr("onpointerup", Handler(stmts...))
-}
+func OnPointerUp(stmts ...Stmt) h.Attribute { return h.Attr("onpointerup", Handler(stmts...)) }
 
 // OnPointerMove creates an onpointermove attribute with the given handler.
-func OnPointerMove(stmts ...Stmt) h.Attribute {
-	return h.Attr("onpointermove", Handler(stmts...))
-}
+func OnPointerMove(stmts ...Stmt) h.Attribute { return h.Attr("onpointermove", Handler(stmts...)) }
 
 // OnPointerEnter creates an onpointerenter attribute with the given handler.
-func OnPointerEnter(stmts ...Stmt) h.Attribute {
-	return h.Attr("onpointerenter", Handler(stmts...))
-}
+func OnPointerEnter(stmts ...Stmt) h.Attribute { return h.Attr("onpointerenter", Handler(stmts...)) }
 
 // OnPointerLeave creates an onpointerleave attribute with the given handler.
-func OnPointerLeave(stmts ...Stmt) h.Attribute {
-	return h.Attr("onpointerleave", Handler(stmts...))
-}
+func OnPointerLeave(stmts ...Stmt) h.Attribute { return h.Attr("onpointerleave", Handler(stmts...)) }
 
 // OnPointerCancel creates an onpointercancel attribute with the given handler.
-func OnPointerCancel(stmts ...Stmt) h.Attribute {
-	return h.Attr("onpointercancel", Handler(stmts...))
-}
+func OnPointerCancel(stmts ...Stmt) h.Attribute { return h.Attr("onpointercancel", Handler(stmts...)) }
 
 // OnPointerOver creates an onpointerover attribute with the given handler.
-func OnPointerOver(stmts ...Stmt) h.Attribute {
-	return h.Attr("onpointerover", Handler(stmts...))
-}
+func OnPointerOver(stmts ...Stmt) h.Attribute { return h.Attr("onpointerover", Handler(stmts...)) }
 
 // OnPointerOut creates an onpointerout attribute with the given handler.
-func OnPointerOut(stmts ...Stmt) h.Attribute {
-	return h.Attr("onpointerout", Handler(stmts...))
-}
+func OnPointerOut(stmts ...Stmt) h.Attribute { return h.Attr("onpointerout", Handler(stmts...)) }
 
 // Media Events
 
 // OnPlay creates an onplay attribute with the given handler.
-func OnPlay(stmts ...Stmt) h.Attribute {
-	return h.Attr("onplay", Handler(stmts...))
-}
+func OnPlay(stmts ...Stmt) h.Attribute { return h.Attr("onplay", Handler(stmts...)) }
 
 // OnPause creates an onpause attribute with the given handler.
-func OnPause(stmts ...Stmt) h.Attribute {
-	return h.Attr("onpause", Handler(stmts...))
-}
+func OnPause(stmts ...Stmt) h.Attribute { return h.Attr("onpause", Handler(stmts...)) }
 
 // OnEnded creates an onended attribute with the given handler.
-func OnEnded(stmts ...Stmt) h.Attribute {
-	return h.Attr("onended", Handler(stmts...))
-}
+func OnEnded(stmts ...Stmt) h.Attribute { return h.Attr("onended", Handler(stmts...)) }
 
 // OnTimeUpdate creates an ontimeupdate attribute with the given handler.
-func OnTimeUpdate(stmts ...Stmt) h.Attribute {
-	return h.Attr("ontimeupdate", Handler(stmts...))
-}
+func OnTimeUpdate(stmts ...Stmt) h.Attribute { return h.Attr("ontimeupdate", Handler(stmts...)) }
 
 // OnVolumeChange creates an onvolumechange attribute with the given handler.
-func OnVolumeChange(stmts ...Stmt) h.Attribute {
-	return h.Attr("onvolumechange", Handler(stmts...))
-}
+func OnVolumeChange(stmts ...Stmt) h.Attribute { return h.Attr("onvolumechange", Handler(stmts...)) }
 
 // OnSeeking creates an onseeking attribute with the given handler.
-func OnSeeking(stmts ...Stmt) h.Attribute {
-	return h.Attr("onseeking", Handler(stmts...))
-}
+func OnSeeking(stmts ...Stmt) h.Attribute { return h.Attr("onseeking", Handler(stmts...)) }
 
 // OnSeeked creates an onseeked attribute with the given handler.
-func OnSeeked(stmts ...Stmt) h.Attribute {
-	return h.Attr("onseeked", Handler(stmts...))
-}
+func OnSeeked(stmts ...Stmt) h.Attribute { return h.Attr("onseeked", Handler(stmts...)) }
 
 // OnLoadedData creates an onloadeddata attribute with the given handler.
-func OnLoadedData(stmts ...Stmt) h.Attribute {
-	return h.Attr("onloadeddata", Handler(stmts...))
-}
+func OnLoadedData(stmts ...Stmt) h.Attribute { return h.Attr("onloadeddata", Handler(stmts...)) }
 
 // OnLoadedMetadata creates an onloadedmetadata attribute with the given handler.
 func OnLoadedMetadata(stmts ...Stmt) h.Attribute {
@@ -414,9 +284,7 @@ func OnLoadedMetadata(stmts ...Stmt) h.Attribute {
 }
 
 // OnCanPlay creates an oncanplay attribute with the given handler.
-func OnCanPlay(stmts ...Stmt) h.Attribute {
-	return h.Attr("oncanplay", Handler(stmts...))
-}
+func OnCanPlay(stmts ...Stmt) h.Attribute { return h.Attr("oncanplay", Handler(stmts...)) }
 
 // OnCanPlayThrough creates an oncanplaythrough attribute with the given handler.
 func OnCanPlayThrough(stmts ...Stmt) h.Attribute {
@@ -465,19 +333,14 @@ func OnTransitionCancel(stmts ...Stmt) h.Attribute {
 // Print Events
 
 // OnBeforePrint creates an onbeforeprint attribute with the given handler.
-func OnBeforePrint(stmts ...Stmt) h.Attribute {
-	return h.Attr("onbeforeprint", Handler(stmts...))
-}
+func OnBeforePrint(stmts ...Stmt) h.Attribute { return h.Attr("onbeforeprint", Handler(stmts...)) }
 
 // OnAfterPrint creates an onafterprint attribute with the given handler.
-func OnAfterPrint(stmts ...Stmt) h.Attribute {
-	return h.Attr("onafterprint", Handler(stmts...))
-}
-
-// Custom Event
+func OnAfterPrint(stmts ...Stmt) h.Attribute { return h.Attr("onafterprint", Handler(stmts...)) }
 
 // On creates a custom event handler attribute.
-// Example: On("touchstart", stmts...) creates ontouchstart="..."
+//
+//	On("touchstart", stmts...) creates ontouchstart="..."
 func On(event string, stmts ...Stmt) h.Attribute {
 	return h.Attr("on"+event, Handler(stmts...))
 }

@@ -8,15 +8,6 @@ import (
 	"github.com/jeffh/htmlgen/h"
 )
 
-// TriggerMod is a modifier for trigger behavior.
-type TriggerMod interface {
-	applyTrigger(*triggerSpec)
-}
-
-type triggerModFunc func(*triggerSpec)
-
-func (f triggerModFunc) applyTrigger(s *triggerSpec) { f(s) }
-
 type triggerSpec struct {
 	event     string
 	filter    string
@@ -39,41 +30,17 @@ func (s *triggerSpec) String() string {
 }
 
 // TriggerBuilder builds an hx-trigger attribute value.
+//
+// TriggerBuilder implements h.AttrBuilder, so it can be passed directly to
+// tag functions like h.Div without calling a terminator method.
 type TriggerBuilder struct {
 	triggers []triggerSpec
 }
 
-// Trigger creates a new trigger with the specified event and optional modifiers.
-//
-// Example:
-//
-//	hx.Trigger("click")
-//	hx.Trigger("keyup", hx.Changed(), hx.Delay(500*time.Millisecond))
-//	hx.Trigger("click", hx.From("#other-element"))
-func Trigger(event string, mods ...TriggerMod) *TriggerBuilder {
-	spec := triggerSpec{event: event}
-	for _, mod := range mods {
-		mod.applyTrigger(&spec)
-	}
-	return &TriggerBuilder{triggers: []triggerSpec{spec}}
-}
+func (t *TriggerBuilder) isTagArg() {}
 
-// And adds another trigger to the builder.
-//
-// Example:
-//
-//	hx.Trigger("load").And("click", hx.Delay(1*time.Second))
-func (t *TriggerBuilder) And(event string, mods ...TriggerMod) *TriggerBuilder {
-	spec := triggerSpec{event: event}
-	for _, mod := range mods {
-		mod.applyTrigger(&spec)
-	}
-	t.triggers = append(t.triggers, spec)
-	return t
-}
-
-// Attr returns the hx-trigger attribute.
-func (t *TriggerBuilder) Attr() h.Attribute {
+// Attribute returns the hx-trigger attribute. Joins all trigger specs with ", ".
+func (t *TriggerBuilder) Attribute() h.Attribute {
 	parts := make([]string, len(t.triggers))
 	for i, trigger := range t.triggers {
 		parts[i] = trigger.String()
@@ -81,117 +48,139 @@ func (t *TriggerBuilder) Attr() h.Attribute {
 	return h.Attr("hx-trigger", strings.Join(parts, ", "))
 }
 
-// TriggerAttr creates a simple hx-trigger attribute with a single event.
-// For complex triggers with modifiers, use Trigger() builder.
-func TriggerAttr(event string) h.Attribute {
-	return h.Attr("hx-trigger", event)
+// last returns a pointer to the most recently added trigger spec.
+// Used by modifier methods to apply modifiers to the last spec in the chain.
+func (t *TriggerBuilder) last() *triggerSpec {
+	return &t.triggers[len(t.triggers)-1]
 }
 
-// Once makes the trigger fire only once.
-func Once() TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "once")
-	})
+// Trigger creates a new trigger with the specified event.
+// Use chained modifier methods to configure further.
+//
+// Example:
+//
+//	hx.Trigger("click")
+//	hx.Trigger("keyup").Changed().Delay(500*time.Millisecond)
+//	hx.Trigger("click").From("#other-element")
+func Trigger(event string) *TriggerBuilder {
+	return &TriggerBuilder{triggers: []triggerSpec{{event: event}}}
 }
 
-// Changed makes the trigger fire only when the element's value has changed.
-func Changed() TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "changed")
-	})
+// And appends another trigger to the builder. Subsequent modifier methods
+// apply to this newly added trigger.
+//
+// Example:
+//
+//	hx.Trigger("load").And("click").Delay(1*time.Second)
+func (t *TriggerBuilder) And(event string) *TriggerBuilder {
+	t.triggers = append(t.triggers, triggerSpec{event: event})
+	return t
 }
 
-// Delay adds a delay before the trigger fires.
+// Once makes the most recently added trigger fire only once.
+func (t *TriggerBuilder) Once() *TriggerBuilder {
+	s := t.last()
+	s.modifiers = append(s.modifiers, "once")
+	return t
+}
+
+// Changed makes the most recently added trigger fire only when the element's value has changed.
+func (t *TriggerBuilder) Changed() *TriggerBuilder {
+	s := t.last()
+	s.modifiers = append(s.modifiers, "changed")
+	return t
+}
+
+// Delay adds a delay before the most recently added trigger fires.
 // If another event occurs during the delay, the timer resets.
-func Delay(d time.Duration) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "delay:"+formatDuration(d))
-	})
+func (t *TriggerBuilder) Delay(d time.Duration) *TriggerBuilder {
+	s := t.last()
+	s.modifiers = append(s.modifiers, "delay:"+formatDuration(d))
+	return t
 }
 
-// Throttle limits how often the trigger can fire.
-func Throttle(d time.Duration) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "throttle:"+formatDuration(d))
-	})
+// Throttle limits how often the most recently added trigger can fire.
+func (t *TriggerBuilder) Throttle(d time.Duration) *TriggerBuilder {
+	s := t.last()
+	s.modifiers = append(s.modifiers, "throttle:"+formatDuration(d))
+	return t
 }
 
 // From specifies that the event should be listened for on a different element.
 // Supports extended CSS selectors: document, window, closest <sel>, find <sel>, next, previous.
-func From(selector string) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		// Handle selectors with spaces by wrapping in parentheses
-		if strings.Contains(selector, " ") && !strings.HasPrefix(selector, "(") {
-			s.modifiers = append(s.modifiers, "from:("+selector+")")
-		} else {
-			s.modifiers = append(s.modifiers, "from:"+selector)
-		}
-	})
+func (t *TriggerBuilder) From(selector string) *TriggerBuilder {
+	s := t.last()
+	if strings.Contains(selector, " ") && !strings.HasPrefix(selector, "(") {
+		s.modifiers = append(s.modifiers, "from:("+selector+")")
+	} else {
+		s.modifiers = append(s.modifiers, "from:"+selector)
+	}
+	return t
 }
 
 // FromDocument listens for the event on the document.
-func FromDocument() TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "from:document")
-	})
+func (t *TriggerBuilder) FromDocument() *TriggerBuilder {
+	s := t.last()
+	s.modifiers = append(s.modifiers, "from:document")
+	return t
 }
 
 // FromWindow listens for the event on the window.
-func FromWindow() TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "from:window")
-	})
+func (t *TriggerBuilder) FromWindow() *TriggerBuilder {
+	s := t.last()
+	s.modifiers = append(s.modifiers, "from:window")
+	return t
 }
 
 // FromClosest listens for the event on the closest ancestor matching the selector.
-func FromClosest(selector string) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "from:closest "+selector)
-	})
+func (t *TriggerBuilder) FromClosest(selector string) *TriggerBuilder {
+	s := t.last()
+	s.modifiers = append(s.modifiers, "from:closest "+selector)
+	return t
 }
 
 // FromFind listens for the event on the first descendant matching the selector.
-func FromFind(selector string) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "from:find "+selector)
-	})
+func (t *TriggerBuilder) FromFind(selector string) *TriggerBuilder {
+	s := t.last()
+	s.modifiers = append(s.modifiers, "from:find "+selector)
+	return t
 }
 
 // FromNext listens for the event on the next sibling element.
-func FromNext(selector ...string) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		if len(selector) > 0 {
-			s.modifiers = append(s.modifiers, "from:next "+selector[0])
-		} else {
-			s.modifiers = append(s.modifiers, "from:next")
-		}
-	})
+func (t *TriggerBuilder) FromNext(selector ...string) *TriggerBuilder {
+	s := t.last()
+	if len(selector) > 0 {
+		s.modifiers = append(s.modifiers, "from:next "+selector[0])
+	} else {
+		s.modifiers = append(s.modifiers, "from:next")
+	}
+	return t
 }
 
 // FromPrevious listens for the event on the previous sibling element.
-func FromPrevious(selector ...string) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		if len(selector) > 0 {
-			s.modifiers = append(s.modifiers, "from:previous "+selector[0])
-		} else {
-			s.modifiers = append(s.modifiers, "from:previous")
-		}
-	})
+func (t *TriggerBuilder) FromPrevious(selector ...string) *TriggerBuilder {
+	s := t.last()
+	if len(selector) > 0 {
+		s.modifiers = append(s.modifiers, "from:previous "+selector[0])
+	} else {
+		s.modifiers = append(s.modifiers, "from:previous")
+	}
+	return t
 }
 
 // TriggerTarget filters events to only those whose target matches the selector.
 // Note: This is different from hx-target; it filters by event.target.
-func TriggerTarget(selector string) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "target:"+selector)
-	})
+func (t *TriggerBuilder) TriggerTarget(selector string) *TriggerBuilder {
+	s := t.last()
+	s.modifiers = append(s.modifiers, "target:"+selector)
+	return t
 }
 
 // Consume prevents the event from triggering requests on parent elements.
-func Consume() TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "consume")
-	})
+func (t *TriggerBuilder) Consume() *TriggerBuilder {
+	s := t.last()
+	s.modifiers = append(s.modifiers, "consume")
+	return t
 }
 
 // QueueMode specifies how events should be queued.
@@ -209,55 +198,94 @@ const (
 )
 
 // Queue specifies how events should be queued during a request.
-func Queue(mode QueueMode) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "queue:"+string(mode))
-	})
+func (t *TriggerBuilder) Queue(mode QueueMode) *TriggerBuilder {
+	s := t.last()
+	s.modifiers = append(s.modifiers, "queue:"+string(mode))
+	return t
 }
 
-// Filter adds a JavaScript filter expression to the trigger.
+// Filter adds a JavaScript filter expression to the most recently added trigger.
 // The expression should evaluate to true/false.
 //
 // Example:
 //
-//	hx.Trigger("click", hx.Filter("ctrlKey"))
-//	hx.Trigger("keyup", hx.Filter("keyCode==13"))
-func Filter(jsExpr string) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.filter = jsExpr
-	})
+//	hx.Trigger("click").Filter("ctrlKey")
+//	hx.Trigger("keyup").Filter("keyCode==13")
+func (t *TriggerBuilder) Filter(jsExpr string) *TriggerBuilder {
+	s := t.last()
+	s.filter = jsExpr
+	return t
 }
 
-// Special trigger constructors
-
-// TriggerLoad creates a trigger that fires on page load.
-func TriggerLoad(mods ...TriggerMod) *TriggerBuilder {
-	return Trigger("load", mods...)
+// TriggerAttr creates a simple hx-trigger attribute with a single event.
+// For complex triggers with modifiers, use Trigger() builder.
+func TriggerAttr(event string) h.Attribute {
+	return h.Attr("hx-trigger", event)
 }
 
-// TriggerRevealed creates a trigger that fires when the element is scrolled into view.
-func TriggerRevealed(mods ...TriggerMod) *TriggerBuilder {
-	return Trigger("revealed", mods...)
+// TriggerLoad creates an hx-trigger="load" attribute.
+func TriggerLoad() h.Attribute {
+	return h.Attr("hx-trigger", "load")
+}
+
+// TriggerRevealed creates an hx-trigger="revealed" attribute that fires
+// when the element is scrolled into view.
+func TriggerRevealed() h.Attribute {
+	return h.Attr("hx-trigger", "revealed")
+}
+
+// IntersectTriggerBuilder builds an hx-trigger attribute for the "intersect" event.
+//
+// IntersectTriggerBuilder implements h.AttrBuilder, so it can be passed directly
+// to tag functions.
+type IntersectTriggerBuilder struct {
+	spec triggerSpec
+}
+
+func (b *IntersectTriggerBuilder) isTagArg() {}
+
+// Attribute returns the hx-trigger attribute.
+func (b *IntersectTriggerBuilder) Attribute() h.Attribute {
+	return h.Attr("hx-trigger", b.spec.String())
 }
 
 // TriggerIntersect creates a trigger that fires when the element intersects the viewport.
-// Use IntersectRoot and IntersectThreshold modifiers for configuration.
-func TriggerIntersect(mods ...TriggerMod) *TriggerBuilder {
-	return Trigger("intersect", mods...)
+func TriggerIntersect() *IntersectTriggerBuilder {
+	return &IntersectTriggerBuilder{spec: triggerSpec{event: "intersect"}}
 }
 
-// IntersectRoot specifies a root element for intersection observation.
-func IntersectRoot(selector string) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "root:"+selector)
-	})
+// Root specifies a root element for intersection observation.
+func (b *IntersectTriggerBuilder) Root(selector string) *IntersectTriggerBuilder {
+	b.spec.modifiers = append(b.spec.modifiers, "root:"+selector)
+	return b
 }
 
-// IntersectThreshold specifies the visibility threshold for intersection (0.0 to 1.0).
-func IntersectThreshold(threshold float64) TriggerMod {
-	return triggerModFunc(func(s *triggerSpec) {
-		s.modifiers = append(s.modifiers, "threshold:"+formatFloat(threshold))
-	})
+// Threshold specifies the visibility threshold for intersection (0.0 to 1.0).
+func (b *IntersectTriggerBuilder) Threshold(value float64) *IntersectTriggerBuilder {
+	b.spec.modifiers = append(b.spec.modifiers, "threshold:"+formatFloat(value))
+	return b
+}
+
+// Once makes the trigger fire only once.
+func (b *IntersectTriggerBuilder) Once() *IntersectTriggerBuilder {
+	b.spec.modifiers = append(b.spec.modifiers, "once")
+	return b
+}
+
+// IntervalTriggerBuilder builds an hx-trigger attribute for polling triggers
+// (e.g., "every 2s").
+//
+// IntervalTriggerBuilder implements h.AttrBuilder, so it can be passed directly
+// to tag functions.
+type IntervalTriggerBuilder struct {
+	spec triggerSpec
+}
+
+func (b *IntervalTriggerBuilder) isTagArg() {}
+
+// Attribute returns the hx-trigger attribute.
+func (b *IntervalTriggerBuilder) Attribute() h.Attribute {
+	return h.Attr("hx-trigger", b.spec.String())
 }
 
 // TriggerEvery creates a polling trigger that fires at the specified interval.
@@ -265,13 +293,51 @@ func IntersectThreshold(threshold float64) TriggerMod {
 // Example:
 //
 //	hx.TriggerEvery(2*time.Second)
-//	hx.TriggerEvery(1*time.Second, hx.Filter("document.visibilityState == 'visible'"))
-func TriggerEvery(interval time.Duration, mods ...TriggerMod) *TriggerBuilder {
-	spec := triggerSpec{event: "every " + formatDuration(interval)}
-	for _, mod := range mods {
-		mod.applyTrigger(&spec)
+//	hx.TriggerEvery(1*time.Second).Filter("document.visibilityState == 'visible'")
+func TriggerEvery(interval time.Duration) *IntervalTriggerBuilder {
+	return &IntervalTriggerBuilder{
+		spec: triggerSpec{event: "every " + formatDuration(interval)},
 	}
-	return &TriggerBuilder{triggers: []triggerSpec{spec}}
+}
+
+// Filter adds a JavaScript filter expression to the polling trigger.
+func (b *IntervalTriggerBuilder) Filter(jsExpr string) *IntervalTriggerBuilder {
+	b.spec.filter = jsExpr
+	return b
+}
+
+// Once makes the polling trigger fire only once.
+func (b *IntervalTriggerBuilder) Once() *IntervalTriggerBuilder {
+	b.spec.modifiers = append(b.spec.modifiers, "once")
+	return b
+}
+
+// Throttle limits how often the polling trigger can fire.
+func (b *IntervalTriggerBuilder) Throttle(d time.Duration) *IntervalTriggerBuilder {
+	b.spec.modifiers = append(b.spec.modifiers, "throttle:"+formatDuration(d))
+	return b
+}
+
+// From specifies the element on which the polling event is observed.
+func (b *IntervalTriggerBuilder) From(selector string) *IntervalTriggerBuilder {
+	if strings.Contains(selector, " ") && !strings.HasPrefix(selector, "(") {
+		b.spec.modifiers = append(b.spec.modifiers, "from:("+selector+")")
+	} else {
+		b.spec.modifiers = append(b.spec.modifiers, "from:"+selector)
+	}
+	return b
+}
+
+// FromDocument listens for the polling event on the document.
+func (b *IntervalTriggerBuilder) FromDocument() *IntervalTriggerBuilder {
+	b.spec.modifiers = append(b.spec.modifiers, "from:document")
+	return b
+}
+
+// FromWindow listens for the polling event on the window.
+func (b *IntervalTriggerBuilder) FromWindow() *IntervalTriggerBuilder {
+	b.spec.modifiers = append(b.spec.modifiers, "from:window")
+	return b
 }
 
 // formatFloat formats a float for HTMX attributes.

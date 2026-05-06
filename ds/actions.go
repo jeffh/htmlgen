@@ -81,6 +81,12 @@ func requestValue(method string, path js.Expr, chains ...PromiseChain) Value {
 	return Value{expr: action}
 }
 
+// OnSuccess creates a .then() chain for successful request handling.
+func OnSuccess(expr Value) PromiseChain { return ThenChain(expr.expr) }
+
+// OnFailure creates a .catch() chain for error handling.
+func OnFailure(expr Value) PromiseChain { return CatchChain(expr.expr) }
+
 // GetWithOptions performs a GET request with options.
 func GetWithOptions(path string, opts RequestOptionsBuilder, chains ...PromiseChain) Value {
 	return requestValueWithOptions("get", js.String(path), opts, chains...)
@@ -282,14 +288,3 @@ type requestOptionFunc func(*strings.Builder)
 
 func (f requestOptionFunc) appendOption(sb *strings.Builder) { f(sb) }
 
-// OnSuccess creates a .then() chain for successful request handling.
-// This is an alias for ThenChain for backward compatibility.
-func OnSuccess(expr Value) PromiseChain {
-	return ThenChain(expr.expr)
-}
-
-// OnFailure creates a .catch() chain for error handling.
-// This is an alias for CatchChain for backward compatibility.
-func OnFailure(expr Value) PromiseChain {
-	return CatchChain(expr.expr)
-}

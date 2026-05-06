@@ -1,7 +1,7 @@
 package h
 
 // TagArg is a marker interface for types that can be passed to tag functions.
-// Valid types are: Attributes, Attribute, and Builder.
+// Valid types are: Attributes, Attribute, AttrBuilder, and Builder.
 type TagArg interface {
 	isTagArg()
 }
@@ -61,6 +61,16 @@ func parseTagArgs(args []TagArg) (Attributes, []Builder) {
 				attrs = Attributes{v}
 			} else {
 				attrs.Set(v.Name, v.Value)
+			}
+		case AttrBuilder:
+			a := v.Attribute()
+			if a.Name == "" {
+				continue
+			}
+			if attrs == nil {
+				attrs = Attributes{a}
+			} else {
+				attrs.Set(a.Name, a.Value)
 			}
 		case Builder:
 			children = append(children, v)

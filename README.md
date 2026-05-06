@@ -222,22 +222,24 @@ ds.Bind("username")             // data-bind="username"
 
 ### Event Handlers
 
+Event-handler builders are fluent: actions are passed at construction, modifiers chain after.
+
 ```go
 // Click events
 ds.OnClick(ds.SetSignal("count", ds.Raw("$count + 1")))
 
 // Form events
-ds.OnSubmit(ds.PreventDefault(), ds.Post("/api/submit"))
+ds.OnSubmit(ds.Post("/api/submit")).PreventDefault()
 
 // Other events
-ds.OnInput(ds.Debounce(300*time.Millisecond), ds.SetSignal("search", ds.Raw("evt.target.value")))
+ds.OnInput(ds.SetSignal("search", ds.Raw("evt.target.value"))).Debounce(300*time.Millisecond)
 ds.OnChange(ds.Get("/api/update"))
 ds.OnLoad(ds.Get("/api/init"))
 ds.On("keydown", ds.Raw("handleKey(evt)"))
 
 // Intersection and interval observers
-ds.OnIntersect(ds.Once(), ds.Raw("$seen = true"))
-ds.OnInterval(ds.Duration(1*time.Second), ds.Raw("$tick++"))
+ds.OnIntersect(ds.Raw("$seen = true")).Once()
+ds.OnInterval(ds.Raw("$tick++")).Duration(1*time.Second)
 ```
 
 ### HTTP Actions
@@ -249,9 +251,10 @@ ds.Put("/api/update")
 ds.Delete("/api/remove")
 
 // With options
-ds.Post("/api/submit",
-    ds.ContentType("application/json"),
-    ds.Headers(map[string]string{"X-Custom": "value"}),
+ds.PostWithOptions("/api/submit",
+    ds.RequestOptions().
+        ContentType("json").
+        Headers(map[string]string{"X-Custom": "value"}),
 )
 ```
 
@@ -271,13 +274,15 @@ ds.Styles(map[string]string{"color": "$red ? 'red' : 'blue'"})
 
 ### Event Modifiers
 
+Modifiers are methods on event builders, not standalone functions:
+
 ```go
-ds.PreventDefault()
-ds.Debounce(300 * time.Millisecond)
-ds.Throttle(100 * time.Millisecond)
-ds.Delay(500 * time.Millisecond)
-ds.Once()
-ds.ViewTransition()
+ds.OnClick(ds.Raw("$x++")).PreventDefault()
+ds.OnInput(ds.Raw("$y++")).Debounce(300 * time.Millisecond)
+ds.OnScroll(ds.Raw("$z++")).Throttle(100 * time.Millisecond)
+ds.OnClick(ds.Raw("$a++")).Delay(500 * time.Millisecond)
+ds.OnClick(ds.Raw("$b++")).Once()
+ds.OnClick(ds.Raw("$c++")).ViewTransition()
 ```
 
 ### Complete Example

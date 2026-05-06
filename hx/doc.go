@@ -22,7 +22,7 @@
 //
 //	h.Input(
 //	    hx.Post("/search"),
-//	    hx.Trigger("keyup", hx.Changed(), hx.Delay(500*time.Millisecond)),
+//	    hx.Trigger("keyup").Changed().Delay(500*time.Millisecond),
 //	    hx.Target("#results"),
 //	)
 //
@@ -30,6 +30,10 @@
 //
 //	h.Div(
 //	    hx.Get("/content"),
-//	    hx.Swap(hx.OuterHTML, hx.Transition(), hx.SwapDelay(100*time.Millisecond)),
+//	    hx.Swap(hx.OuterHTML).Transition().Delay(100*time.Millisecond),
 //	)
+//
+// Trigger and Swap return fluent builders that auto-finalize as h.AttrBuilder,
+// so they can be passed directly to tag functions without an explicit
+// terminator method.
 package hx

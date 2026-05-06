@@ -1,51 +1,309 @@
 package ds
 
 import (
-	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jeffh/htmlgen/h"
+	"github.com/jeffh/htmlgen/js"
 )
 
-// AttrMutator modifies an attribute being built (name and/or statements).
-type AttrMutator interface{ Modify(*attrBuilder) }
-
-// AttrFunc is a function that implements AttrMutator.
-type AttrFunc func(*attrBuilder)
-
-func (f AttrFunc) Modify(attr *attrBuilder) { f(attr) }
-
-// attrBuilder tracks the attribute name and statements during building.
-type attrBuilder struct {
+// attrBase is the shared payload for fluent Datastar attribute builders.
+// It tracks the accumulating attribute name (which modifiers append to) and
+// the JavaScript statements that form the attribute value.
+type attrBase struct {
 	name       strings.Builder
 	statements []string
 }
 
-// AppendStatement adds a JavaScript statement to the attribute value.
-func (attr *attrBuilder) AppendStatement(s string) {
-	attr.statements = append(attr.statements, s)
+func (a *attrBase) isTagArg() {}
+
+// Attribute returns the finished h.Attribute. Statements are joined with
+// "; " into the attribute value.
+func (a *attrBase) Attribute() h.Attribute {
+	return h.Attr(a.name.String(), strings.Join(a.statements, "; "))
 }
 
-// buildAttr creates an attrBuilder with the given name and applies all mutators.
-func buildAttr(name string, options ...AttrMutator) *attrBuilder {
-	attr := &attrBuilder{
-		statements: make([]string, 0, len(options)),
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			panic(fmt.Sprintf("attr %q: %s", attr.name.String(), r))
-		}
-	}()
-	attr.name.WriteString(name)
-	for _, opt := range options {
-		opt.Modify(attr)
-	}
-	return attr
+func (a *attrBase) addStmt(s string) {
+	a.statements = append(a.statements, s)
 }
 
-// exprAttr builds an h.Attribute from a base name and mutators.
-// Statements are joined with "; " as the attribute value.
-func exprAttr(name string, options ...AttrMutator) h.Attribute {
-	attr := buildAttr(name, options...)
-	return h.Attr(attr.name.String(), strings.Join(attr.statements, "; "))
+func (a *attrBase) addValue(v Value) {
+	a.statements = append(a.statements, js.ToJS(v.expr))
+}
+
+func newAttr(name string) *attrBase {
+	var b attrBase
+	b.name.WriteString(name)
+	return &b
+}
+
+// SignalCasing controls the casing of signal/event names emitted by Datastar.
+type SignalCasing string
+
+const (
+	CamelCase  SignalCasing = "camel"  // myEvent
+	KebabCase  SignalCasing = "kebab"  // my-event
+	SnakeCase  SignalCasing = "snake"  // my_event
+	PascalCase SignalCasing = "pascal" // MyEvent
+)
+
+// TimingOption modifies a Debounce/Throttle/Duration name segment.
+type TimingOption func(*strings.Builder)
+
+// NoLeading prevents the first trigger from firing immediately (for Debounce).
+func NoLeading() TimingOption {
+	return func(sb *strings.Builder) { sb.WriteString(".noleading") }
+}
+
+// NoTrailing prevents the final trigger from firing after the delay (for Debounce).
+func NoTrailing() TimingOption {
+	return func(sb *strings.Builder) { sb.WriteString(".notrailing") }
+}
+
+// Leading causes the first trigger to fire immediately (for Throttle).
+func Leading() TimingOption {
+	return func(sb *strings.Builder) { sb.WriteString(".leading") }
+}
+
+// Trailing causes the final trigger to fire after the delay (for Throttle).
+func Trailing() TimingOption {
+	return func(sb *strings.Builder) { sb.WriteString(".trailing") }
+}
+
+// DurationLeading causes the first interval to fire immediately (for Duration).
+func DurationLeading() TimingOption {
+	return func(sb *strings.Builder) { sb.WriteString(".leading") }
+}
+
+func writeTiming(sb *strings.Builder, segment string, d time.Duration, opts []TimingOption) {
+	sb.WriteString(segment)
+	sb.WriteString(d.String())
+	for _, opt := range opts {
+		opt(sb)
+	}
+}
+
+// EventBuilder builds a Datastar event-handler attribute (data-on:click,
+// data-on:submit, data-on:custom, etc.) with chainable modifiers.
+type EventBuilder struct {
+	*attrBase
+}
+
+func newEventBuilder(name string, actions []Value) *EventBuilder {
+	b := &EventBuilder{attrBase: newAttr(name)}
+	for _, a := range actions {
+		b.addValue(a)
+	}
+	return b
+}
+
+// Then appends additional JavaScript actions to be executed in order with the
+// initial actions.
+func (b *EventBuilder) Then(actions ...Value) *EventBuilder {
+	for _, a := range actions {
+		b.addValue(a)
+	}
+	return b
+}
+
+// PreventDefault appends "__prevent" — calls event.preventDefault().
+func (b *EventBuilder) PreventDefault() *EventBuilder {
+	b.name.WriteString("__prevent")
+	return b
+}
+
+// StopPropagation appends "__stop" — stops event propagation.
+func (b *EventBuilder) StopPropagation() *EventBuilder {
+	b.name.WriteString("__stop")
+	return b
+}
+
+// Once appends "__once" — fire only once.
+func (b *EventBuilder) Once() *EventBuilder {
+	b.name.WriteString("__once")
+	return b
+}
+
+// Passive appends "__passive" — declares a passive listener.
+func (b *EventBuilder) Passive() *EventBuilder {
+	b.name.WriteString("__passive")
+	return b
+}
+
+// Capture appends "__capture" — declares a capture-phase listener.
+func (b *EventBuilder) Capture() *EventBuilder {
+	b.name.WriteString("__capture")
+	return b
+}
+
+// Outside appends "__outside" — fires when the event happens outside the element.
+func (b *EventBuilder) Outside() *EventBuilder {
+	b.name.WriteString("__outside")
+	return b
+}
+
+// Window appends "__window" — attaches the listener to the window.
+func (b *EventBuilder) Window() *EventBuilder {
+	b.name.WriteString("__window")
+	return b
+}
+
+// Self appends "__self" — only fires when the target is the element itself.
+func (b *EventBuilder) Self() *EventBuilder {
+	b.name.WriteString("__self")
+	return b
+}
+
+// ViewTransition appends "__viewtransition" — wraps work in document.startViewTransition().
+func (b *EventBuilder) ViewTransition() *EventBuilder {
+	b.name.WriteString("__viewtransition")
+	return b
+}
+
+// IfMissing appends "__ifmissing".
+func (b *EventBuilder) IfMissing() *EventBuilder {
+	b.name.WriteString("__ifmissing")
+	return b
+}
+
+// Delay appends "__delay.<duration>".
+func (b *EventBuilder) Delay(d time.Duration) *EventBuilder {
+	writeTiming(&b.name, "__delay.", d, nil)
+	return b
+}
+
+// Debounce appends "__debounce.<duration>" plus optional NoLeading/NoTrailing.
+func (b *EventBuilder) Debounce(d time.Duration, opts ...TimingOption) *EventBuilder {
+	writeTiming(&b.name, "__debounce.", d, opts)
+	return b
+}
+
+// Throttle appends "__throttle.<duration>" plus optional Leading/Trailing.
+func (b *EventBuilder) Throttle(d time.Duration, opts ...TimingOption) *EventBuilder {
+	writeTiming(&b.name, "__throttle.", d, opts)
+	return b
+}
+
+// IntersectBuilder builds a data-on-intersect attribute.
+type IntersectBuilder struct {
+	*attrBase
+}
+
+func newIntersectBuilder(actions []Value) *IntersectBuilder {
+	b := &IntersectBuilder{attrBase: newAttr("data-on-intersect")}
+	for _, a := range actions {
+		b.addValue(a)
+	}
+	return b
+}
+
+// Once appends "__once".
+func (b *IntersectBuilder) Once() *IntersectBuilder {
+	b.name.WriteString("__once")
+	return b
+}
+
+// Half appends "__half" — fire at 50% visibility.
+func (b *IntersectBuilder) Half() *IntersectBuilder {
+	b.name.WriteString("__half")
+	return b
+}
+
+// Full appends "__full" — fire at 100% visibility.
+func (b *IntersectBuilder) Full() *IntersectBuilder {
+	b.name.WriteString("__full")
+	return b
+}
+
+// Exit appends "__exit" — fire when leaving the viewport.
+func (b *IntersectBuilder) Exit() *IntersectBuilder {
+	b.name.WriteString("__exit")
+	return b
+}
+
+// Threshold appends "__threshold.<value>" — custom intersection threshold.
+func (b *IntersectBuilder) Threshold(value float64) *IntersectBuilder {
+	b.name.WriteString("__threshold.")
+	b.name.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
+	return b
+}
+
+// IntervalBuilder builds a data-on-interval attribute.
+type IntervalBuilder struct {
+	*attrBase
+}
+
+func newIntervalBuilder(actions []Value) *IntervalBuilder {
+	b := &IntervalBuilder{attrBase: newAttr("data-on-interval")}
+	for _, a := range actions {
+		b.addValue(a)
+	}
+	return b
+}
+
+// Duration appends "__duration.<duration>" plus optional DurationLeading.
+func (b *IntervalBuilder) Duration(d time.Duration, opts ...TimingOption) *IntervalBuilder {
+	writeTiming(&b.name, "__duration.", d, opts)
+	return b
+}
+
+// SignalPatchBuilder builds a data-on-signal-patch attribute.
+type SignalPatchBuilder struct {
+	*attrBase
+}
+
+func newSignalPatchBuilder(actions []Value) *SignalPatchBuilder {
+	b := &SignalPatchBuilder{attrBase: newAttr("data-on-signal-patch")}
+	for _, a := range actions {
+		b.addValue(a)
+	}
+	return b
+}
+
+// Case appends "__case.<casing>" — the signal/event name casing.
+func (b *SignalPatchBuilder) Case(c SignalCasing) *SignalPatchBuilder {
+	b.name.WriteString("__case.")
+	b.name.WriteString(string(c))
+	return b
+}
+
+// NamedBuilder builds attributes whose name carries a signal name and which
+// support the Case modifier (data-bind, data-bind:key, data-indicator,
+// data-indicator:key, data-ref:name, data-computed:name, data-signals:name).
+type NamedBuilder struct {
+	*attrBase
+}
+
+// Case appends "__case.<casing>".
+func (b *NamedBuilder) Case(c SignalCasing) *NamedBuilder {
+	b.name.WriteString("__case.")
+	b.name.WriteString(string(c))
+	return b
+}
+
+// SignalsBuilder builds the data-signals attribute (whole-object form). It
+// supports IfMissing, Terse and Case.
+type SignalsBuilder struct {
+	*attrBase
+}
+
+// Case appends "__case.<casing>".
+func (b *SignalsBuilder) Case(c SignalCasing) *SignalsBuilder {
+	b.name.WriteString("__case.")
+	b.name.WriteString(string(c))
+	return b
+}
+
+// IfMissing appends "__ifmissing" — only patch missing keys.
+func (b *SignalsBuilder) IfMissing() *SignalsBuilder {
+	b.name.WriteString("__ifmissing")
+	return b
+}
+
+// Terse appends "__terse" (used by data-json-signals debug, kept for symmetry).
+func (b *SignalsBuilder) Terse() *SignalsBuilder {
+	b.name.WriteString("__terse")
+	return b
 }

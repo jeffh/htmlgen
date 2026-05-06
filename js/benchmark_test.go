@@ -111,61 +111,61 @@ func BenchmarkIdent(b *testing.B) {
 func BenchmarkProp(b *testing.B) {
 	obj := Ident("document")
 	for b.Loop() {
-		Prop(obj, "body")
+		obj.Prop("body")
 	}
 }
 
 func BenchmarkPropChain(b *testing.B) {
 	for b.Loop() {
-		Prop(Prop(Prop(Prop(Ident("window"), "document"), "body"), "style"), "display")
+		Ident("window").Prop("document").Prop("body").Prop("style").Prop("display")
 	}
 }
 
 func BenchmarkIndex(b *testing.B) {
 	arr := Ident("arr")
 	for b.Loop() {
-		Index(arr, Int(0))
+		arr.Index(Int(0))
 	}
 }
 
 func BenchmarkCall_NoArgs(b *testing.B) {
 	fn := Ident("doSomething")
 	for b.Loop() {
-		Call(fn)
+		fn.Call()
 	}
 }
 
 func BenchmarkCall_WithArgs(b *testing.B) {
 	fn := Ident("doSomething")
 	for b.Loop() {
-		Call(fn, String("arg1"), Int(42), Bool(true))
+		fn.Call(String("arg1"), Int(42), Bool(true))
 	}
 }
 
 func BenchmarkMethod(b *testing.B) {
 	obj := Ident("console")
 	for b.Loop() {
-		Method(obj, "log", String("message"))
+		obj.Method("log", String("message"))
 	}
 }
 
 func BenchmarkNew(b *testing.B) {
 	for b.Loop() {
-		New(Ident("Date"), Int(2024), Int(0), Int(1))
+		Ident("Date").New(Int(2024), Int(0), Int(1))
 	}
 }
 
 func BenchmarkOptionalProp(b *testing.B) {
 	obj := Ident("obj")
 	for b.Loop() {
-		OptionalProp(obj, "foo")
+		obj.OptionalProp("foo")
 	}
 }
 
 func BenchmarkOptionalCall(b *testing.B) {
 	obj := Ident("obj")
 	for b.Loop() {
-		OptionalCall(obj, "method", Int(1))
+		obj.OptionalCall("method", Int(1))
 	}
 }
 
@@ -175,40 +175,40 @@ func BenchmarkOptionalCall(b *testing.B) {
 
 func BenchmarkBinaryOp_Simple(b *testing.B) {
 	for b.Loop() {
-		Add(Int(1), Int(2))
+		Int(1).Add(Int(2))
 	}
 }
 
 func BenchmarkBinaryOp_Nested(b *testing.B) {
 	for b.Loop() {
-		Add(Mul(Int(2), Int(3)), Div(Int(10), Int(2)))
+		Int(2).Mul(Int(3)).Add(Int(10).Div(Int(2)))
 	}
 }
 
 func BenchmarkComparison(b *testing.B) {
 	x := Ident("x")
 	for b.Loop() {
-		And(GtEq(x, Int(0)), Lt(x, Int(100)))
+		x.GtEq(Int(0)).And(x.Lt(Int(100)))
 	}
 }
 
 func BenchmarkTernary(b *testing.B) {
 	for b.Loop() {
-		Ternary(Ident("cond"), String("yes"), String("no"))
+		Ident("cond").Ternary(String("yes"), String("no"))
 	}
 }
 
 func BenchmarkUnaryOp(b *testing.B) {
 	x := Ident("x")
 	for b.Loop() {
-		Not(x)
+		x.Not()
 	}
 }
 
 func BenchmarkNullishCoalesce(b *testing.B) {
 	x := Ident("x")
 	for b.Loop() {
-		NullishCoalesce(x, String("default"))
+		x.NullishCoalesce(String("default"))
 	}
 }
 
@@ -219,7 +219,7 @@ func BenchmarkNullishCoalesce(b *testing.B) {
 func BenchmarkAssign(b *testing.B) {
 	x := Ident("x")
 	for b.Loop() {
-		Assign(x, Int(5))
+		x.Assign(Int(5))
 	}
 }
 
@@ -237,7 +237,7 @@ func BenchmarkConst(b *testing.B) {
 
 func BenchmarkIf(b *testing.B) {
 	for b.Loop() {
-		If(Ident("cond"), Assign(Ident("x"), Int(1)))
+		If(Ident("cond"), Ident("x").Assign(Int(1)))
 	}
 }
 
@@ -245,8 +245,8 @@ func BenchmarkIfElse(b *testing.B) {
 	for b.Loop() {
 		IfElse(
 			Ident("cond"),
-			[]Stmt{Assign(Ident("x"), Int(1))},
-			[]Stmt{Assign(Ident("x"), Int(0))},
+			[]Stmt{Ident("x").Assign(Int(1))},
+			[]Stmt{Ident("x").Assign(Int(0))},
 		)
 	}
 }
@@ -255,7 +255,7 @@ func BenchmarkBlock(b *testing.B) {
 	for b.Loop() {
 		Block(
 			Let("x", Int(1)),
-			Incr(Ident("x")),
+			Ident("x").Incr(),
 			Return(Ident("x")),
 		)
 	}
@@ -266,7 +266,7 @@ func BenchmarkStmts(b *testing.B) {
 		Stmts(
 			Let("a", Int(1)),
 			Let("b", Int(2)),
-			Assign(Ident("c"), Add(Ident("a"), Ident("b"))),
+			Ident("c").Assign(Ident("a").Add(Ident("b"))),
 		)
 	}
 }
@@ -283,20 +283,20 @@ func BenchmarkArrowFunc_NoParams(b *testing.B) {
 
 func BenchmarkArrowFunc_OneParam(b *testing.B) {
 	for b.Loop() {
-		ArrowFunc([]string{"x"}, Mul(Ident("x"), Int(2)))
+		ArrowFunc([]string{"x"}, Ident("x").Mul(Int(2)))
 	}
 }
 
 func BenchmarkArrowFunc_MultiParams(b *testing.B) {
 	for b.Loop() {
-		ArrowFunc([]string{"a", "b", "c"}, Add(Add(Ident("a"), Ident("b")), Ident("c")))
+		ArrowFunc([]string{"a", "b", "c"}, Ident("a").Add(Ident("b")).Add(Ident("c")))
 	}
 }
 
 func BenchmarkArrowFuncStmts(b *testing.B) {
 	for b.Loop() {
 		ArrowFuncStmts([]string{"x"},
-			Let("result", Mul(Ident("x"), Int(2))),
+			Let("result", Ident("x").Mul(Int(2))),
 			Return(Ident("result")),
 		)
 	}
@@ -304,7 +304,7 @@ func BenchmarkArrowFuncStmts(b *testing.B) {
 
 func BenchmarkFunc(b *testing.B) {
 	for b.Loop() {
-		Func([]string{"x", "y"}, Return(Add(Ident("x"), Ident("y"))))
+		Func([]string{"x", "y"}, Return(Ident("x").Add(Ident("y"))))
 	}
 }
 
@@ -332,21 +332,21 @@ func BenchmarkTemplate_Complex(b *testing.B) {
 func BenchmarkAwait(b *testing.B) {
 	fetch := Fetch(String("/api"))
 	for b.Loop() {
-		Await(fetch)
+		fetch.Await()
 	}
 }
 
 func BenchmarkAsyncArrowFunc(b *testing.B) {
 	for b.Loop() {
-		AsyncArrowFunc(nil, Await(Fetch(String("/api"))))
+		AsyncArrowFunc(nil, Fetch(String("/api")).Await())
 	}
 }
 
 func BenchmarkAsyncArrowFuncStmts(b *testing.B) {
 	for b.Loop() {
 		AsyncArrowFuncStmts([]string{"url"},
-			Let("response", Await(Fetch(Ident("url")))),
-			Return(Method(Ident("response"), "json")),
+			Let("response", Fetch(Ident("url")).Await()),
+			Return(Ident("response").Method("json")),
 		)
 	}
 }
@@ -381,10 +381,10 @@ func BenchmarkHandler_Complex(b *testing.B) {
 		Handler(
 			ExprStmt(PreventDefault()),
 			Let("value", EventValue()),
-			If(Eq(Ident("value"), String("")),
+			If(Ident("value").Eq(String("")),
 				Return(Null()),
 			),
-			ExprStmt(ClassListAdd(This(), String("submitted"))),
+			ExprStmt(This().ClassListAdd(String("submitted"))),
 			ExprStmt(ConsoleLog(String("Submitted:"), Ident("value"))),
 		)
 	}
@@ -397,14 +397,14 @@ func BenchmarkExprHandler(b *testing.B) {
 }
 
 func BenchmarkToJS(b *testing.B) {
-	expr := Add(Mul(Ident("x"), Int(2)), Int(1))
+	expr := Ident("x").Mul(Int(2)).Add(Int(1))
 	for b.Loop() {
 		ToJS(expr)
 	}
 }
 
 func BenchmarkToJSStmt(b *testing.B) {
-	stmt := Let("x", Add(Int(1), Int(2)))
+	stmt := Let("x", Int(1).Add(Int(2)))
 	for b.Loop() {
 		ToJSStmt(stmt)
 	}
@@ -424,14 +424,14 @@ func BenchmarkOnSubmit(b *testing.B) {
 	for b.Loop() {
 		OnSubmit(
 			ExprStmt(PreventDefault()),
-			ExprStmt(Method(This(), "submit")),
+			ExprStmt(This().Method("submit")),
 		)
 	}
 }
 
 func BenchmarkOnInput(b *testing.B) {
 	for b.Loop() {
-		OnInput(Assign(Prop(EventTarget(), "value"), Method(EventValue(), "toUpperCase")))
+		OnInput(EventTarget().Prop("value").Assign(EventValue().Method("toUpperCase")))
 	}
 }
 
@@ -475,21 +475,21 @@ func BenchmarkFetch_WithOptions(b *testing.B) {
 func BenchmarkClassListAdd(b *testing.B) {
 	el := Ident("el")
 	for b.Loop() {
-		ClassListAdd(el, String("active"), String("visible"))
+		el.ClassListAdd(String("active"), String("visible"))
 	}
 }
 
 func BenchmarkClassListToggle(b *testing.B) {
 	el := Ident("el")
 	for b.Loop() {
-		ClassListToggle(el, String("active"))
+		el.ClassListToggle(String("active"))
 	}
 }
 
 func BenchmarkClassListToggle_WithForce(b *testing.B) {
 	el := Ident("el")
 	for b.Loop() {
-		ClassListToggle(el, String("active"), Bool(true))
+		el.ClassListToggle(String("active"), Bool(true))
 	}
 }
 
@@ -509,7 +509,7 @@ func BenchmarkJSONParse(b *testing.B) {
 func BenchmarkSetStyle(b *testing.B) {
 	el := Ident("el")
 	for b.Loop() {
-		SetStyle(el, "backgroundColor", String("red"))
+		el.SetStyle("backgroundColor", String("red"))
 	}
 }
 
@@ -550,10 +550,10 @@ func BenchmarkAllocations_ComplexHandler(b *testing.B) {
 		Handler(
 			ExprStmt(PreventDefault()),
 			Let("value", EventValue()),
-			If(Eq(Ident("value"), String("")),
+			If(Ident("value").Eq(String("")),
 				Return(Null()),
 			),
-			ExprStmt(ClassListAdd(This(), String("submitted"))),
+			ExprStmt(This().ClassListAdd(String("submitted"))),
 		)
 	}
 }
@@ -561,7 +561,7 @@ func BenchmarkAllocations_ComplexHandler(b *testing.B) {
 func BenchmarkAllocations_ArrowFunc(b *testing.B) {
 	b.ReportAllocs()
 	for b.Loop() {
-		ArrowFunc([]string{"x"}, Mul(Ident("x"), Int(2)))
+		ArrowFunc([]string{"x"}, Ident("x").Mul(Int(2)))
 	}
 }
 

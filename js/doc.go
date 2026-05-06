@@ -1,8 +1,8 @@
 // Package js provides type-safe JavaScript string generation for HTML event attributes.
 //
-// This package provides a builder API for generating JavaScript code strings
-// suitable for use in HTML event handler attributes like onclick, onchange, etc.
-// It integrates seamlessly with the [github.com/jeffh/htmlgen/h] package.
+// This package provides a fluent builder API for generating JavaScript code
+// strings suitable for use in HTML event handler attributes like onclick,
+// onchange, etc. It integrates seamlessly with the [github.com/jeffh/htmlgen/h] package.
 //
 // # Quick Start
 //
@@ -15,26 +15,25 @@
 //
 //	// Simple click handler
 //	button := h.Button(
-//	    js.OnClick(js.ExprStmt(js.Alert(js.String("Hello!")))),
+//	    js.OnClick(js.Alert(js.String("Hello!")).Stmt()),
 //	    h.Text("Say Hello"),
 //	)
 //	// Output: <button onclick="alert(&quot;Hello!&quot;)">Say Hello</button>
 //
 // # Type System
 //
-// The package uses three core interfaces to ensure type safety:
+// The package exposes two core types:
 //
-//   - [Expr] - JavaScript expressions that produce values (e.g., "1 + 2", "x.foo")
-//   - [Stmt] - JavaScript statements that perform actions (e.g., "let x = 1", "x++")
-//   - [Callable] - Expressions that can have properties accessed or methods called
+//   - [Expr] - JavaScript expressions that produce values; operators and
+//     property/method access are exposed as methods on Expr (e.g. e.Add(other),
+//     e.Eq(other), e.Prop("x"), e.Method("foo", arg)).
+//   - [Stmt] - JavaScript statements (e.g. let, return, assignment).
 //
-// This type system prevents accidentally passing raw Go strings where JavaScript
-// is expected. The only way to inject arbitrary JavaScript is through the explicit
-// [Raw] escape hatch.
+// Both are concrete struct values, not interfaces. Construct them with the
+// package constructors ([String], [Int], [Ident], [Raw], etc.) and then chain
+// methods to build larger expressions or convert to statements.
 //
 // # Creating Values
-//
-// Use these functions to create JavaScript literals safely:
 //
 //	js.String("hello")     // "hello" (JSON-escaped, prevents XSS)
 //	js.Int(42)             // 42
@@ -60,81 +59,52 @@
 //
 // # Property and Method Access
 //
-// Access properties with [Prop] and call methods with [Method]:
+// Property access and method calls are methods on Expr:
 //
-//	js.Prop(js.Ident("document"), "body")
-//	// document.body
+//	js.Ident("document").Prop("body")                       // document.body
+//	js.Ident("console").Method("log", js.String("hello"))   // console.log("hello")
+//	js.Ident("event").Prop("target").Prop("value")          // event.target.value
 //
-//	js.Method(js.Ident("console"), "log", js.String("hello"))
-//	// console.log("hello")
+// For array/computed property access, use [Expr.Index]:
 //
-//	js.Prop(js.Prop(js.Ident("event"), "target"), "value")
-//	// event.target.value
+//	js.Ident("arr").Index(js.Int(0))         // arr[0]
+//	js.Ident("obj").Index(js.String("key"))  // obj["key"]
 //
-// For array/computed property access, use [Index]:
+// Optional chaining is supported with [Expr.OptionalProp] and [Expr.OptionalCall]:
 //
-//	js.Index(js.Ident("arr"), js.Int(0))         // arr[0]
-//	js.Index(js.Ident("obj"), js.String("key"))  // obj["key"]
-//
-// Optional chaining is supported with [OptionalProp] and [OptionalCall]:
-//
-//	js.OptionalProp(js.Ident("user"), "name")     // user?.name
-//	js.OptionalCall(js.Ident("obj"), "method")    // obj?.method()
+//	js.Ident("user").OptionalProp("name")           // user?.name
+//	js.Ident("obj").OptionalCall("method")          // obj?.method()
 //
 // # Operators
 //
-// All standard JavaScript operators are available:
+// Operators are methods on Expr:
 //
-//	// Arithmetic
-//	js.Add(js.Int(1), js.Int(2))    // (1 + 2)
-//	js.Sub(js.Int(5), js.Int(3))    // (5 - 3)
-//	js.Mul(js.Int(4), js.Int(2))    // (4 * 2)
-//	js.Div(js.Int(10), js.Int(2))   // (10 / 2)
-//
-//	// Comparison (strict by default)
-//	js.Eq(js.Ident("x"), js.Int(5))       // (x === 5)
-//	js.NotEq(js.Ident("x"), js.Null())    // (x !== null)
-//	js.Lt(js.Ident("x"), js.Int(10))      // (x < 10)
-//	js.Gt(js.Ident("x"), js.Int(0))       // (x > 0)
-//
-//	// Logical
-//	js.And(js.Ident("a"), js.Ident("b"))  // (a && b)
-//	js.Or(js.Ident("a"), js.Ident("b"))   // (a || b)
-//	js.Not(js.Ident("x"))                 // !x
-//
-//	// Ternary
-//	js.Ternary(js.Ident("cond"), js.String("yes"), js.String("no"))
+//	js.Int(1).Add(js.Int(2))                      // (1 + 2)
+//	js.Int(5).Sub(js.Int(3))                      // (5 - 3)
+//	js.Ident("x").Eq(js.Int(5))                   // (x === 5)
+//	js.Ident("x").Lt(js.Int(10))                  // (x < 10)
+//	js.Ident("a").And(js.Ident("b"))              // (a && b)
+//	js.Ident("x").Not()                           // !x
+//	js.Ident("cond").Ternary(js.String("yes"), js.String("no"))
 //	// (cond ? "yes" : "no")
 //
-//	// Nullish coalescing
-//	js.NullishCoalesce(js.Ident("x"), js.String("default"))
+//	js.Ident("x").NullishCoalesce(js.String("default"))
 //	// (x ?? "default")
 //
 // # Statements
 //
-// Create JavaScript statements for use in handlers:
-//
-//	// Variable declarations
-//	js.Let("x", js.Int(5))           // let x = 5
-//	js.Const("PI", js.Float(3.14))   // const PI = 3.14
-//
-//	// Assignment
-//	js.Assign(js.Ident("x"), js.Int(10))  // x = 10
-//	js.AddAssign(js.Ident("x"), js.Int(1)) // x += 1
-//
-//	// Increment/decrement
-//	js.Incr(js.Ident("count"))  // count++
-//	js.Decr(js.Ident("count"))  // count--
-//
-//	// Conditionals
-//	js.If(js.Eq(js.Ident("x"), js.Int(0)),
+//	js.Let("x", js.Int(5))                         // let x = 5
+//	js.Const("PI", js.Float(3.14))                 // const PI = 3.14
+//	js.Ident("x").Assign(js.Int(10))               // x = 10
+//	js.Ident("x").AddAssign(js.Int(1))             // x += 1
+//	js.Ident("count").Incr()                       // count++
+//	js.If(js.Ident("x").Eq(js.Int(0)),
 //	    js.Return(js.Null()),
-//	)
-//	// if (x === 0) { return null }
+//	)                                              // if (x === 0) { return null }
 //
-// To use an expression as a statement, wrap it with [ExprStmt]:
+// To use an expression as a statement, call [Expr.Stmt]:
 //
-//	js.ExprStmt(js.ConsoleLog(js.String("hello")))
+//	js.ConsoleLog(js.String("hello")).Stmt()
 //	// console.log("hello")
 //
 // # Event Handlers
@@ -142,103 +112,50 @@
 // The [Handler] function combines statements into a handler string:
 //
 //	handler := js.Handler(
-//	    js.ExprStmt(js.PreventDefault()),
+//	    js.PreventDefault().Stmt(),
 //	    js.Let("value", js.EventValue()),
-//	    js.ExprStmt(js.ConsoleLog(js.Ident("value"))),
+//	    js.ConsoleLog(js.Ident("value")).Stmt(),
 //	)
 //	// "event.preventDefault(); let value = event.target.value; console.log(value)"
 //
-// For convenience, use the On* functions to create [h.Attribute] values directly:
-//
-//	js.OnClick(...)      // onclick="..."
-//	js.OnInput(...)      // oninput="..."
-//	js.OnChange(...)     // onchange="..."
-//	js.OnSubmit(...)     // onsubmit="..."
-//	js.OnKeyDown(...)    // onkeydown="..."
-//	js.OnLoad(...)       // onload="..."
-//
-// For custom events, use [On]:
-//
-//	js.On("touchstart", js.ExprStmt(js.ConsoleLog(js.String("touched"))))
-//	// ontouchstart="console.log(\"touched\")"
+// For convenience, [OnClick], [OnInput], etc. create [h.Attribute] values directly.
 //
 // # Built-in Helpers
 //
-// The package provides helpers for common JavaScript patterns:
+//	js.ConsoleLog(js.String("message"))            // console.log("message")
+//	js.GetElementById(js.String("myId"))           // document.getElementById("myId")
+//	js.QuerySelector(js.String(".myClass"))        // document.querySelector(".myClass")
+//	js.PreventDefault()                            // event.preventDefault()
+//	js.EventValue()                                // event.target.value
+//	js.Navigate(js.String("/home"))                // location.href = "/home"
 //
-// Console:
+// DOM helpers are methods on element expressions:
 //
-//	js.ConsoleLog(js.String("message"))   // console.log("message")
-//	js.ConsoleError(js.String("error"))   // console.error("error")
-//	js.ConsoleWarn(js.String("warning"))  // console.warn("warning")
-//
-// Document:
-//
-//	js.GetElementById(js.String("myId"))     // document.getElementById("myId")
-//	js.QuerySelector(js.String(".myClass"))  // document.querySelector(".myClass")
-//
-// Event handling:
-//
-//	js.PreventDefault()      // event.preventDefault()
-//	js.StopPropagation()     // event.stopPropagation()
-//	js.EventTarget()         // event.target
-//	js.EventValue()          // event.target.value
-//	js.EventChecked()        // event.target.checked
-//	js.EventKey()            // event.key
-//
-// Navigation:
-//
-//	js.Navigate(js.String("/home"))  // location.href = "/home"
-//	js.Reload()                      // location.reload()
-//	js.HistoryBack()                 // history.back()
-//
-// DOM manipulation:
-//
-//	js.ClassListAdd(js.Ident("el"), js.String("active"))
+//	js.Ident("el").ClassListAdd(js.String("active"))
 //	// el.classList.add("active")
 //
-//	js.ClassListToggle(js.Ident("el"), js.String("hidden"))
-//	// el.classList.toggle("hidden")
-//
-//	js.SetStyle(js.Ident("el"), "backgroundColor", js.String("red"))
+//	js.Ident("el").SetStyle("backgroundColor", js.String("red"))
 //	// el.style.backgroundColor = "red"
 //
-// # Arrow Functions
+// # Arrow Functions and Async
 //
-// Create arrow functions for callbacks:
-//
-//	// Expression body
-//	js.ArrowFunc([]string{"x"}, js.Mul(js.Ident("x"), js.Int(2)))
+//	js.ArrowFunc([]string{"x"}, js.Ident("x").Mul(js.Int(2)))
 //	// x => (x * 2)
 //
-//	// Statement body
-//	js.ArrowFuncStmts([]string{"x"},
-//	    js.Let("result", js.Mul(js.Ident("x"), js.Int(2))),
-//	    js.Return(js.Ident("result")),
-//	)
-//	// x => { let result = (x * 2); return result }
-//
-//	// Async arrow functions
-//	js.AsyncArrowFunc([]string{}, js.Await(js.Fetch(js.String("/api"))))
+//	js.AsyncArrowFunc([]string{}, js.Fetch(js.String("/api")).Await())
 //	// async () => await fetch("/api")
+//
+// # Promises
+//
+//	js.Fetch(js.String("/api")).
+//	    Then(js.ArrowFunc([]string{"r"}, js.Ident("r").Method("json"))).
+//	    Catch(js.ArrowFunc([]string{"err"}, js.ConsoleError(js.Ident("err"))))
+//	// fetch("/api").then(r => r.json()).catch(err => console.error(err))
 //
 // # Template Literals
 //
-// Create template literals with [Template]:
-//
 //	js.Template("Hello, ", js.Ident("name"), "!")
 //	// `Hello, ${name}!`
-//
-// # Promises and Async
-//
-//	js.Await(js.Fetch(js.String("/api/data")))
-//	// await fetch("/api/data")
-//
-//	js.PromiseThen(
-//	    js.Fetch(js.String("/api")),
-//	    js.ArrowFunc([]string{"r"}, js.Method(js.Ident("r"), "json")),
-//	)
-//	// fetch("/api").then(r => r.json())
 //
 // # Raw JavaScript Escape Hatch
 //
@@ -249,75 +166,5 @@
 //	js.Raw("myCustomFunction()")
 //	js.Raw("window.gtag('event', 'click')")
 //
-// Use Raw sparingly, as it bypasses type safety. The API covers most common
-// use cases, so prefer using the type-safe builders when possible.
-//
-// # Complete Examples
-//
-// Form submission with validation:
-//
-//	h.Form(
-//	    js.OnSubmit(
-//	        js.ExprStmt(js.PreventDefault()),
-//	        js.Let("email", js.Prop(js.GetElementById(js.String("email")), "value")),
-//	        js.If(js.Eq(js.Ident("email"), js.String("")),
-//	            js.ExprStmt(js.Alert(js.String("Email is required"))),
-//	            js.ReturnVoid(),
-//	        ),
-//	        js.ExprStmt(js.Method(js.This(), "submit")),
-//	    ),
-//	    // ... form fields
-//	)
-//
-// Toggle visibility:
-//
-//	h.Button(
-//	    js.OnClick(
-//	        js.ExprStmt(js.ClassListToggle(
-//	            js.GetElementById(js.String("panel")),
-//	            js.String("hidden"),
-//	        )),
-//	    ),
-//	    h.Text("Toggle Panel"),
-//	)
-//
-// Live character count:
-//
-//	h.Textarea(
-//	    h.Attrs("id", "message", "maxlength", "200"),
-//	    js.OnInput(
-//	        js.Assign(
-//	            js.Prop(js.GetElementById(js.String("charCount")), "textContent"),
-//	            js.Template(js.Prop(js.EventValue(), "length"), " / 200"),
-//	        ),
-//	    ),
-//	)
-//
-// Keyboard shortcuts:
-//
-//	h.Body(
-//	    js.OnKeyDown(
-//	        js.If(js.And(js.EventCtrlKey(), js.Eq(js.EventKey(), js.String("s"))),
-//	            js.ExprStmt(js.PreventDefault()),
-//	            js.ExprStmt(js.Raw("saveDocument()")),
-//	        ),
-//	    ),
-//	)
-//
-// Fetch with error handling:
-//
-//	h.Button(
-//	    js.OnClick(
-//	        js.ExprStmt(
-//	            js.PromiseCatch(
-//	                js.PromiseThen(
-//	                    js.Fetch(js.String("/api/data")),
-//	                    js.ArrowFunc([]string{"r"}, js.Method(js.Ident("r"), "json")),
-//	                ),
-//	                js.ArrowFunc([]string{"err"}, js.ConsoleError(js.Ident("err"))),
-//	            ),
-//	        ),
-//	    ),
-//	    h.Text("Load Data"),
-//	)
+// Use Raw sparingly, as it bypasses type safety.
 package js

@@ -31,20 +31,18 @@ func writeJSONString(sb *strings.Builder, s string) {
 			sb.WriteString(`\f`)
 		case '<':
 			// Match json.Marshal HTML-safe escaping
-			sb.WriteString(`\u003c`)
+			sb.WriteString("\\u003c")
 		case '>':
-			sb.WriteString(`\u003e`)
+			sb.WriteString("\\u003e")
 		case '&':
-			sb.WriteString(`\u0026`)
+			sb.WriteString("\\u0026")
 		default:
 			if r < 0x20 {
-				// Control characters use \uXXXX format
 				sb.WriteString(`\u00`)
 				sb.WriteByte("0123456789abcdef"[r>>4])
 				sb.WriteByte("0123456789abcdef"[r&0xf])
 			} else if r == utf8.RuneError && size == 1 {
-				// Invalid UTF-8 byte
-				sb.WriteString(`\ufffd`)
+				sb.WriteString("\\ufffd")
 			} else {
 				sb.WriteRune(r)
 			}
@@ -54,75 +52,57 @@ func writeJSONString(sb *strings.Builder, s string) {
 	sb.WriteByte('"')
 }
 
-// literal represents a JavaScript literal value.
+// literal represents a JavaScript literal value emitted verbatim.
 type literal struct {
 	value string
 }
 
 func (l literal) js(sb *strings.Builder) { sb.WriteString(l.value) }
-func (l literal) callable()              {}
 
-// stringLiteral represents a JavaScript string literal that escapes on output.
-type stringLiteral struct {
+// stringLiteralNode represents a JavaScript string literal that escapes on output.
+type stringLiteralNode struct {
 	value string
 }
 
-func (s stringLiteral) js(sb *strings.Builder) { writeJSONString(sb, s.value) }
-func (s stringLiteral) callable()              {}
+func (s stringLiteralNode) js(sb *strings.Builder) { writeJSONString(sb, s.value) }
 
 // String creates a JavaScript string literal, properly escaped using JSON encoding.
-func String(s string) Callable {
-	return stringLiteral{s}
-}
+func String(s string) Expr { return Expr{node: stringLiteralNode{s}} }
 
 // Int creates a JavaScript number literal from an integer.
-func Int(n int) Callable {
-	return literal{strconv.Itoa(n)}
-}
+func Int(n int) Expr { return Expr{node: literal{strconv.Itoa(n)}} }
 
 // Int64 creates a JavaScript number literal from an int64.
-func Int64(n int64) Callable {
-	return literal{strconv.FormatInt(n, 10)}
-}
+func Int64(n int64) Expr { return Expr{node: literal{strconv.FormatInt(n, 10)}} }
 
 // Float creates a JavaScript number literal from a float64.
-func Float(f float64) Callable {
-	return literal{strconv.FormatFloat(f, 'f', -1, 64)}
-}
+func Float(f float64) Expr { return Expr{node: literal{strconv.FormatFloat(f, 'f', -1, 64)}} }
 
 // Bool creates a JavaScript boolean literal.
-func Bool(b bool) Callable {
+func Bool(b bool) Expr {
 	if b {
-		return literal{"true"}
+		return Expr{node: literal{"true"}}
 	}
-	return literal{"false"}
+	return Expr{node: literal{"false"}}
 }
 
 // Null creates a JavaScript null literal.
-func Null() Callable {
-	return literal{"null"}
-}
+func Null() Expr { return Expr{node: literal{"null"}} }
 
 // Undefined creates a JavaScript undefined literal.
-func Undefined() Callable {
-	return literal{"undefined"}
-}
+func Undefined() Expr { return Expr{node: literal{"undefined"}} }
 
 // JSON creates a JavaScript value from a Go value using JSON encoding.
 // Panics if the value cannot be marshaled to JSON.
-func JSON(value any) Callable {
+func JSON(value any) Expr {
 	b, err := json.Marshal(value)
 	if err != nil {
 		panic(fmt.Errorf("js.JSON: %w: value=%#v", err, value))
 	}
-	return literal{string(b)}
+	return Expr{node: literal{string(b)}}
 }
 
-// Array creates a JavaScript array literal from expressions.
-func Array(elements ...Expr) Callable {
-	return arrayLiteral{elements}
-}
-
+// arrayLiteral represents a JavaScript array literal.
 type arrayLiteral struct {
 	elements []Expr
 }
@@ -137,12 +117,9 @@ func (a arrayLiteral) js(sb *strings.Builder) {
 	}
 	sb.WriteString("]")
 }
-func (a arrayLiteral) callable() {}
 
-// Object creates a JavaScript object literal from key-value pairs.
-func Object(pairs ...KV) Callable {
-	return objectLiteral{pairs}
-}
+// Array creates a JavaScript array literal from expressions.
+func Array(elements ...Expr) Expr { return Expr{node: arrayLiteral{elements}} }
 
 // KV represents a key-value pair for object literals.
 type KV struct {
@@ -151,10 +128,9 @@ type KV struct {
 }
 
 // Pair creates a key-value pair for Object().
-func Pair(key string, value Expr) KV {
-	return KV{Key: key, Value: value}
-}
+func Pair(key string, value Expr) KV { return KV{Key: key, Value: value} }
 
+// objectLiteral represents a JavaScript object literal.
 type objectLiteral struct {
 	pairs []KV
 }
@@ -165,27 +141,24 @@ func (o objectLiteral) js(sb *strings.Builder) {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
-		// Quote the key using JSON encoding for safety
 		writeJSONString(sb, kv.Key)
 		sb.WriteString(": ")
 		kv.Value.js(sb)
 	}
 	sb.WriteString("}")
 }
-func (o objectLiteral) callable() {}
 
-// Ident creates a JavaScript identifier reference.
-// This should be used for variable names, not for string literals.
-func Ident(name string) Callable {
-	return identifier(name)
-}
+// Object creates a JavaScript object literal from key-value pairs.
+func Object(pairs ...KV) Expr { return Expr{node: objectLiteral{pairs}} }
 
+// identifier represents a bare identifier reference.
 type identifier string
 
 func (i identifier) js(sb *strings.Builder) { sb.WriteString(string(i)) }
-func (i identifier) callable()              {}
+
+// Ident creates a JavaScript identifier reference.
+// This should be used for variable names, not for string literals.
+func Ident(name string) Expr { return Expr{node: identifier(name)} }
 
 // This creates the special "this" identifier.
-func This() Callable {
-	return identifier("this")
-}
+func This() Expr { return Expr{node: identifier("this")} }

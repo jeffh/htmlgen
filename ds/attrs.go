@@ -7,28 +7,26 @@ import (
 	"github.com/jeffh/htmlgen/js"
 )
 
-// SetSignalExpr creates an AttrMutator that sets a signal to an expression.
-// The signalName will automatically be prefixed with "$".
-func SetSignalExpr(signalName string, expression js.Expr) AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		var sb strings.Builder
-		sb.Grow(len(signalName) + 10)
-		if strings.HasPrefix(signalName, "$") {
-			sb.WriteString(signalName)
-		} else {
-			sb.WriteString("$")
-			sb.WriteString(signalName)
-		}
-		sb.WriteString(" = ")
-		sb.WriteString(js.ToJS(expression))
-		attr.AppendStatement(sb.String())
-	})
+// SetSignalExpr returns a Value that assigns a signal to a JavaScript expression.
+// The signal name is automatically prefixed with "$".
+func SetSignalExpr(signalName string, expression js.Expr) Value {
+	var sb strings.Builder
+	sb.Grow(len(signalName) + 10)
+	if strings.HasPrefix(signalName, "$") {
+		sb.WriteString(signalName)
+	} else {
+		sb.WriteString("$")
+		sb.WriteString(signalName)
+	}
+	sb.WriteString(" = ")
+	sb.WriteString(js.ToJS(expression))
+	return Value{expr: js.Raw(sb.String())}
 }
 
-// SetSignal creates an AttrMutator that sets a signal to a value.
-// Use SetSignalExpr if you need to set the signal to a more complex expression.
-// The signalName will automatically be prefixed with "$".
-func SetSignal(signalName string, jsValue any) AttrMutator {
+// SetSignal returns a Value that assigns a signal to a value.
+// Use SetSignalExpr if you need to set the signal to a complex expression.
+// The signal name is automatically prefixed with "$".
+func SetSignal(signalName string, jsValue any) Value {
 	switch v := jsValue.(type) {
 	case js.Expr:
 		return SetSignalExpr(signalName, v)
@@ -39,133 +37,141 @@ func SetSignal(signalName string, jsValue any) AttrMutator {
 	}
 }
 
-// Sets an action to be executed when the form is submitted.
-// The action will be encoded as a JavaScript expression.
-func OnSubmit(options ...AttrMutator) h.Attribute { return exprAttr("data-on:submit", options...) }
-
-// Sets an action to be executed when the input is changed.
-// The action will be encoded as a JavaScript expression.
-func OnInput(options ...AttrMutator) h.Attribute { return exprAttr("data-on:input", options...) }
-
-// Sets an action to be executed when the change is detected.
-// The action will be encoded as a JavaScript expression.
-func OnChange(options ...AttrMutator) h.Attribute { return exprAttr("data-on:change", options...) }
-
-// Sets an action to be executed when the element is clicked.
-// The action will be encoded as a JavaScript expression.
-func OnClick(options ...AttrMutator) h.Attribute { return exprAttr("data-on:click", options...) }
-
-// Sets an action to be executed when the element is loaded.
-// The action will be encoded as a JavaScript expression.
-func OnLoad(options ...AttrMutator) h.Attribute { return exprAttr("data-on:load", options...) }
-
-// Sets an action to be executed when the event is triggered.
-// The action will be encoded as a JavaScript expression.
-func On(eventName string, options ...AttrMutator) h.Attribute {
-	opts := append([]AttrMutator{appendName(eventName)}, options...)
-	return exprAttr("data-on:", opts...)
+// OnSubmit creates a data-on:submit event handler.
+func OnSubmit(actions ...Value) *EventBuilder {
+	return newEventBuilder("data-on:submit", actions)
 }
 
-// OnIntersect runs an expression when the element intersects the viewport.
-// Use Half() for 50% visibility, Full() for 100% visibility.
-// Example: OnIntersect(Once(), Raw("$seen = true"))
-// Produces: data-on-intersect__once="$seen = true"
-func OnIntersect(options ...AttrMutator) h.Attribute {
-	return exprAttr("data-on-intersect", options...)
+// OnInput creates a data-on:input event handler.
+func OnInput(actions ...Value) *EventBuilder {
+	return newEventBuilder("data-on:input", actions)
 }
 
-// OnInterval executes an expression at regular intervals.
-// Default interval is 1 second. Use Duration() to customize.
-// Example: OnInterval(Duration(500*time.Millisecond), Raw("$count++"))
-// Produces: data-on-interval__duration.500ms="$count++"
-func OnInterval(options ...AttrMutator) h.Attribute {
-	return exprAttr("data-on-interval", options...)
+// OnChange creates a data-on:change event handler.
+func OnChange(actions ...Value) *EventBuilder {
+	return newEventBuilder("data-on:change", actions)
 }
 
-// OnSignalPatch runs an expression whenever signals are updated.
-// A "patch" variable is available containing signal patch details.
-// Example: OnSignalPatch(Raw("console.log('Signal changed!')"))
-// Produces: data-on-signal-patch="console.log('Signal changed!')"
-func OnSignalPatch(options ...AttrMutator) h.Attribute {
-	return exprAttr("data-on-signal-patch", options...)
+// OnClick creates a data-on:click event handler.
+func OnClick(actions ...Value) *EventBuilder {
+	return newEventBuilder("data-on:click", actions)
 }
 
-// OnSignalPatchFilter filters which signals trigger OnSignalPatch handlers.
-// Example: OnSignalPatchFilter(&FilterOptions{IncludeReg: ptr("^counter$")})
-// Produces: data-on-signal-patch-filter="{include: /^counter$/}"
+// OnLoad creates a data-on:load event handler.
+func OnLoad(actions ...Value) *EventBuilder {
+	return newEventBuilder("data-on:load", actions)
+}
+
+// On creates a custom data-on:<eventName> event handler.
+func On(eventName string, actions ...Value) *EventBuilder {
+	return newEventBuilder("data-on:"+eventName, actions)
+}
+
+// OnIntersect creates a data-on-intersect handler triggered when the element
+// intersects the viewport.
+func OnIntersect(actions ...Value) *IntersectBuilder {
+	return newIntersectBuilder(actions)
+}
+
+// OnInterval creates a data-on-interval handler executed at regular intervals.
+func OnInterval(actions ...Value) *IntervalBuilder {
+	return newIntervalBuilder(actions)
+}
+
+// OnSignalPatch creates a data-on-signal-patch handler that runs whenever a
+// signal is updated.
+func OnSignalPatch(actions ...Value) *SignalPatchBuilder {
+	return newSignalPatchBuilder(actions)
+}
+
+// OnSignalPatchFilter sets the filter for signals that trigger
+// OnSignalPatch handlers.
 func OnSignalPatchFilter(options *FilterOptions) h.Attribute {
 	if options == nil {
 		return h.Attr("data-on-signal-patch-filter", "")
 	}
-	return exprAttr("data-on-signal-patch-filter", FilterOptionsValue(options))
+	var sb strings.Builder
+	options.appendJS(&sb)
+	return h.Attr("data-on-signal-patch-filter", sb.String())
 }
 
-// SignalExpr sets a signal to an arbitrary JavaScript expression.
-// The signal's default value will be appended to the attribute name.
-// The signal name will automatically be prefixed with "$".
-func SignalExpr(name string, defaultExpression Value) h.Attribute {
-	return exprAttr("data-signals:", appendName(name), AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString(js.ToJS(defaultExpression.expr))
-	}))
+// SignalExpr declares a signal initialized from an expression.
+// The signal name is appended to "data-signals:". Modifiers (Case) may be chained.
+func SignalExpr(name string, defaultExpression Value) *NamedBuilder {
+	b := &NamedBuilder{attrBase: newAttr("data-signals:" + name)}
+	b.addStmt(js.ToJS(defaultExpression.expr))
+	return b
 }
 
-// Signal defines a signal with a default value.
-// The signal's default value will be encoded as a JSON value.
-// The signal name will automatically be prefixed with "$".
-func Signal(name string, defaultJsValue any) h.Attribute {
-	return exprAttr("data-signals:", appendName(name), JsonValue(defaultJsValue))
+// Signal declares a signal with a JSON-encoded default value.
+// The signal name is appended to "data-signals:". Modifiers (Case) may be chained.
+func Signal(name string, defaultJsValue any) *NamedBuilder {
+	b := &NamedBuilder{attrBase: newAttr("data-signals:" + name)}
+	b.addStmt(js.ToJS(js.JSON(defaultJsValue)))
+	return b
 }
 
-// Signals defines multiple signals with default values using object syntax.
-// The signals will be encoded as a JSON object.
-// Example: Signals(map[string]any{"foo": 1, "bar": "hello"})
-// Produces: data-signals="{\"foo\":1,\"bar\":\"hello\"}"
-func Signals(signals map[string]any) h.Attribute {
-	return exprAttr("data-signals", JsonValue(signals))
+// Signals declares multiple signals using object syntax.
+// Modifiers (Case, IfMissing, Terse) may be chained.
+func Signals(signals map[string]any) *SignalsBuilder {
+	b := &SignalsBuilder{attrBase: newAttr("data-signals")}
+	b.addStmt(js.ToJS(js.JSON(signals)))
+	return b
 }
 
-// Bind sets a signal to be used as the value of the element.
-// Updates to the element will be reflected in the signal.
-// The signal name will automatically be prefixed with "$".
-func Bind(signalName string) h.Attribute {
-	return exprAttr("data-bind", Raw(signalName))
+// Bind creates a two-way data binding for the named signal as the value form.
+// Modifiers (Case) may be chained.
+func Bind(signalName string) *NamedBuilder {
+	b := &NamedBuilder{attrBase: newAttr("data-bind")}
+	b.addStmt(signalName)
+	return b
 }
 
-// Class sets a class to be used as the value of the element.
-// Updates to the class will be reflected in the element.
-func Class(clsName string, value ...AttrMutator) h.Attribute {
-	value = append(value, appendName(clsName))
-	return exprAttr("data-class", value...)
+// BindKey creates a two-way data binding using key syntax (signal in attribute name).
+func BindKey(signalName string) *NamedBuilder {
+	return &NamedBuilder{attrBase: newAttr("data-bind:" + signalName)}
 }
 
-// Text sets the text of the element to be the value of the signal.
-// Updates to the signal will be reflected in the element.
-func Text(value ...AttrMutator) h.Attribute {
-	return exprAttr("data-text", value...)
+// Class binds a CSS class to a JavaScript expression.
+//
+//	ds.Class("hidden", ds.Raw("$collapsed"))  =>  data-class:hidden="$collapsed"
+func Class(clsName string, value Value) h.Attribute {
+	return h.Attr("data-class:"+clsName, js.ToJS(value.expr))
 }
 
-// Show conditionally shows/hides the element based on a signal.
-func Show(value ...AttrMutator) h.Attribute {
-	return exprAttr("data-show", value...)
+// Text binds the element's text content to a JavaScript expression.
+func Text(value Value) h.Attribute {
+	return h.Attr("data-text", js.ToJS(value.expr))
 }
 
-// Hide returns a style attribute that hides the element.
-// For reactive hiding, use Show() with a negated condition instead.
+// Show conditionally shows or hides the element based on an expression.
+func Show(value Value) h.Attribute {
+	return h.Attr("data-show", js.ToJS(value.expr))
+}
+
+// Hide returns a style attribute that hides the element. For reactive hiding
+// use Show with a negated condition instead.
 func Hide() h.Attribute {
 	return h.Attr("style", "display: none")
 }
 
-// Attribute sets a single HTML attribute value reactively.
-// Example: Attribute("title", Raw("$foo"))
-// Produces: data-attr:title="$foo"
-func Attribute(name string, value ...AttrMutator) h.Attribute {
-	return exprAttr("data-attr:"+name, value...)
+// Attribute reactively sets a single HTML attribute.
+//
+//	ds.Attribute("title", ds.Raw("$foo"))  =>  data-attr:title="$foo"
+func Attribute(name string, value Value) h.Attribute {
+	return h.Attr("data-attr:"+name, js.ToJS(value.expr))
 }
 
-// Indicator creates a fetch indicator signal.
+// Indicator declares a fetch-indicator signal.
 func Indicator(signalName string) h.Attribute {
 	signalName = strings.TrimLeft(signalName, "$")
 	return h.Attr("data-indicator", signalName)
+}
+
+// IndicatorKey creates a fetch-indicator signal using key syntax.
+func IndicatorKey(signalName string) *NamedBuilder {
+	signalName = strings.TrimLeft(signalName, "$")
+	return &NamedBuilder{attrBase: newAttr("data-indicator:" + signalName)}
 }
 
 // Ignore marks an element to be ignored by Datastar.
@@ -173,123 +179,94 @@ func Ignore() h.Attribute {
 	return h.Attr("data-ignore", "")
 }
 
-// Effect runs an expression reactively whenever dependencies change.
-func Effect(values ...AttrMutator) h.Attribute {
-	return exprAttr("data-effect", values...)
-}
-
-// Peek creates a @peek(() => expr) Datastar action for debugging.
-// Returns a Value that can be used with event handlers.
-func Peek(action Value) Value {
-	return V(ActionPeek(action.expr))
-}
-
-// Computed creates a read-only signal computed from an expression.
-// The signal auto-updates when dependencies change.
-// Example: Computed("total", Raw("$price * $quantity"))
-// Produces: data-computed:total="$price * $quantity"
-func Computed(name string, expression Value) h.Attribute {
-	return exprAttr("data-computed:", appendName(name), AttrFunc(func(attr *attrBuilder) {
-		attr.name.WriteString(js.ToJS(expression.expr))
-	}))
-}
-
-// ComputedExpr creates a computed signal with modifiers.
-// Example: ComputedExpr("total", Case(CamelCase), Raw("$price * $quantity"))
-func ComputedExpr(name string, options ...AttrMutator) h.Attribute {
-	opts := append([]AttrMutator{appendName(name)}, options...)
-	return exprAttr("data-computed:", opts...)
-}
-
-// Init runs an expression when the element loads into the DOM.
-// Example: Init(Raw("$count = 1"))
-// Produces: data-init="$count = 1"
-func Init(options ...AttrMutator) h.Attribute {
-	return exprAttr("data-init", options...)
-}
-
-// Ref creates a signal referencing a DOM element.
-// Example: Ref("myElement")
-// Produces: data-ref:myElement
-func Ref(signalName string, options ...AttrMutator) h.Attribute {
-	opts := append([]AttrMutator{appendName(signalName)}, options...)
-	return exprAttr("data-ref:", opts...)
-}
-
-// Style sets an inline CSS style property reactively.
-// Example: Style("background-color", Raw("$isRed ? 'red' : 'blue'"))
-// Produces: data-style:background-color="$isRed ? 'red' : 'blue'"
-func Style(property string, expression ...AttrMutator) h.Attribute {
-	opts := append([]AttrMutator{appendName(property)}, expression...)
-	return exprAttr("data-style:", opts...)
-}
-
-// Styles sets multiple inline CSS styles reactively using object syntax.
-// Example: Styles(map[string]string{"display": "$hidden ? 'none' : 'block'", "color": "$red ? 'red' : 'green'"})
-func Styles(styles map[string]string) h.Attribute {
-	return exprAttr("data-style", JsonValue(styles))
-}
-
-// Attrs sets multiple HTML attributes reactively using object syntax.
-// Example: Attrs(map[string]string{"title": "$foo", "disabled": "$bar"})
-// Produces: data-attr="{\"title\":\"$foo\",\"disabled\":\"$bar\"}"
-func Attrs(attrs map[string]string) h.Attribute {
-	return exprAttr("data-attr", JsonValue(attrs))
-}
-
-// Classes sets multiple CSS classes conditionally using object syntax.
-// Example: Classes(map[string]string{"hidden": "$foo", "font-bold": "$bar"})
-// Produces: data-class="{\"hidden\":\"$foo\",\"font-bold\":\"$bar\"}"
-func Classes(classes map[string]string) h.Attribute {
-	return exprAttr("data-class", JsonValue(classes))
+// IgnoreSelf ignores only the element itself, not its descendants.
+func IgnoreSelf() h.Attribute {
+	return h.Attr("data-ignore__self", "")
 }
 
 // IgnoreMorph prevents the element from being morphed during backend patches.
-// Produces: data-ignore-morph
 func IgnoreMorph() h.Attribute {
 	return h.Attr("data-ignore-morph", "")
 }
 
 // PreserveAttr preserves specified attribute values during DOM morphing.
-// Example: PreserveAttr("open", "class")
-// Produces: data-preserve-attr="open class"
 func PreserveAttr(attrs ...string) h.Attribute {
 	return h.Attr("data-preserve-attr", strings.Join(attrs, " "))
 }
 
-// JsonSignalsDebug displays reactive JSON stringified signals for debugging.
-// Use with FilterOptions to include/exclude specific signals.
-// Example: JsonSignalsDebug(nil) or JsonSignalsDebug(&FilterOptions{IncludeReg: ptr("user")})
-// Produces: data-json-signals or data-json-signals="{include: /user/}"
-func JsonSignalsDebug(options *FilterOptions, modifiers ...AttrMutator) h.Attribute {
-	if options == nil {
-		return exprAttr("data-json-signals", modifiers...)
+// Effect runs an expression reactively whenever dependencies change.
+// Multiple values are joined with "; ".
+func Effect(values ...Value) h.Attribute {
+	stmts := make([]string, len(values))
+	for i, v := range values {
+		stmts[i] = js.ToJS(v.expr)
 	}
-	opts := append([]AttrMutator{FilterOptionsValue(options)}, modifiers...)
-	return exprAttr("data-json-signals", opts...)
+	return h.Attr("data-effect", strings.Join(stmts, "; "))
 }
 
-// BindKey creates a two-way data binding using key syntax (signal name in key).
-// Example: BindKey("foo", Case(CamelCase))
-// Produces: data-bind:foo__case.camel
-func BindKey(signalName string, options ...AttrMutator) h.Attribute {
-	opts := append([]AttrMutator{appendName(signalName)}, options...)
-	return exprAttr("data-bind:", opts...)
+// Init runs an expression when the element loads into the DOM.
+func Init(values ...Value) h.Attribute {
+	stmts := make([]string, len(values))
+	for i, v := range values {
+		stmts[i] = js.ToJS(v.expr)
+	}
+	return h.Attr("data-init", strings.Join(stmts, "; "))
 }
 
-// IndicatorKey creates a fetch indicator signal using key syntax.
-// Example: IndicatorKey("fetching", Case(CamelCase))
-// Produces: data-indicator:fetching__case.camel
-func IndicatorKey(signalName string, options ...AttrMutator) h.Attribute {
-	signalName = strings.TrimLeft(signalName, "$")
-	opts := append([]AttrMutator{appendName(signalName)}, options...)
-	return exprAttr("data-indicator:", opts...)
+// Peek wraps a Value in @peek(() => expr) for debugging.
+func Peek(action Value) Value {
+	return V(ActionPeek(action.expr))
 }
 
-// IgnoreSelf ignores only the element itself, not its descendants.
-// Produces: data-ignore__self
-func IgnoreSelf() h.Attribute {
-	return h.Attr("data-ignore__self", "")
+// Computed creates a read-only signal computed from an expression.
+//
+//	ds.Computed("total", ds.Raw("$price * $quantity"))
+//	=> data-computed:total="$price * $quantity"
+func Computed(name string, expression Value) *NamedBuilder {
+	b := &NamedBuilder{attrBase: newAttr("data-computed:" + name)}
+	b.addStmt(js.ToJS(expression.expr))
+	return b
+}
+
+// Ref creates a signal referencing a DOM element.
+//
+//	ds.Ref("myElement")  =>  data-ref:myElement
+func Ref(signalName string) *NamedBuilder {
+	return &NamedBuilder{attrBase: newAttr("data-ref:" + signalName)}
+}
+
+// Style sets an inline CSS style property reactively.
+//
+//	ds.Style("background-color", ds.Raw("$isRed ? 'red' : 'blue'"))
+//	=> data-style:background-color="$isRed ? 'red' : 'blue'"
+func Style(property string, expression Value) h.Attribute {
+	return h.Attr("data-style:"+property, js.ToJS(expression.expr))
+}
+
+// Styles sets multiple inline CSS styles reactively using object syntax.
+func Styles(styles map[string]string) h.Attribute {
+	return h.Attr("data-style", js.ToJS(js.JSON(styles)))
+}
+
+// Attrs sets multiple HTML attributes reactively using object syntax.
+func Attrs(attrs map[string]string) h.Attribute {
+	return h.Attr("data-attr", js.ToJS(js.JSON(attrs)))
+}
+
+// Classes sets multiple CSS classes conditionally using object syntax.
+func Classes(classes map[string]string) h.Attribute {
+	return h.Attr("data-class", js.ToJS(js.JSON(classes)))
+}
+
+// JsonSignalsDebug displays reactive JSON-stringified signals for debugging.
+func JsonSignalsDebug(options *FilterOptions) *SignalsBuilder {
+	b := &SignalsBuilder{attrBase: newAttr("data-json-signals")}
+	if options != nil {
+		var sb strings.Builder
+		options.appendJS(&sb)
+		b.addStmt(sb.String())
+	}
+	return b
 }
 
 // FilterOptions specifies regex patterns for filtering signals.
@@ -320,23 +297,12 @@ func (o *FilterOptions) appendJS(sb *strings.Builder) {
 	sb.WriteString("}")
 }
 
-// FilterOptionsValue returns an AttrMutator that outputs FilterOptions as a JS object with regex literals.
-func FilterOptionsValue(o *FilterOptions) AttrMutator {
-	return AttrFunc(func(attr *attrBuilder) {
-		var sb strings.Builder
-		o.appendJS(&sb)
-		attr.AppendStatement(sb.String())
-	})
-}
-
 // SetAll creates a @setAll(value, filter) Datastar action.
-// Returns a Value that can be used with event handlers.
 func SetAll(value Value, options *FilterOptions) Value {
 	return V(ActionSetAll(value.expr, options))
 }
 
 // ToggleAll creates a @toggleAll(filter) Datastar action.
-// Returns a Value that can be used with event handlers.
 func ToggleAll(options *FilterOptions) Value {
 	return V(ActionToggleAll(options))
 }
