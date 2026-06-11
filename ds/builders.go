@@ -150,9 +150,10 @@ func (b *EventBuilder) Window() *EventBuilder {
 	return b
 }
 
-// Self appends "__self" — only fires when the target is the element itself.
-func (b *EventBuilder) Self() *EventBuilder {
-	b.name.WriteString("__self")
+// Document appends "__document" — attaches the listener to the document.
+// Useful for events that are only available on document and do not bubble.
+func (b *EventBuilder) Document() *EventBuilder {
+	b.name.WriteString("__document")
 	return b
 }
 
@@ -162,9 +163,10 @@ func (b *EventBuilder) ViewTransition() *EventBuilder {
 	return b
 }
 
-// IfMissing appends "__ifmissing".
-func (b *EventBuilder) IfMissing() *EventBuilder {
-	b.name.WriteString("__ifmissing")
+// Case appends "__case.<casing>" — converts the event name casing.
+func (b *EventBuilder) Case(c SignalCasing) *EventBuilder {
+	b.name.WriteString("__case.")
+	b.name.WriteString(string(c))
 	return b
 }
 
@@ -223,10 +225,35 @@ func (b *IntersectBuilder) Exit() *IntersectBuilder {
 	return b
 }
 
-// Threshold appends "__threshold.<value>" — custom intersection threshold.
-func (b *IntersectBuilder) Threshold(value float64) *IntersectBuilder {
+// Threshold appends "__threshold.<percent>" — custom intersection threshold as
+// a percentage of visibility (0–100), e.g. Threshold(25) => "__threshold.25".
+func (b *IntersectBuilder) Threshold(percent int) *IntersectBuilder {
 	b.name.WriteString("__threshold.")
-	b.name.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
+	b.name.WriteString(strconv.Itoa(percent))
+	return b
+}
+
+// Delay appends "__delay.<duration>".
+func (b *IntersectBuilder) Delay(d time.Duration) *IntersectBuilder {
+	writeTiming(&b.name, "__delay.", d, nil)
+	return b
+}
+
+// Debounce appends "__debounce.<duration>" plus optional NoLeading/NoTrailing.
+func (b *IntersectBuilder) Debounce(d time.Duration, opts ...TimingOption) *IntersectBuilder {
+	writeTiming(&b.name, "__debounce.", d, opts)
+	return b
+}
+
+// Throttle appends "__throttle.<duration>" plus optional Leading/Trailing.
+func (b *IntersectBuilder) Throttle(d time.Duration, opts ...TimingOption) *IntersectBuilder {
+	writeTiming(&b.name, "__throttle.", d, opts)
+	return b
+}
+
+// ViewTransition appends "__viewtransition" — wraps work in document.startViewTransition().
+func (b *IntersectBuilder) ViewTransition() *IntersectBuilder {
+	b.name.WriteString("__viewtransition")
 	return b
 }
 
@@ -249,6 +276,12 @@ func (b *IntervalBuilder) Duration(d time.Duration, opts ...TimingOption) *Inter
 	return b
 }
 
+// ViewTransition appends "__viewtransition" — wraps work in document.startViewTransition().
+func (b *IntervalBuilder) ViewTransition() *IntervalBuilder {
+	b.name.WriteString("__viewtransition")
+	return b
+}
+
 // SignalPatchBuilder builds a data-on-signal-patch attribute.
 type SignalPatchBuilder struct {
 	*attrBase
@@ -262,16 +295,27 @@ func newSignalPatchBuilder(actions []Value) *SignalPatchBuilder {
 	return b
 }
 
-// Case appends "__case.<casing>" — the signal/event name casing.
-func (b *SignalPatchBuilder) Case(c SignalCasing) *SignalPatchBuilder {
-	b.name.WriteString("__case.")
-	b.name.WriteString(string(c))
+// Delay appends "__delay.<duration>".
+func (b *SignalPatchBuilder) Delay(d time.Duration) *SignalPatchBuilder {
+	writeTiming(&b.name, "__delay.", d, nil)
+	return b
+}
+
+// Debounce appends "__debounce.<duration>" plus optional NoLeading/NoTrailing.
+func (b *SignalPatchBuilder) Debounce(d time.Duration, opts ...TimingOption) *SignalPatchBuilder {
+	writeTiming(&b.name, "__debounce.", d, opts)
+	return b
+}
+
+// Throttle appends "__throttle.<duration>" plus optional Leading/Trailing.
+func (b *SignalPatchBuilder) Throttle(d time.Duration, opts ...TimingOption) *SignalPatchBuilder {
+	writeTiming(&b.name, "__throttle.", d, opts)
 	return b
 }
 
 // NamedBuilder builds attributes whose name carries a signal name and which
-// support the Case modifier (data-bind, data-bind:key, data-indicator,
-// data-indicator:key, data-ref:name, data-computed:name, data-signals:name).
+// support the Case modifier (data-indicator, data-indicator:key,
+// data-ref:name, data-computed:name, data-signals:name, data-class:name).
 type NamedBuilder struct {
 	*attrBase
 }
@@ -283,8 +327,62 @@ func (b *NamedBuilder) Case(c SignalCasing) *NamedBuilder {
 	return b
 }
 
+// BindBuilder builds data-bind / data-bind:key attributes. It supports the
+// Case, Prop and Event modifiers.
+type BindBuilder struct {
+	*attrBase
+}
+
+// Case appends "__case.<casing>".
+func (b *BindBuilder) Case(c SignalCasing) *BindBuilder {
+	b.name.WriteString("__case.")
+	b.name.WriteString(string(c))
+	return b
+}
+
+// Prop appends "__prop.<name>" — binds to a specific element property instead
+// of the default binding. Must not be a read-only property.
+//
+//	ds.BindKey("is-checked").Prop("checked")  =>  data-bind:is-checked__prop.checked
+func (b *BindBuilder) Prop(name string) *BindBuilder {
+	b.name.WriteString("__prop.")
+	b.name.WriteString(name)
+	return b
+}
+
+// Event appends "__event.<events...>" — defines which events sync the element
+// property back to the signal.
+//
+//	ds.BindKey("query").Event("input", "change")  =>  data-bind:query__event.input.change
+func (b *BindBuilder) Event(events ...string) *BindBuilder {
+	b.name.WriteString("__event")
+	for _, e := range events {
+		b.name.WriteString(".")
+		b.name.WriteString(e)
+	}
+	return b
+}
+
+// InitBuilder builds the data-init attribute. It supports the Delay and
+// ViewTransition modifiers.
+type InitBuilder struct {
+	*attrBase
+}
+
+// Delay appends "__delay.<duration>" — waits before running the expression.
+func (b *InitBuilder) Delay(d time.Duration) *InitBuilder {
+	writeTiming(&b.name, "__delay.", d, nil)
+	return b
+}
+
+// ViewTransition appends "__viewtransition" — wraps work in document.startViewTransition().
+func (b *InitBuilder) ViewTransition() *InitBuilder {
+	b.name.WriteString("__viewtransition")
+	return b
+}
+
 // SignalsBuilder builds the data-signals attribute (whole-object form). It
-// supports IfMissing, Terse and Case.
+// supports IfMissing and Case.
 type SignalsBuilder struct {
 	*attrBase
 }
@@ -302,8 +400,14 @@ func (b *SignalsBuilder) IfMissing() *SignalsBuilder {
 	return b
 }
 
-// Terse appends "__terse" (used by data-json-signals debug, kept for symmetry).
-func (b *SignalsBuilder) Terse() *SignalsBuilder {
+// JsonSignalsBuilder builds the data-json-signals debug attribute. It supports
+// the Terse modifier.
+type JsonSignalsBuilder struct {
+	*attrBase
+}
+
+// Terse appends "__terse" — outputs a more compact JSON representation.
+func (b *JsonSignalsBuilder) Terse() *JsonSignalsBuilder {
 	b.name.WriteString("__terse")
 	return b
 }

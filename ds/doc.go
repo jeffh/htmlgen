@@ -23,14 +23,19 @@
 //
 // # Builders
 //
-//   - EventBuilder — returned by OnClick, OnSubmit, OnInput, OnChange, OnLoad, On, OnRAF, OnResize.
+//   - EventBuilder — returned by OnClick, OnSubmit, OnInput, OnChange, On, OnRAF, OnResize.
 //     Methods: PreventDefault, StopPropagation, Once, Passive, Capture, Outside, Window,
-//     Self, ViewTransition, IfMissing, Delay, Debounce, Throttle, Then.
-//   - IntersectBuilder — returned by OnIntersect. Methods: Once, Half, Full, Exit, Threshold.
-//   - IntervalBuilder — returned by OnInterval. Method: Duration.
-//   - SignalPatchBuilder — returned by OnSignalPatch. Method: Case.
-//   - NamedBuilder — returned by Bind, BindKey, IndicatorKey, Signal, SignalExpr, Computed, Ref. Method: Case.
-//   - SignalsBuilder — returned by Signals and JsonSignalsDebug. Methods: Case, IfMissing, Terse.
+//     Document, ViewTransition, Case, Delay, Debounce, Throttle, Then.
+//   - IntersectBuilder — returned by OnIntersect. Methods: Once, Half, Full, Exit,
+//     Threshold, Delay, Debounce, Throttle, ViewTransition.
+//   - IntervalBuilder — returned by OnInterval. Methods: Duration, ViewTransition.
+//   - SignalPatchBuilder — returned by OnSignalPatch. Methods: Delay, Debounce, Throttle.
+//   - InitBuilder — returned by Init. Methods: Delay, ViewTransition.
+//   - BindBuilder — returned by Bind, BindKey. Methods: Case, Prop, Event.
+//   - NamedBuilder — returned by IndicatorKey, Signal, SignalExpr, Computed, Ref, Class,
+//     MatchMedia (Pro). Method: Case.
+//   - SignalsBuilder — returned by Signals. Methods: Case, IfMissing.
+//   - JsonSignalsBuilder — returned by JsonSignalsDebug. Method: Terse.
 //   - PersistBuilder (Pro) — returned by Persist, PersistKey. Method: Session.
 //   - QueryStringBuilder (Pro) — returned by QueryString. Methods: Filter, History.
 //   - ScrollBuilder (Pro) — returned by ScrollIntoView. Methods: Smooth, Instant, Auto,
@@ -38,7 +43,7 @@
 //
 // # Plain attributes (return h.Attribute directly)
 //
-// Show, Text, Hide, Class, Classes, Style, Styles, Attribute, Attrs, Effect, Init,
+// Show, Text, Hide, Classes, Style, Styles, Attribute, Attrs, Effect,
 // Indicator, Ignore, IgnoreSelf, IgnoreMorph, PreserveAttr, OnSignalPatchFilter,
 // Animate (Pro), CustomValidity (Pro), ReplaceURL (Pro), ViewTransitionName (Pro).
 //

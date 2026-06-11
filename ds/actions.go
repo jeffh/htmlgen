@@ -196,6 +196,7 @@ func (b RequestOptionsBuilder) Headers(headers map[string]string) RequestOptions
 }
 
 // OpenWhenHidden keeps the connection alive when the tab is hidden.
+// Defaults to false for GET requests and true for all other methods.
 func (b RequestOptionsBuilder) OpenWhenHidden(open bool) RequestOptionsBuilder {
 	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("openWhenHidden: ")
@@ -245,7 +246,7 @@ func (b RequestOptionsBuilder) RetryMaxCount(count int) RequestOptionsBuilder {
 }
 
 // RequestCancellation sets the request cancellation mode.
-// Values: "auto" (default), "disabled"
+// Values: "auto" (default), "cleanup", "disabled"
 func (b RequestOptionsBuilder) RequestCancellation(mode string) RequestOptionsBuilder {
 	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("requestCancellation: ")
@@ -265,11 +266,12 @@ func (b RequestOptionsBuilder) Retry(mode string) RequestOptionsBuilder {
 	return b
 }
 
-// Payload overrides the request body with custom JSON data.
-// Use for POST/PUT/PATCH requests when you need a custom payload.
+// Payload overrides the data sent with the request (instead of the filtered
+// signals). Encoded as the request body for POST/PUT/PATCH, or as query
+// params for GET.
 func (b RequestOptionsBuilder) Payload(data any) RequestOptionsBuilder {
 	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
-		sb.WriteString("body: ")
+		sb.WriteString("payload: ")
 		bytes, err := json.Marshal(data)
 		if err != nil {
 			panic(fmt.Errorf("Payload: %w: value=%#v", err, data))
@@ -287,4 +289,3 @@ type RequestOption interface {
 type requestOptionFunc func(*strings.Builder)
 
 func (f requestOptionFunc) appendOption(sb *strings.Builder) { f(sb) }
-

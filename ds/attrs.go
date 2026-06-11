@@ -57,9 +57,13 @@ func OnClick(actions ...Value) *EventBuilder {
 	return newEventBuilder("data-on:click", actions)
 }
 
-// OnLoad creates a data-on:load event handler.
-func OnLoad(actions ...Value) *EventBuilder {
-	return newEventBuilder("data-on:load", actions)
+// OnLoad creates a data-init attribute that runs when the element is loaded
+// into the DOM.
+//
+// Deprecated: Datastar v1 removed the synthetic "load" event in favor of
+// data-init. Use Init instead.
+func OnLoad(actions ...Value) *InitBuilder {
+	return Init(actions...)
 }
 
 // On creates a custom data-on:<eventName> event handler.
@@ -120,23 +124,27 @@ func Signals(signals map[string]any) *SignalsBuilder {
 }
 
 // Bind creates a two-way data binding for the named signal as the value form.
-// Modifiers (Case) may be chained.
-func Bind(signalName string) *NamedBuilder {
-	b := &NamedBuilder{attrBase: newAttr("data-bind")}
+// Modifiers (Case, Prop, Event) may be chained.
+func Bind(signalName string) *BindBuilder {
+	b := &BindBuilder{attrBase: newAttr("data-bind")}
 	b.addStmt(signalName)
 	return b
 }
 
 // BindKey creates a two-way data binding using key syntax (signal in attribute name).
-func BindKey(signalName string) *NamedBuilder {
-	return &NamedBuilder{attrBase: newAttr("data-bind:" + signalName)}
+// Modifiers (Case, Prop, Event) may be chained.
+func BindKey(signalName string) *BindBuilder {
+	return &BindBuilder{attrBase: newAttr("data-bind:" + signalName)}
 }
 
-// Class binds a CSS class to a JavaScript expression.
+// Class binds a CSS class to a JavaScript expression. Class names in the
+// attribute key are kebab-cased by default; chain Case to change that.
 //
 //	ds.Class("hidden", ds.Raw("$collapsed"))  =>  data-class:hidden="$collapsed"
-func Class(clsName string, value Value) h.Attribute {
-	return h.Attr("data-class:"+clsName, js.ToJS(value.expr))
+func Class(clsName string, value Value) *NamedBuilder {
+	b := &NamedBuilder{attrBase: newAttr("data-class:" + clsName)}
+	b.addValue(value)
+	return b
 }
 
 // Text binds the element's text content to a JavaScript expression.
@@ -205,12 +213,13 @@ func Effect(values ...Value) h.Attribute {
 }
 
 // Init runs an expression when the element loads into the DOM.
-func Init(values ...Value) h.Attribute {
-	stmts := make([]string, len(values))
-	for i, v := range values {
-		stmts[i] = js.ToJS(v.expr)
+// Modifiers (Delay, ViewTransition) may be chained.
+func Init(values ...Value) *InitBuilder {
+	b := &InitBuilder{attrBase: newAttr("data-init")}
+	for _, v := range values {
+		b.addValue(v)
 	}
-	return h.Attr("data-init", strings.Join(stmts, "; "))
+	return b
 }
 
 // Peek wraps a Value in @peek(() => expr) for debugging.
@@ -259,8 +268,9 @@ func Classes(classes map[string]string) h.Attribute {
 }
 
 // JsonSignalsDebug displays reactive JSON-stringified signals for debugging.
-func JsonSignalsDebug(options *FilterOptions) *SignalsBuilder {
-	b := &SignalsBuilder{attrBase: newAttr("data-json-signals")}
+// Modifiers (Terse) may be chained.
+func JsonSignalsDebug(options *FilterOptions) *JsonSignalsBuilder {
+	b := &JsonSignalsBuilder{attrBase: newAttr("data-json-signals")}
 	if options != nil {
 		var sb strings.Builder
 		options.appendJS(&sb)

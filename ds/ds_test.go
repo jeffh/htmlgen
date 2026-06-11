@@ -336,10 +336,17 @@ func TestIfMissing(t *testing.T) {
 	}
 }
 
-func TestSelf(t *testing.T) {
-	attr := OnClick().Self().Attribute()
-	if !strings.Contains(attr.Name, "__self") {
-		t.Errorf("Self() should add __self, got %q", attr.Name)
+func TestDocument(t *testing.T) {
+	attr := On("visibilitychange").Document().Attribute()
+	if !strings.Contains(attr.Name, "__document") {
+		t.Errorf("Document() should add __document, got %q", attr.Name)
+	}
+}
+
+func TestEventCase(t *testing.T) {
+	attr := On("myEvent").Case(KebabCase).Attribute()
+	if !strings.Contains(attr.Name, "__case.kebab") {
+		t.Errorf("Case() should add __case.kebab, got %q", attr.Name)
 	}
 }
 
@@ -395,22 +402,50 @@ func TestExit(t *testing.T) {
 func TestThreshold(t *testing.T) {
 	tests := []struct {
 		name     string
-		value    float64
+		percent  int
 		expected string
 	}{
-		{"quarter", 0.25, "__threshold.0.25"},
-		{"three quarters", 0.75, "__threshold.0.75"},
-		{"full", 1, "__threshold.1"},
+		{"quarter", 25, "__threshold.25"},
+		{"three quarters", 75, "__threshold.75"},
+		{"full", 100, "__threshold.100"},
 		{"zero", 0, "__threshold.0"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			attr := OnIntersect().Threshold(tt.value).Attribute()
+			attr := OnIntersect().Threshold(tt.percent).Attribute()
 			if !strings.Contains(attr.Name, tt.expected) {
-				t.Errorf("Threshold(%v) should contain %s, got %q", tt.value, tt.expected, attr.Name)
+				t.Errorf("Threshold(%v) should contain %s, got %q", tt.percent, tt.expected, attr.Name)
 			}
 		})
+	}
+}
+
+func TestIntersectTiming(t *testing.T) {
+	attr := OnIntersect().Debounce(300 * time.Millisecond).Attribute()
+	if !strings.Contains(attr.Name, "__debounce.300ms") {
+		t.Errorf("OnIntersect().Debounce() should add __debounce.300ms, got %q", attr.Name)
+	}
+
+	attr = OnIntersect().Throttle(100 * time.Millisecond).Delay(1 * time.Second).ViewTransition().Attribute()
+	for _, want := range []string{"__throttle.100ms", "__delay.1s", "__viewtransition"} {
+		if !strings.Contains(attr.Name, want) {
+			t.Errorf("OnIntersect() modifiers should contain %s, got %q", want, attr.Name)
+		}
+	}
+}
+
+func TestIntervalViewTransition(t *testing.T) {
+	attr := OnInterval().ViewTransition().Attribute()
+	if !strings.Contains(attr.Name, "__viewtransition") {
+		t.Errorf("OnInterval().ViewTransition() should add __viewtransition, got %q", attr.Name)
+	}
+}
+
+func TestSignalPatchTiming(t *testing.T) {
+	attr := OnSignalPatch(Raw("$x++")).Debounce(500 * time.Millisecond).Attribute()
+	if !strings.Contains(attr.Name, "__debounce.500ms") {
+		t.Errorf("OnSignalPatch().Debounce() should add __debounce.500ms, got %q", attr.Name)
 	}
 }
 
@@ -498,8 +533,8 @@ func TestOnClick(t *testing.T) {
 
 func TestOnLoad(t *testing.T) {
 	attr := OnLoad(Raw("$init()")).Attribute()
-	if attr.Name != "data-on:load" {
-		t.Errorf("OnLoad().Name = %q, want %q", attr.Name, "data-on:load")
+	if attr.Name != "data-init" {
+		t.Errorf("OnLoad().Name = %q, want %q", attr.Name, "data-init")
 	}
 }
 
@@ -603,13 +638,32 @@ func TestBind(t *testing.T) {
 	}
 }
 
+func TestBindProp(t *testing.T) {
+	attr := BindKey("is-checked").Prop("checked").Attribute()
+	if attr.Name != "data-bind:is-checked__prop.checked" {
+		t.Errorf("BindKey().Prop().Name = %q, want %q", attr.Name, "data-bind:is-checked__prop.checked")
+	}
+}
+
+func TestBindEvent(t *testing.T) {
+	attr := BindKey("query").Event("input", "change").Attribute()
+	if attr.Name != "data-bind:query__event.input.change" {
+		t.Errorf("BindKey().Event().Name = %q, want %q", attr.Name, "data-bind:query__event.input.change")
+	}
+}
+
 func TestClass(t *testing.T) {
-	attr := Class("active", Raw("$isActive"))
+	attr := Class("active", Raw("$isActive")).Attribute()
 	if attr.Name != "data-class:active" {
 		t.Errorf("Class().Name = %q, want %q", attr.Name, "data-class:active")
 	}
 	if attr.Value != "$isActive" {
 		t.Errorf("Class().Value = %q, want %q", attr.Value, "$isActive")
+	}
+
+	attr = Class("font-bold", Raw("$bold")).Case(KebabCase).Attribute()
+	if attr.Name != "data-class:font-bold__case.kebab" {
+		t.Errorf("Class().Case().Name = %q, want %q", attr.Name, "data-class:font-bold__case.kebab")
 	}
 }
 
@@ -716,12 +770,17 @@ func TestComputedExpr(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	attr := Init(Raw("$count = 1"))
+	attr := Init(Raw("$count = 1")).Attribute()
 	if attr.Name != "data-init" {
 		t.Errorf("Init().Name = %q, want %q", attr.Name, "data-init")
 	}
 	if attr.Value != "$count = 1" {
 		t.Errorf("Init().Value = %q, want %q", attr.Value, "$count = 1")
+	}
+
+	attr = Init(Raw("$count = 1")).Delay(500 * time.Millisecond).ViewTransition().Attribute()
+	if !strings.Contains(attr.Name, "__delay.500ms") || !strings.Contains(attr.Name, "__viewtransition") {
+		t.Errorf("Init() modifiers should contain __delay.500ms and __viewtransition, got %q", attr.Name)
 	}
 }
 
@@ -1076,9 +1135,9 @@ func TestPayload(t *testing.T) {
 		data     any
 		expected string
 	}{
-		{"map", map[string]any{"name": "John"}, `body: {"name":"John"}`},
-		{"simple value", 42, `body: 42`},
-		{"string", "hello", `body: "hello"`},
+		{"map", map[string]any{"name": "John"}, `payload: {"name":"John"}`},
+		{"simple value", 42, `payload: 42`},
+		{"string", "hello", `payload: "hello"`},
 	}
 
 	for _, tt := range tests {
