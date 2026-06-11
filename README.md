@@ -234,7 +234,7 @@ ds.OnSubmit(ds.Post("/api/submit")).PreventDefault()
 // Other events
 ds.OnInput(ds.SetSignal("search", ds.Raw("evt.target.value"))).Debounce(300*time.Millisecond)
 ds.OnChange(ds.Get("/api/update"))
-ds.OnLoad(ds.Get("/api/init"))
+ds.Init(ds.Get("/api/init"))  // data-init: runs when the element loads
 ds.On("keydown", ds.Raw("handleKey(evt)"))
 
 // Intersection and interval observers
@@ -279,7 +279,7 @@ Modifiers are methods on event builders, not standalone functions:
 ```go
 ds.OnClick(ds.Raw("$x++")).PreventDefault()
 ds.OnInput(ds.Raw("$y++")).Debounce(300 * time.Millisecond)
-ds.OnScroll(ds.Raw("$z++")).Throttle(100 * time.Millisecond)
+ds.On("scroll", ds.Raw("$z++")).Throttle(100 * time.Millisecond)
 ds.OnClick(ds.Raw("$a++")).Delay(500 * time.Millisecond)
 ds.OnClick(ds.Raw("$b++")).Once()
 ds.OnClick(ds.Raw("$c++")).ViewTransition()

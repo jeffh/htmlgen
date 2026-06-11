@@ -43,7 +43,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) for programmatic HTML generati
 Provides helpers for building [Datastar](https://data-star.dev/) reactive attributes:
 
 - **Signals**: `Signal()`, `Signals()`, `Bind()` - define reactive state
-- **Events**: `OnClick()`, `OnSubmit()`, `OnInput()`, `OnChange()`, `OnLoad()`, `On()` - event handlers
+- **Events**: `OnClick()`, `OnSubmit()`, `OnInput()`, `OnChange()`, `On()` - event handlers; `Init()` - run on element load (data-init)
 - **Actions**: `Get()`, `Post()`, `Put()`, `Delete()` - HTTP request helpers
 - **Modifiers**: `PreventDefault()`, `Debounce()`, `Throttle()`, `Delay()`, `Once()`, `ViewTransition()` - event modifiers
 - **Values**: `Raw()`, `JsonValue()`, `Str()` - value builders for expressions

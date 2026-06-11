@@ -27,17 +27,29 @@ func CustomValidity(expression Value) h.Attribute {
 }
 
 // OnRAF executes an expression on every requestAnimationFrame.
-// Returns an EventBuilder that supports the standard event modifiers.
+// Only the Throttle modifier is supported by Datastar.
 // Requires Datastar Pro.
 func OnRAF(actions ...Value) *EventBuilder {
 	return newEventBuilder("data-on-raf", actions)
 }
 
 // OnResize runs an expression when the element's dimensions change.
-// Returns an EventBuilder that supports the standard event modifiers.
+// Only the Debounce and Throttle modifiers are supported by Datastar.
 // Requires Datastar Pro.
 func OnResize(actions ...Value) *EventBuilder {
 	return newEventBuilder("data-on-resize", actions)
+}
+
+// MatchMedia syncs a signal with whether a media query currently matches.
+// Modifiers (Case) may be chained.
+// Requires Datastar Pro.
+//
+//	ds.MatchMedia("isDark", ds.Str("prefers-color-scheme: dark"))
+//	=> data-match-media:isDark="\"prefers-color-scheme: dark\""
+func MatchMedia(signalName string, query Value) *NamedBuilder {
+	b := &NamedBuilder{attrBase: newAttr("data-match-media:" + signalName)}
+	b.addValue(query)
+	return b
 }
 
 // PersistBuilder builds the data-persist attribute.
@@ -137,7 +149,8 @@ func (b *ScrollBuilder) VStart() *ScrollBuilder { b.name.WriteString("__vstart")
 func (b *ScrollBuilder) VCenter() *ScrollBuilder { b.name.WriteString("__vcenter"); return b }
 
 // VEnd aligns to end of vertical viewport.
-func (b *ScrollBuilder) VEnd() *ScrollBuilder { b.name.WriteString("__vend")
+func (b *ScrollBuilder) VEnd() *ScrollBuilder {
+	b.name.WriteString("__vend")
 	return b
 }
 
@@ -198,4 +211,20 @@ func FitRounded(v, oldMin, oldMax, newMin, newMax Value) Value {
 // Requires Datastar Pro.
 func FitClampedRounded(v, oldMin, oldMax, newMin, newMax Value) Value {
 	return V(ActionFitClampedRounded(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
+}
+
+// Intl formats a value using the Intl API via @intl(type, value, options?, locale?).
+// Type is one of the Intl formatter kinds (e.g. "number", "datetime",
+// "relativetime", "list"). Optional args are the formatter options object and
+// the locale.
+// Requires Datastar Pro.
+//
+//	ds.Intl("number", ds.SignalRef("price"))  =>  @intl("number", $price)
+func Intl(typ string, value Value, args ...Value) Value {
+	exprs := make([]js.Expr, 0, len(args)+2)
+	exprs = append(exprs, js.String(typ), value.expr)
+	for _, a := range args {
+		exprs = append(exprs, a.expr)
+	}
+	return V(DatastarAction("intl", exprs...))
 }

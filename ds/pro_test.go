@@ -33,6 +33,21 @@ func TestOnResize(t *testing.T) {
 	}
 }
 
+func TestMatchMedia(t *testing.T) {
+	attr := MatchMedia("isDark", Str("prefers-color-scheme: dark")).Attribute()
+	if attr.Name != "data-match-media:isDark" {
+		t.Errorf("MatchMedia().Name = %q, want %q", attr.Name, "data-match-media:isDark")
+	}
+	if attr.Value != `"prefers-color-scheme: dark"` {
+		t.Errorf("MatchMedia().Value = %q, want %q", attr.Value, `"prefers-color-scheme: dark"`)
+	}
+
+	attr = MatchMedia("is-dark", Str("prefers-color-scheme: dark")).Case(KebabCase).Attribute()
+	if !strings.Contains(attr.Name, "__case.kebab") {
+		t.Errorf("MatchMedia().Case().Name = %q, should contain __case.kebab", attr.Name)
+	}
+}
+
 func TestPersist(t *testing.T) {
 	// Without options
 	attr := Persist(nil).Attribute()
@@ -307,5 +322,21 @@ func TestFitClampedRounded(t *testing.T) {
 	expected := "@fit($v, 0, 100, 0, 255, true, true)"
 	if got != expected {
 		t.Errorf("FitClampedRounded() = %q, want %q", got, expected)
+	}
+}
+
+func TestIntl(t *testing.T) {
+	v := Intl("number", SignalRef("price"))
+	got := ToJS(v.expr)
+	expected := `@intl("number", $price)`
+	if got != expected {
+		t.Errorf("Intl() = %q, want %q", got, expected)
+	}
+
+	v = Intl("datetime", SignalRef("ts"), JsonValue(map[string]any{"dateStyle": "full"}), Str("en-US"))
+	got = ToJS(v.expr)
+	expected = `@intl("datetime", $ts, {"dateStyle":"full"}, "en-US")`
+	if got != expected {
+		t.Errorf("Intl() with options = %q, want %q", got, expected)
 	}
 }
