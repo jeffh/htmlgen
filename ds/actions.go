@@ -227,10 +227,10 @@ func (b RequestOptionsBuilder) RetryScaler(scaler float64) RequestOptionsBuilder
 	return b
 }
 
-// RetryMaxWaitMs sets the maximum wait between retries in milliseconds (default: 30000).
-func (b RequestOptionsBuilder) RetryMaxWaitMs(ms int) RequestOptionsBuilder {
+// RetryMaxWait sets the maximum wait between retries in milliseconds (default: 30000).
+func (b RequestOptionsBuilder) RetryMaxWait(ms int) RequestOptionsBuilder {
 	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
-		sb.WriteString("retryMaxWaitMs: ")
+		sb.WriteString("retryMaxWait: ")
 		sb.WriteString(strconv.Itoa(ms))
 	}))
 	return b

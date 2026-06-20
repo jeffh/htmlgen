@@ -264,9 +264,9 @@ func TestDebounce(t *testing.T) {
 		expected string
 	}{
 		{"basic", 300 * time.Millisecond, nil, "__debounce.300ms"},
-		{"with noleading", 500 * time.Millisecond, []TimingOption{NoLeading()}, "__debounce.500ms.noleading"},
+		{"with leading", 500 * time.Millisecond, []TimingOption{Leading()}, "__debounce.500ms.leading"},
 		{"with notrailing", 500 * time.Millisecond, []TimingOption{NoTrailing()}, "__debounce.500ms.notrailing"},
-		{"with both", 500 * time.Millisecond, []TimingOption{NoLeading(), NoTrailing()}, "__debounce.500ms.noleading.notrailing"},
+		{"with both", 500 * time.Millisecond, []TimingOption{Leading(), NoTrailing()}, "__debounce.500ms.leading.notrailing"},
 	}
 
 	for _, tt := range tests {
@@ -287,7 +287,7 @@ func TestThrottle(t *testing.T) {
 		expected string
 	}{
 		{"basic", 100 * time.Millisecond, nil, "__throttle.100ms"},
-		{"with leading", 200 * time.Millisecond, []TimingOption{Leading()}, "__throttle.200ms.leading"},
+		{"with noleading", 200 * time.Millisecond, []TimingOption{NoLeading()}, "__throttle.200ms.noleading"},
 		{"with trailing", 200 * time.Millisecond, []TimingOption{Trailing()}, "__throttle.200ms.trailing"},
 	}
 
@@ -1073,7 +1073,7 @@ func TestRequestOptionsBuilder(t *testing.T) {
 		{"open when hidden false", RequestOptions().OpenWhenHidden(false), `openWhenHidden: false`},
 		{"retry interval", RequestOptions().RetryInterval(2000), `retryInterval: 2000`},
 		{"retry scaler", RequestOptions().RetryScaler(1.5), `retryScaler: 1.5`},
-		{"retry max wait", RequestOptions().RetryMaxWaitMs(60000), `retryMaxWaitMs: 60000`},
+		{"retry max wait", RequestOptions().RetryMaxWait(60000), `retryMaxWait: 60000`},
 		{"retry max count", RequestOptions().RetryMaxCount(5), `retryMaxCount: 5`},
 		{"request cancellation", RequestOptions().RequestCancellation("disabled"), `requestCancellation: "disabled"`},
 	}
