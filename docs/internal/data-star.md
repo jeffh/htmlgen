@@ -353,7 +353,7 @@ All accept a URI and optional configuration object.
 - `retry` - `'auto'`, `'error'`, `'always'`, or `'never'`
 - `retryInterval` - Wait between retries (ms)
 - `retryScaler` - Exponential backoff multiplier
-- `retryMaxWaitMs` - Maximum retry delay
+- `retryMaxWait` - Maximum retry delay (ms)
 - `retryMaxCount` - Maximum retry attempts
 - `requestCancellation` - `'auto'`, `'disabled'`
 

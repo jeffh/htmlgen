@@ -52,9 +52,10 @@ const (
 // TimingOption modifies a Debounce/Throttle/Duration name segment.
 type TimingOption func(*strings.Builder)
 
-// NoLeading prevents the first trigger from firing immediately (for Debounce).
-func NoLeading() TimingOption {
-	return func(sb *strings.Builder) { sb.WriteString(".noleading") }
+// Leading causes the first trigger to also fire immediately (for Debounce).
+// Debounce only fires on the trailing edge by default.
+func Leading() TimingOption {
+	return func(sb *strings.Builder) { sb.WriteString(".leading") }
 }
 
 // NoTrailing prevents the final trigger from firing after the delay (for Debounce).
@@ -62,12 +63,14 @@ func NoTrailing() TimingOption {
 	return func(sb *strings.Builder) { sb.WriteString(".notrailing") }
 }
 
-// Leading causes the first trigger to fire immediately (for Throttle).
-func Leading() TimingOption {
-	return func(sb *strings.Builder) { sb.WriteString(".leading") }
+// NoLeading prevents the first trigger from firing immediately (for Throttle).
+// Throttle fires on the leading edge by default.
+func NoLeading() TimingOption {
+	return func(sb *strings.Builder) { sb.WriteString(".noleading") }
 }
 
-// Trailing causes the final trigger to fire after the delay (for Throttle).
+// Trailing causes the final trigger to also fire after the delay (for Throttle).
+// Throttle only fires on the leading edge by default.
 func Trailing() TimingOption {
 	return func(sb *strings.Builder) { sb.WriteString(".trailing") }
 }
@@ -176,13 +179,13 @@ func (b *EventBuilder) Delay(d time.Duration) *EventBuilder {
 	return b
 }
 
-// Debounce appends "__debounce.<duration>" plus optional NoLeading/NoTrailing.
+// Debounce appends "__debounce.<duration>" plus optional Leading/NoTrailing.
 func (b *EventBuilder) Debounce(d time.Duration, opts ...TimingOption) *EventBuilder {
 	writeTiming(&b.name, "__debounce.", d, opts)
 	return b
 }
 
-// Throttle appends "__throttle.<duration>" plus optional Leading/Trailing.
+// Throttle appends "__throttle.<duration>" plus optional NoLeading/Trailing.
 func (b *EventBuilder) Throttle(d time.Duration, opts ...TimingOption) *EventBuilder {
 	writeTiming(&b.name, "__throttle.", d, opts)
 	return b
@@ -239,13 +242,13 @@ func (b *IntersectBuilder) Delay(d time.Duration) *IntersectBuilder {
 	return b
 }
 
-// Debounce appends "__debounce.<duration>" plus optional NoLeading/NoTrailing.
+// Debounce appends "__debounce.<duration>" plus optional Leading/NoTrailing.
 func (b *IntersectBuilder) Debounce(d time.Duration, opts ...TimingOption) *IntersectBuilder {
 	writeTiming(&b.name, "__debounce.", d, opts)
 	return b
 }
 
-// Throttle appends "__throttle.<duration>" plus optional Leading/Trailing.
+// Throttle appends "__throttle.<duration>" plus optional NoLeading/Trailing.
 func (b *IntersectBuilder) Throttle(d time.Duration, opts ...TimingOption) *IntersectBuilder {
 	writeTiming(&b.name, "__throttle.", d, opts)
 	return b
@@ -301,13 +304,13 @@ func (b *SignalPatchBuilder) Delay(d time.Duration) *SignalPatchBuilder {
 	return b
 }
 
-// Debounce appends "__debounce.<duration>" plus optional NoLeading/NoTrailing.
+// Debounce appends "__debounce.<duration>" plus optional Leading/NoTrailing.
 func (b *SignalPatchBuilder) Debounce(d time.Duration, opts ...TimingOption) *SignalPatchBuilder {
 	writeTiming(&b.name, "__debounce.", d, opts)
 	return b
 }
 
-// Throttle appends "__throttle.<duration>" plus optional Leading/Trailing.
+// Throttle appends "__throttle.<duration>" plus optional NoLeading/Trailing.
 func (b *SignalPatchBuilder) Throttle(d time.Duration, opts ...TimingOption) *SignalPatchBuilder {
 	writeTiming(&b.name, "__throttle.", d, opts)
 	return b
