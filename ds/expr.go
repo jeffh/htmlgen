@@ -23,6 +23,44 @@ type Value struct {
 // Expr returns the underlying js.Expr.
 func (v Value) Expr() js.Expr { return v.expr }
 
+// Not returns the logical negation of the Value. Values are immutable; a new
+// Value is returned.
+//
+//	ds.SignalRef("open").Not()  =>  !$open
+func (v Value) Not() Value { return Value{expr: v.expr.Not()} }
+
+// And returns the logical conjunction of two Values.
+//
+//	ds.SignalRef("a").And(ds.SignalRef("b"))  =>  ($a && $b)
+func (v Value) And(other Value) Value { return Value{expr: v.expr.And(other.expr)} }
+
+// Or returns the logical disjunction of two Values.
+//
+//	ds.SignalRef("a").Or(ds.SignalRef("b"))  =>  ($a || $b)
+func (v Value) Or(other Value) Value { return Value{expr: v.expr.Or(other.expr)} }
+
+// Ternary uses the Value as a condition and returns a conditional expression.
+//
+//	ds.SignalRef("open").Ternary(ds.Str("Hide"), ds.Str("Show"))
+//	=>  ($open ? "Hide" : "Show")
+func (v Value) Ternary(ifTrue, ifFalse Value) Value {
+	return Value{expr: v.expr.Ternary(ifTrue.expr, ifFalse.expr)}
+}
+
+// Do bridges typed js statements into a Datastar Value. Statements are joined
+// with "; " by js.Stmts.
+//
+// Only valid where Datastar accepts a statement list — event handlers
+// (data-on:*), data-init and data-effect. A statement list is NOT an
+// expression, so a Do value must not be nested inside another expression
+// (Ternary, And, Show, Text, ...); doing so produces invalid JavaScript.
+//
+//	ds.Do(js.Let("n", js.Int(1)), js.Ident("n").Incr())
+//	=>  let n = 1; n++
+func Do(stmts ...js.Stmt) Value {
+	return Value{expr: js.Raw(js.ToJSStmt(js.Stmts(stmts...)))}
+}
+
 // V wraps a js.Expr as a Value.
 func V(expr js.Expr) Value { return Value{expr: expr} }
 
@@ -59,11 +97,55 @@ var (
 	Console      = js.Console
 	Document     = js.Document
 	JSWindow     = js.Window
-	Event        = js.Event
 	JSConsoleLog = js.ConsoleLog
 	ConsoleError = js.ConsoleError
-	EventTarget  = js.EventTarget
-	EventValue   = js.EventValue
+)
+
+// Event is the legacy inline-handler event object ("event").
+//
+// Deprecated: Datastar expressions do not expose "event" — they expose "evt"
+// (the triggering event) and "el" (the bound element). Use Evt or El instead.
+// This re-export remains for code that also emits legacy on* attributes via
+// the js package.
+var Event = js.Event
+
+// EventTarget returns event.target.
+//
+// Deprecated: emits "event.target", which is undefined inside a Datastar
+// expression. Use EvtTarget instead.
+var EventTarget = js.EventTarget
+
+// EventValue returns event.target.value.
+//
+// Deprecated: emits "event.target.value", which is undefined inside a Datastar
+// expression. Use EvtValue instead.
+var EventValue = js.EventValue
+
+// Datastar expression scope identifiers.
+//
+// Datastar evaluates attribute expressions with "evt" bound to the triggering
+// event and "el" bound to the element carrying the attribute. This differs
+// from legacy inline handlers (onclick="..."), where the event object is named
+// "event" — that is what js.Event and the deprecated Event/EventTarget/
+// EventValue re-exports emit. Inside data-on:*, data-init and friends, always
+// use these.
+var (
+	// Evt is the Datastar event object: evt.
+	Evt js.Expr = js.Ident("evt")
+	// El is the Datastar element object: el.
+	El js.Expr = js.Ident("el")
+	// EvtTarget is evt.target.
+	//
+	//	ds.OnClick(ds.V(ds.EvtTarget.Method("blur")))  =>  data-on:click="evt.target.blur()"
+	EvtTarget = Evt.Prop("target")
+	// EvtValue is evt.target.value.
+	//
+	//	ds.Sig("q").SetExpr(ds.EvtValue)  =>  $q = evt.target.value
+	EvtValue = Evt.Prop("target").Prop("value")
+	// EvtKey is evt.key.
+	//
+	//	ds.Sig("k").SetExpr(ds.EvtKey)  =>  $k = evt.key
+	EvtKey = Evt.Prop("key")
 )
 
 // Re-export js statement creators.
@@ -77,9 +159,13 @@ var (
 
 // SignalRef creates a Datastar signal reference: $name. Use this to reference
 // a signal value in expressions. Any leading "$" is stripped.
+//
+// It is equivalent to Sig(name).Value(); prefer Sig when you reference the same
+// signal more than once.
+//
+//	ds.SignalRef("open")  =>  $open
 func SignalRef(name string) Value {
-	name = strings.TrimPrefix(name, "$")
-	return Value{expr: js.Raw("$" + name)}
+	return Sig(name).Value()
 }
 
 // DatastarAction creates a Datastar action call: @action(args...).

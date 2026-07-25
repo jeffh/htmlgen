@@ -151,6 +151,34 @@ func (o objectLiteral) js(sb *strings.Builder) {
 // Object creates a JavaScript object literal from key-value pairs.
 func Object(pairs ...KV) Expr { return Expr{node: objectLiteral{pairs}} }
 
+// regexLiteral represents a JavaScript regular-expression literal.
+type regexLiteral struct {
+	pattern string
+	flags   string
+}
+
+func (r regexLiteral) js(sb *strings.Builder) {
+	sb.WriteByte('/')
+	sb.WriteString(r.pattern)
+	sb.WriteByte('/')
+	sb.WriteString(r.flags)
+}
+
+// Regex creates a JavaScript regular-expression literal: /pattern/flags.
+//
+// The pattern and flags are emitted VERBATIM — no escaping or validation is
+// performed. The caller is responsible for supplying a valid JS regex literal
+// body; in particular any literal "/" inside pattern must already be escaped
+// as "\\/", otherwise the emitted literal terminates early and produces
+// invalid JavaScript.
+//
+//	Regex("^user_", "i")   =>  /^user_/i
+//	Regex("\\d+", "")      =>  /\d+/
+//	Regex("a\\/b", "g")    =>  /a\/b/g
+func Regex(pattern, flags string) Expr {
+	return Expr{node: regexLiteral{pattern: pattern, flags: flags}}
+}
+
 // identifier represents a bare identifier reference.
 type identifier string
 

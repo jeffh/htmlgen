@@ -43,29 +43,32 @@ This is a Go library (`github.com/jeffh/htmlgen`) for programmatic HTML generati
 Provides helpers for building [Datastar](https://data-star.dev/) reactive attributes:
 
 - **Signals**: `Signal()`, `Signals()`, `Bind()` - define reactive state
+- **Typed signals**: `Sig("name")` - a signal name with methods `Ref()`, `Value()`, `Not()`, `Set()`, `SetExpr()`, `Toggle()`, `Clear()`, `Eq()`, `NotEq()`, `Sub()` (derived `name_suffix` signals)
 - **Events**: `OnClick()`, `OnSubmit()`, `OnInput()`, `OnChange()`, `On()` - event handlers; `Init()` - run on element load (data-init)
 - **Actions**: `Get()`, `Post()`, `Put()`, `Delete()` - HTTP request helpers
 - **Modifiers**: `PreventDefault()`, `Debounce()`, `Throttle()`, `Delay()`, `Once()`, `ViewTransition()` - event modifiers
 - **Values**: `Raw()`, `JsonValue()`, `Str()` - value builders for expressions
+- **Composition**: `Do(stmts...)` bridges typed `js.Stmt`s into a Value (statement positions only: `data-on:*`, `data-init`, `data-effect`); Value methods `Not()`, `And()`, `Or()`, `Ternary()` combine expressions; `Confirm(msg, then...)` guards actions behind a `confirm()` dialog
+- **Expression-valued maps**: `ClassesExpr()`, `StylesExpr()`, `AttrsExpr()` emit `data-class`/`data-style`/`data-attr` object literals with expression values and sorted keys. Prefer these over `Classes()`/`Styles()`/`Attrs()`, which JSON-encode values into always-truthy string literals
+- **Scope identifiers**: `Evt`, `El`, `EvtTarget`, `EvtValue`, `EvtKey` - Datastar expressions expose `evt`/`el`, not the `event` of legacy inline handlers (`js.Event` and the deprecated `Event`/`EventTarget`/`EventValue` re-exports)
 
-The `ds` package uses a builder pattern with `AttrMutator` and `AttrValueAppender` interfaces to compose complex Datastar attributes.
+The `ds` package composes attributes with fluent builders: `OnClick()`/`On()`/`Bind()`/`Signals()` and friends return builder structs whose modifier methods (`.Outside()`, `.PreventDefault()`, `.Debounce()`, ...) append to the attribute name and whose `Attribute()` method produces the final `h.Attribute`.
 
 ### Package `js` - Type-Safe JavaScript Generation
 
 Provides a type-safe builder API for generating JavaScript code strings for HTML event handler attributes (`onclick`, `onsubmit`, etc.). Integrates with the `h` package.
 
 **Core Types** (`js/expr.go`, `js/stmt.go`):
-- `Expr` - JavaScript expressions that produce values (e.g., `"1 + 2"`, `"x.foo"`)
+- `Expr` - JavaScript expressions that produce values (e.g., `"1 + 2"`, `"x.foo"`); property access, method calls and operators are methods on `Expr`
 - `Stmt` - JavaScript statements that perform actions (e.g., `"let x = 1"`, `"x++"`)
-- `Callable` - Expressions that support property access and method calls
 
-**Values** (`js/values.go`): Create literals with `String()`, `Int()`, `Float()`, `Bool()`, `Null()`, `Undefined()`, `JSON()`, `Array()`, `Object()`. Reference variables with `Ident()` or `This()`.
+**Values** (`js/values.go`): Create literals with `String()`, `Int()`, `Float()`, `Bool()`, `Null()`, `Undefined()`, `JSON()`, `Array()`, `Object()`. Reference variables with `Ident()` or `This()`. `Regex(pattern, flags)` emits a `/pattern/flags` literal verbatim (no escaping).
 
 **Property/Method Access** (`js/access.go`): Use `Prop()` for property access, `Method()` for method calls, `Index()` for array/computed access, `OptionalProp()`/`OptionalCall()` for optional chaining.
 
 **Operators** (`js/operators.go`): Arithmetic (`Add`, `Sub`, `Mul`, `Div`), comparison (`Eq`, `NotEq`, `Lt`, `Gt`), logical (`And`, `Or`, `Not`), ternary (`Ternary`), nullish coalescing (`NullishCoalesce`).
 
-**Statements** (`js/stmt.go`): Variable declarations (`Let`, `Const`), assignment (`Assign`, `AddAssign`), increment/decrement (`Incr`, `Decr`), conditionals (`If`, `IfElse`), returns (`Return`, `ReturnVoid`). Wrap expressions as statements with `ExprStmt()`.
+**Statements** (`js/stmt.go`): Variable declarations (`Let`, `Const`), assignment (`Assign`, `AddAssign`), increment/decrement (`Incr`, `Decr`), conditionals (`If`, `IfElse`), returns (`Return`, `ReturnVoid`), error handling (`TryCatch(body, errName, catchBody)`, and `Try(body...)` for a best-effort `try { ... } catch {}`). Wrap expressions as statements with `ExprStmt()`.
 
 **Event Handlers** (`js/handler.go`): `Handler()` combines statements into a handler string. Convenience functions `OnClick()`, `OnInput()`, `OnSubmit()`, `OnChange()`, `OnKeyDown()`, `OnLoad()`, `On()` create `h.Attribute` values directly.
 
