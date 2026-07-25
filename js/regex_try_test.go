@@ -128,3 +128,28 @@ func TestTryNested(t *testing.T) {
 		t.Errorf("nested Try = %q, want %q", got, want)
 	}
 }
+
+func TestLogicalFreeFunctions(t *testing.T) {
+	tests := []struct {
+		name     string
+		expr     Expr
+		expected string
+	}{
+		{"Not", Not(Ident("had")), "!had"},
+		{"Not matches method form", Not(Ident("x")), ToJS(Ident("x").Not())},
+		{"And empty", And(), "true"},
+		{"And single", And(Ident("a")), "a"},
+		{"And folds left", And(Ident("a"), Ident("b"), Ident("c")), "((a && b) && c)"},
+		{"Or empty", Or(), "false"},
+		{"Or single", Or(Ident("a")), "a"},
+		{"Or folds left", Or(Ident("a"), Ident("b")), "(a || b)"},
+		{"composed", And(Not(Ident("had")), Ident("present")), "(!had && present)"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ToJS(tt.expr); got != tt.expected {
+				t.Errorf("%s = %q, want %q", tt.name, got, tt.expected)
+			}
+		})
+	}
+}

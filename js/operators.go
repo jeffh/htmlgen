@@ -213,3 +213,43 @@ func (s spreadExpr) js(sb *strings.Builder) {
 
 // Spread returns ...e.
 func (e Expr) Spread() Expr { return Expr{node: spreadExpr{e}} }
+
+// Free-function forms of the logical operators. They emit exactly what the
+// corresponding Expr methods emit; prefer them when the operand structure
+// matters more than left-to-right reading order — js.And(js.Not(a), b) makes
+// the grouping explicit where a.Not().And(b) buries it.
+
+// Not returns the logical negation of expr.
+//
+//	js.Not(js.Ident("had"))  =>  !had
+func Not(expr Expr) Expr { return expr.Not() }
+
+// And folds exprs left with &&. With no arguments it returns true, the
+// identity of &&; with one argument it returns that expression unchanged.
+//
+//	js.And(js.Ident("a"), js.Ident("b"), js.Ident("c"))  =>  ((a && b) && c)
+func And(exprs ...Expr) Expr {
+	if len(exprs) == 0 {
+		return Bool(true)
+	}
+	result := exprs[0]
+	for _, e := range exprs[1:] {
+		result = result.And(e)
+	}
+	return result
+}
+
+// Or folds exprs left with ||. With no arguments it returns false, the
+// identity of ||; with one argument it returns that expression unchanged.
+//
+//	js.Or(js.Ident("a"), js.Ident("b"))  =>  (a || b)
+func Or(exprs ...Expr) Expr {
+	if len(exprs) == 0 {
+		return Bool(false)
+	}
+	result := exprs[0]
+	for _, e := range exprs[1:] {
+		result = result.Or(e)
+	}
+	return result
+}
