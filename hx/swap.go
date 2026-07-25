@@ -43,14 +43,12 @@ const (
 
 // SwapBuilder builds an hx-swap attribute value.
 //
-// SwapBuilder implements h.AttrBuilder, so it can be passed directly to tag
-// functions like h.Div without an explicit terminator method.
+// SwapBuilder implements h.AttrBuilder, so it can be passed directly to
+// element methods like B.Div without an explicit terminator method.
 type SwapBuilder struct {
 	strategy  SwapStrategy
 	modifiers []string
 }
-
-func (s *SwapBuilder) isTagArg() {}
 
 // Attribute returns the hx-swap attribute.
 func (s *SwapBuilder) Attribute() h.Attribute {

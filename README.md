@@ -16,44 +16,52 @@ go get github.com/jeffh/htmlgen
 
 ## Overview
 
-htmlgen provides three packages:
+htmlgen provides four packages:
 
-- **`h`** - Core HTML generation with both streaming and declarative APIs
+- **`h`** - Streaming HTML generation
 - **`ds`** - Datastar attribute helpers for building reactive web applications
+- **`hx`** - HTMX attribute helpers
 - **`js`** - Type-safe JavaScript generation for event handler attributes
 
 ## Package `h` - HTML Generation
 
-### Declarative Builder API
+### Streaming API
 
-Build HTML trees using Go functions that mirror HTML elements:
+Render HTML imperatively through a per-render `*h.B`. Container bodies execute
+immediately, so normal Go control flow and component functions work without an
+intermediate tree:
 
 ```go
 import "github.com/jeffh/htmlgen/h"
 
-page := h.Html(
-    h.Head(
-        h.Title(h.Text("My Page")),
-    ),
-    h.Body(
-        h.Div(h.Attrs("class", "container"),
-            h.H1(h.Text("Hello, World!")),
-            h.P(h.Text("Welcome to htmlgen.")),
-            h.A(h.Attrs("href", "/about"), h.Text("About")),
-        ),
-    ),
-)
-
-// Render to any io.Writer
-if err := h.Render(os.Stdout, page); err != nil {
+err := h.Render(os.Stdout, func(b *h.B) {
+    b.Html(func(b *h.B) {
+        b.Head(func(b *h.B) {
+            b.Title(func(b *h.B) { b.Text("My Page") })
+        })
+        b.Body(func(b *h.B) {
+            b.Div(h.Attrs("class", "container"), func(b *h.B) {
+                b.H1(func(b *h.B) { b.Text("Hello, World!") })
+                b.P(func(b *h.B) { b.Text("Welcome to htmlgen.") })
+                b.A(h.Attr("href", "/about"), func(b *h.B) {
+                    b.Text("About")
+                })
+            })
+        })
+    })
+})
+if err != nil {
     panic(err)
 }
 
-// Or render with pretty-printed indentation (using two spaces)
-if err := h.RenderIndent(os.Stdout, "  ", page); err != nil {
-    panic(err)
-}
+html := h.RenderString(func(b *h.B) {
+    b.Strong(func(b *h.B) { b.Text("Rendered to a string") })
+})
 ```
+
+Use `RenderIndent` for pretty-printed output and `RenderBytes` for an in-memory
+byte slice. The first write error is sticky: later output calls become no-ops,
+and `Render` returns that error.
 
 ### Attributes
 
@@ -76,9 +84,13 @@ attrs.Delete("disabled")
 value, ok := attrs.Get("class")
 ```
 
+Element arguments may be `Attributes`, an `Attribute`, an `AttrBuilder` from a
+companion package, a trailing `func(*h.B)` body, or `nil`. Later attribute
+values override earlier values.
+
 ### Available Elements
 
-All standard HTML5 elements are available as functions:
+All standard HTML5 elements are available as methods on `*h.B`:
 
 - **Document**: `Html`, `Head`, `Title`, `Meta`, `Link`, `Style`, `Script`, `Body`
 - **Sections**: `Header`, `Footer`, `Main`, `Nav`, `Section`, `Article`, `Aside`
@@ -88,116 +100,10 @@ All standard HTML5 elements are available as functions:
 - **Tables**: `Table`, `Thead`, `Tbody`, `Tfoot`, `Tr`, `Th`, `Td`
 - **Forms**: `Form`, `Input`, `Button`, `Label`, `Select`, `Option`, `Textarea`, `Fieldset`
 - **Media**: `Img`, `Video`, `Audio`, `Picture`, `Source`, `Canvas`, `Svg`
-- **Helpers**: `Fragment`, `Text`, `Raw`, `CustomElement`
+- **Content and custom tags**: `Text`, `Textf`, `Raw`, `Rawf`, `El`, `VoidEl`
 
-### Streaming Writer API
-
-For lower-level control, use the Writer API directly:
-
-```go
-w := h.NewWriter(os.Stdout)
-w.Doctype()
-w.OpenTag("html", h.Attrs("lang", "en"))
-w.OpenTag("body", nil)
-w.Text("Hello, World!")
-w.Close()  // Closes all open tags
-```
-
-### Pre-compiled Templates
-
-For frequently rendered content, use `Compile` to pre-render HTML to bytes for faster subsequent renders:
-
-```go
-// Compile once at startup
-header, err := h.Compile(h.Header(
-    h.Nav(
-        h.A(h.Attrs("href", "/"), h.Text("Home")),
-        h.A(h.Attrs("href", "/about"), h.Text("About")),
-    ),
-))
-if err != nil {
-    // handle error
-}
-
-// Fast renders afterward - just writes pre-computed bytes
-if err := h.Render(w, header); err != nil {
-    // handle error
-}
-```
-
-Or use `MustCompile` to panic on error (for initialization code):
-
-```go
-// Or use MustCompile to panic on error (for initialization code)
-header := h.MustCompile(h.Header(
-    h.Nav(
-        h.A(h.Attrs("href", "/"), h.Text("Home")),
-        h.A(h.Attrs("href", "/about"), h.Text("About")),
-    ),
-))
-if err := h.Render(w, header); err != nil {
-	// handle error
-}
-```
-
-For templates with dynamic content, use `CompileParams` with parameter placeholders:
-
-```go
-// Define parameters
-title := h.NewParam("title")
-content := h.NewParam("content")
-
-// Compile template with parameter slots
-tmpl, err := h.CompileParams(h.Html(
-    h.Head(h.Title(title)),
-    h.Body(
-        h.H1(title),
-        h.Main(content),
-    ),
-))
-if err != nil {
-    // handle error
-}
-
-// Render with values
-tmpl.Render(w,
-    title.Value(h.Text("Welcome")),
-    content.Value(h.P(h.Text("Hello, World!"))),
-)
-
-// Or create a reusable Builder
-page := tmpl.With(
-    title.Value(h.Text("Welcome")),
-    content.Value(h.P(h.Text("Hello, World!"))),
-)
-if err := h.Render(w, page); err != nil {
-	// handle error
-}
-```
-
-Or use `MustCompileParams` to panic on error (for initialization code):
-
-```go
-title := h.NewParam("title")
-content := h.NewParam("content")
-
-// Or use MustCompileParams to panic on error (for initialization code)
-tmpl := h.MustCompileParams(h.Html(
-    h.Head(h.Title(title)),
-    h.Body(
-        h.H1(title),
-        h.Main(content),
-    ),
-))
-if err := tmpl.Render(w,
-	title.Value(h.Text("Welcome")),
-	content.Value(h.P(nil, h.Text("Hello, World!"))),
-); err != nil {
-	// handle error
-}
-```
-
-Compiled templates are ~8.0x faster than `html/template` for parameterized content.
+Void HTML elements such as `Img`, `Input`, and `Br` are self-closing and do not
+run body closures. `Html` emits the HTML5 doctype and defaults to `lang="en"`.
 
 ## Package `ds` - Datastar Integration
 
@@ -298,25 +204,27 @@ import (
 )
 
 func main() {
-    page := h.Html(
-        h.Head(
-            h.Title(h.Text("Counter")),
-            h.Script(h.Attrs("type", "module", "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.2/bundles/datastar.js")),
-        ),
-        h.Body(
-            h.Div(h.Attrs("id", "app"),
-                h.Button(h.Attributes{
+    if err := h.Render(os.Stdout, func(b *h.B) {
+        b.Html(func(b *h.B) {
+            b.Head(func(b *h.B) {
+                b.Title(func(b *h.B) { b.Text("Counter") })
+                b.Script(h.Attrs("type", "module", "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.2/bundles/datastar.js"))
+            })
+            b.Body(func(b *h.B) {
+                b.Div(
+                    h.Attr("id", "app"),
                     ds.Signal("count", 0),
-                    ds.OnClick(ds.SetSignal("count", ds.Raw("$count + 1"))),
-                },
-                    h.Text("Count: "),
-                    h.Span(h.Attributes{ds.Text(ds.Raw("$count"))}),
-                ),
-            ),
-        ),
-    )
-
-    if err := h.Render(os.Stdout, page); err != nil {
+                    func(b *h.B) {
+                        b.Button(
+                            ds.OnClick(ds.SetSignal("count", ds.Raw("$count + 1"))),
+                            func(b *h.B) { b.Text("Count: ") },
+                        )
+                        b.Span(ds.Text(ds.Raw("$count")))
+                    },
+                )
+            })
+        })
+    }); err != nil {
         panic(err)
     }
 }
@@ -348,46 +256,9 @@ go test -bench=. -benchmem -tags=purego ./h/
 
 The `purego` build tag disables unsafe pointer optimizations for environments that require pure Go code.
 
-### Performance Comparison
-
-| Scenario | htmlgen | htmlgen (purego) | html/template | Winner |
-|----------|---------|------------------|---------------|--------|
-| [Simple Div](h/benchmark_test.go#L16) | 151 ns | 152 ns | 521 ns | htmlgen ~3.5x faster |
-| [Div with Attributes](h/benchmark_test.go#L37) | 303 ns | 349 ns | 2100 ns | htmlgen ~6.9x faster |
-| [Nested Elements](h/benchmark_test.go#L68) | 1068 ns | 1095 ns | 2128 ns | htmlgen ~2.0x faster |
-| [List (10 items)](h/benchmark_test.go#L104) | 887 ns | 1022 ns | 4762 ns | htmlgen ~5.4x faster |
-| [List (100 items)](h/benchmark_test.go#L130) | 7.2 µs | 8.5 µs | 45.2 µs | htmlgen ~6.3x faster |
-| [Table (10 rows)](h/benchmark_test.go#L166) | 7.2 µs | 7.7 µs | 17.1 µs | htmlgen ~2.4x faster |
-| [Table (100 rows)](h/benchmark_test.go#L207) | 62.7 µs | 66.7 µs | 167.5 µs | htmlgen ~2.7x faster |
-| [Full Page](h/benchmark_test.go#L270) | 4.9 µs | 5.2 µs | 11.0 µs | htmlgen ~2.3x faster |
-| [Escaping](h/benchmark_test.go#L349) | 450 ns | 498 ns | 1437 ns | htmlgen ~3.2x faster |
-| [Deep Nesting (10 levels)](h/benchmark_test.go#L376) | 1030 ns | 1030 ns | 530 ns | template ~1.9x faster |
-| [Form](h/benchmark_test.go#L450) | 3.5 µs | 4.1 µs | 13.7 µs | htmlgen ~3.9x faster |
-| [Pre-built Tree (static)](h/benchmark_test.go#L644) | 539 ns | 576 ns | 73 ns | template ~7.4x faster |
-| [Compiled Tree (static)](h/benchmark_test.go#L675) | 19 ns | 19 ns | 73 ns | htmlgen ~3.8x faster |
-| [Compiled Params](h/benchmark_test.go#L717) | 141 ns | 145 ns | 1122 ns | htmlgen ~8.0x faster |
-
-*Benchmarks run on Apple M1 Ultra. Results may vary by hardware.*
-
-### Key Insights
-
-- **htmlgen is faster** for dynamic content generation with variable data structures
-- **Compile** pre-renders static content for excellent performance (19 ns vs 539 ns)
-- **CompileParams** is ~8.0x faster than html/template for parameterized content
-- htmlgen excels at list/table generation where it can be 5-6x faster
-- For attribute-heavy elements, htmlgen can be up to 7x faster
-- **purego** adds ~5-15% overhead but remains significantly faster than html/template
-
-### When to Use Each
-
-| Use Case | Recommendation |
-|----------|----------------|
-| Dynamic lists/tables | htmlgen |
-| Forms with many attributes | htmlgen |
-| Full page generation with data | htmlgen |
-| Static templates with no data | `Compile` |
-| Parameterized templates | `CompileParams` |
-| Component-based UI architecture | htmlgen |
+The benchmark suite covers nested output, iteration, escaping, and allocation
+counts for the pooled streaming builder. Results vary by Go version and
+hardware; run the suite locally for current measurements.
 
 ## License
 

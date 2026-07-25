@@ -76,19 +76,18 @@ This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
   ```
 
 ### Naming Conventions
-- **Exported types/functions**: PascalCase (e.g., `Builder`, `Render`, `Html`)
-- **Unexported types/functions**: camelCase (e.g., `tagBuilder`, `parseTagArgs`)
-- **Interfaces**: Typically use nouns (e.g., `Builder`, `Callable`) or descriptive names
-- **Functions that create builders**: Match HTML element names (e.g., `Div`, `Span`, `A`)
+- **Exported types/functions**: PascalCase (e.g., `Render`, `Html`, `AttrBuilder`)
+- **Unexported types/functions**: camelCase (e.g., `parseArgs`, `writeAttrs`)
+- **Interfaces**: Typically use nouns (e.g., `AttrBuilder`, `Callable`) or descriptive names
+- **Element methods on `*h.B`**: Match HTML element names (e.g., `Div`, `Span`, `A`)
 - **Attribute helpers**: Descriptive names (e.g., `Attrs`, `AttrsMap`, `Attr`)
 - **Test functions**: Start with `Test` (e.g., `TestHtmlWriting`, `TestString`)
 - **Benchmark functions**: Start with `Benchmark` (e.g., `BenchmarkRender`)
 
 ### Type Definitions
-- Use marker interfaces for type constraints (e.g., `TagArg`, `Builder`)
-- Implement marker methods as no-ops: `func (x) isTagArg() {}`
-- Prefer struct types over type aliases for builders
-- Use interfaces to define behavior (e.g., `Builder`, `Stmt`, `Expr`, `Callable`)
+- Element methods accept `...any` and type-switch over Attributes, Attribute, AttrBuilder, nil, and `func(*h.B)` bodies; unknown types panic with a clear message
+- Prefer struct types over type aliases for builders (`h.Body` is the one alias: `func(*h.B)`)
+- Use interfaces to define behavior (e.g., `AttrBuilder`, `Stmt`, `Expr`, `Callable`)
 
 ### Error Handling
 - Return `error` as the last return value
@@ -117,7 +116,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
   ```
 
 ### Function Structure
-- **Variadic parameters**: Use `...TagArg` or `...Stmt` for flexibility
+- **Variadic parameters**: Use `...any` (element args) or `...Stmt` for flexibility
 - **Options pattern**: Use interfaces like `AttrMutator` with `Modify()` method
 - **Builder pattern**: Chain method calls where appropriate
 - **Function order**: Exported functions first, then unexported helpers
@@ -176,7 +175,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
 
 #### Builder Interface
 - All builders implement: `Build(w *Writer) error`
-- Tag arguments implement marker interface: `isTagArg()`
+- Element args are dispatched by an `any` type switch in `parseArgs`; fluent attribute builders implement `AttrBuilder` (`Attribute() h.Attribute`)
 - Support nil builders by checking before calling `Build()`
 
 #### Attributes API

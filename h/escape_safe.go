@@ -10,7 +10,7 @@ import (
 // writeEscapedString writes s to w with HTML escaping, avoiding allocations
 // when no escaping is needed.
 func writeEscapedString(w io.Writer, s string) error {
-	if strings.ContainsAny(s, "&<>\"'") {
+	if strings.ContainsAny(s, "&<>\"'\x00") {
 		// Slow path: use writeHTMLEscape which writes directly to w, allocating a byte slice
 		return writeHTMLEscape(w, []byte(s))
 	}

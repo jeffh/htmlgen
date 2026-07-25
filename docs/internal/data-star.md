@@ -634,40 +634,39 @@ import (
     "time"
 )
 
-func CounterComponent() h.Builder {
-    return h.Div(
+func CounterComponent(b *h.B) {
+    b.Div(
         ds.Signal("count", 0),
-        h.Button(
-            h.Attrs("type", "button"),
-            ds.OnClick(ds.Raw("$count++")),
-            h.Text("Increment"),
-        ),
-        h.Span(
-            ds.Text(ds.Raw("`Count: ${$count}`")),
-        ),
+        func(b *h.B) {
+            b.Button(
+                h.Attrs("type", "button"),
+                ds.OnClick(ds.Raw("$count++")),
+                func(b *h.B) { b.Text("Increment") },
+            )
+            b.Span(ds.Text(ds.Raw("`Count: ${$count}`")))
+        },
     )
 }
 
-func SearchForm() h.Builder {
-    return h.Form(
+func SearchForm(b *h.B) {
+    b.Form(
         ds.Signal("query", ""),
         ds.Indicator("searching"),
-        h.Input(
-            h.Attrs("type", "text", "placeholder", "Search..."),
-            ds.Bind("query"),
-            ds.OnInput(
-                ds.Debounce(300*time.Millisecond),
-                ds.Get("/search"),
-            ),
-        ),
-        h.Div(
-            h.Attrs("id", "results"),
-            ds.Show(ds.Raw("!$searching")),
-        ),
-        h.Div(
-            ds.Show(ds.Raw("$searching")),
-            h.Text("Loading..."),
-        ),
+        func(b *h.B) {
+            b.Input(
+                h.Attrs("type", "text", "placeholder", "Search..."),
+                ds.Bind("query"),
+                ds.OnInput(ds.Get("/search")).Debounce(300*time.Millisecond),
+            )
+            b.Div(
+                h.Attrs("id", "results"),
+                ds.Show(ds.Raw("!$searching")),
+            )
+            b.Div(
+                ds.Show(ds.Raw("$searching")),
+                func(b *h.B) { b.Text("Loading...") },
+            )
+        },
     )
 }
 ```
