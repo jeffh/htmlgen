@@ -150,8 +150,8 @@ func (e Expr) PostDecrExpr() Expr { return Expr{node: incrDecr{target: e, op: "-
 // Return statement
 
 type returnStmt struct {
-	value   Expr
-	hasVal  bool
+	value  Expr
+	hasVal bool
 }
 
 func (r returnStmt) stmt(sb *strings.Builder) {
@@ -259,6 +259,60 @@ func If(cond Expr, body ...Stmt) Stmt {
 // IfElse creates an if-else statement.
 func IfElse(cond Expr, thenBody []Stmt, elseBody []Stmt) Stmt {
 	return Stmt{node: ifStmt{cond: cond, body: thenBody, elseBody: elseBody}}
+}
+
+// Try / catch statement
+
+type tryStmt struct {
+	body      []Stmt
+	errName   string
+	catchBody []Stmt
+}
+
+// writeStmtBlock writes body as a braced block. An empty body writes "{}" so
+// that generated handlers stay compact.
+func writeStmtBlock(sb *strings.Builder, body []Stmt) {
+	if len(body) == 0 {
+		sb.WriteString("{}")
+		return
+	}
+	sb.WriteString("{ ")
+	writeStmtList(sb, body)
+	sb.WriteString(" }")
+}
+
+func (t tryStmt) stmt(sb *strings.Builder) {
+	sb.WriteString("try ")
+	writeStmtBlock(sb, t.body)
+	sb.WriteString(" catch ")
+	if t.errName != "" {
+		sb.WriteString("(")
+		sb.WriteString(t.errName)
+		sb.WriteString(") ")
+	}
+	writeStmtBlock(sb, t.catchBody)
+}
+
+// TryCatch creates a try/catch statement. When errName is empty the optional
+// catch binding is omitted.
+//
+//	TryCatch([]Stmt{ExprStmt(ConsoleLog(Int(1)))}, "e", []Stmt{ExprStmt(ConsoleError(Ident("e")))})
+//	=>  try { console.log(1) } catch (e) { console.error(e) }
+//
+//	TryCatch([]Stmt{Ident("x").Incr()}, "", nil)
+//	=>  try { x++ } catch {}
+func TryCatch(body []Stmt, errName string, catchBody []Stmt) Stmt {
+	return Stmt{node: tryStmt{body: body, errName: errName, catchBody: catchBody}}
+}
+
+// Try creates a try statement with an empty, unbound catch block. It is sugar
+// for TryCatch(body, "", nil) and is useful for best-effort work whose failure
+// should be ignored.
+//
+//	Try(ExprStmt(Ident("el").Method("focus")))
+//	=>  try { el.focus() } catch {}
+func Try(body ...Stmt) Stmt {
+	return TryCatch(body, "", nil)
 }
 
 // Statement list

@@ -3,6 +3,8 @@ package ds
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -176,19 +178,21 @@ func (b RequestOptionsBuilder) Selector(sel string) RequestOptionsBuilder {
 	return b
 }
 
-// Headers sets custom HTTP headers for the request.
+// Headers sets custom HTTP headers for the request. Header names are sorted
+// alphabetically for deterministic output.
+//
+//	ds.RequestOptions().Headers(map[string]string{"X-B": "2", "X-A": "1"})
+//	=>  headers: {"X-A": "1", "X-B": "2"}
 func (b RequestOptionsBuilder) Headers(headers map[string]string) RequestOptionsBuilder {
 	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("headers: {")
-		i := 0
-		for k, v := range headers {
+		for i, k := range slices.Sorted(maps.Keys(headers)) {
 			if i > 0 {
 				sb.WriteString(", ")
 			}
 			sb.WriteString(strconv.Quote(k))
 			sb.WriteString(": ")
-			sb.WriteString(strconv.Quote(v))
-			i++
+			sb.WriteString(strconv.Quote(headers[k]))
 		}
 		sb.WriteString("}")
 	}))

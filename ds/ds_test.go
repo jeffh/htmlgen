@@ -458,8 +458,8 @@ func TestSetSignalExpr(t *testing.T) {
 		expr       js.Expr
 		expected   string
 	}{
-		{"without $", "foo", js.Raw("1"), "$foo = 1"},
-		{"with $", "$bar", js.Raw("true"), "$bar = true"},
+		{"without $", "foo", js.Raw("1"), "($foo = 1)"},
+		{"with $", "$bar", js.Raw("true"), "($bar = true)"},
 	}
 
 	for _, tt := range tests {
@@ -480,10 +480,10 @@ func TestSetSignal(t *testing.T) {
 		value      any
 		expected   string
 	}{
-		{"string value", "msg", "hello", `$msg = "hello"`},
-		{"number value", "count", 42, "$count = 42"},
-		{"bool value", "active", true, "$active = true"},
-		{"raw expression", "expr", Raw("$a + $b"), "$expr = $a + $b"},
+		{"string value", "msg", "hello", `($msg = "hello")`},
+		{"number value", "count", 42, "($count = 42)"},
+		{"bool value", "active", true, "($active = true)"},
+		{"raw expression", "expr", Raw("$a + $b"), "($expr = $a + $b)"},
 	}
 
 	for _, tt := range tests {
@@ -1090,10 +1090,15 @@ func TestRequestOptionsBuilder(t *testing.T) {
 }
 
 func TestHeaders(t *testing.T) {
-	v := GetWithOptions("/api", RequestOptions().Headers(map[string]string{"X-Custom": "value"}))
+	v := GetWithOptions("/api", RequestOptions().Headers(map[string]string{
+		"X-Custom": "value",
+		"Accept":   "text/event-stream",
+	}))
 	got := ToJS(v.expr)
-	if !strings.Contains(got, `"X-Custom"`) || !strings.Contains(got, `"value"`) {
-		t.Errorf("Headers() = %q, should contain X-Custom and value", got)
+	// Header names are sorted for deterministic output.
+	want := `@get("/api", {headers: {"Accept": "text/event-stream", "X-Custom": "value"}})`
+	if got != want {
+		t.Errorf("Headers() = %q, want %q", got, want)
 	}
 }
 

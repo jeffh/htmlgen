@@ -1,6 +1,8 @@
 package ds
 
 import (
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/jeffh/htmlgen/h"
@@ -8,10 +10,16 @@ import (
 )
 
 // SetSignalExpr returns a Value that assigns a signal to a JavaScript expression.
-// The signal name is automatically prefixed with "$".
+// The signal name is automatically prefixed with "$". The assignment is emitted
+// parenthesized so it stays a valid expression when composed with And, Or,
+// Ternary or Confirm — an unparenthesized "a && $x = 1" is a JavaScript
+// SyntaxError (invalid assignment target).
+//
+//	ds.SetSignalExpr("n", js.Int(1))  =>  ($n = 1)
 func SetSignalExpr(signalName string, expression js.Expr) Value {
 	var sb strings.Builder
-	sb.Grow(len(signalName) + 10)
+	sb.Grow(len(signalName) + 12)
+	sb.WriteString("(")
 	if strings.HasPrefix(signalName, "$") {
 		sb.WriteString(signalName)
 	} else {
@@ -20,6 +28,7 @@ func SetSignalExpr(signalName string, expression js.Expr) Value {
 	}
 	sb.WriteString(" = ")
 	sb.WriteString(js.ToJS(expression))
+	sb.WriteString(")")
 	return Value{expr: js.Raw(sb.String())}
 }
 
@@ -252,19 +261,81 @@ func Style(property string, expression Value) h.Attribute {
 	return h.Attr("data-style:"+property, js.ToJS(expression.expr))
 }
 
-// Styles sets multiple inline CSS styles reactively using object syntax.
+// Styles sets multiple inline CSS styles reactively using object syntax. The
+// values are JSON-encoded, so they become quoted string literals.
+//
+// Use StylesExpr when the values are JavaScript expressions.
 func Styles(styles map[string]string) h.Attribute {
 	return h.Attr("data-style", js.ToJS(js.JSON(styles)))
 }
 
-// Attrs sets multiple HTML attributes reactively using object syntax.
+// Attrs sets multiple HTML attributes reactively using object syntax. The
+// values are JSON-encoded, so they become quoted string literals.
+//
+// Use AttrsExpr when the values are JavaScript expressions.
 func Attrs(attrs map[string]string) h.Attribute {
 	return h.Attr("data-attr", js.ToJS(js.JSON(attrs)))
 }
 
-// Classes sets multiple CSS classes conditionally using object syntax.
+// Classes sets multiple CSS classes conditionally using object syntax. The
+// values are JSON-encoded, so they become quoted string literals — and every
+// non-empty string literal is truthy, which means classes declared this way are
+// always applied.
+//
+// Use ClassesExpr for conditional classes, which keeps the values as
+// expressions.
 func Classes(classes map[string]string) h.Attribute {
 	return h.Attr("data-class", js.ToJS(js.JSON(classes)))
+}
+
+// exprObject renders a JavaScript object literal from a map of Values, with
+// keys emitted as JS string literals and sorted for deterministic output.
+func exprObject(m map[string]Value) string {
+	pairs := make([]js.KV, 0, len(m))
+	for _, k := range slices.Sorted(maps.Keys(m)) {
+		pairs = append(pairs, js.Pair(k, m[k].expr))
+	}
+	return js.ToJS(js.Object(pairs...))
+}
+
+// ClassesExpr sets multiple CSS classes conditionally using object syntax, with
+// each value rendered as a JavaScript expression rather than a quoted string.
+// Keys are sorted alphabetically for deterministic output.
+//
+// Prefer this over Classes for conditional classes: Classes JSON-encodes its
+// values, and a non-empty string literal is always truthy to Datastar.
+//
+//	ds.ClassesExpr(map[string]ds.Value{
+//	    "hidden": ds.Sig("open").Not(),
+//	    "active": ds.Sig("open").Value(),
+//	})
+//	=>  data-class="{"active": $open, "hidden": !$open}"
+func ClassesExpr(classes map[string]Value) h.Attribute {
+	return h.Attr("data-class", exprObject(classes))
+}
+
+// StylesExpr sets multiple inline CSS styles reactively using object syntax,
+// with each value rendered as a JavaScript expression rather than a quoted
+// string. Keys are sorted alphabetically for deterministic output.
+//
+// Use Styles when the values are plain CSS strings.
+//
+//	ds.StylesExpr(map[string]ds.Value{"width": ds.Sig("pct").Value()})
+//	=>  data-style="{"width": $pct}"
+func StylesExpr(styles map[string]Value) h.Attribute {
+	return h.Attr("data-style", exprObject(styles))
+}
+
+// AttrsExpr sets multiple HTML attributes reactively using object syntax, with
+// each value rendered as a JavaScript expression rather than a quoted string.
+// Keys are sorted alphabetically for deterministic output.
+//
+// Use Attrs when the values are plain strings.
+//
+//	ds.AttrsExpr(map[string]ds.Value{"disabled": ds.Sig("busy").Value()})
+//	=>  data-attr="{"disabled": $busy}"
+func AttrsExpr(attrs map[string]Value) h.Attribute {
+	return h.Attr("data-attr", exprObject(attrs))
 }
 
 // JsonSignalsDebug displays reactive JSON-stringified signals for debugging.

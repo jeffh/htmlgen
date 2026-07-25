@@ -43,9 +43,23 @@
 //
 // # Plain attributes (return h.Attribute directly)
 //
-// Show, Text, Hide, Classes, Style, Styles, Attribute, Attrs, Effect,
-// Indicator, Ignore, IgnoreSelf, IgnoreMorph, PreserveAttr, OnSignalPatchFilter,
-// Animate (Pro), CustomValidity (Pro), ReplaceURL (Pro), ViewTransitionName (Pro).
+// Show, Text, Hide, Classes, ClassesExpr, Style, Styles, StylesExpr,
+// Attribute, Attrs, AttrsExpr, Effect, Indicator, Ignore, IgnoreSelf,
+// IgnoreMorph, PreserveAttr, OnSignalPatchFilter, Animate (Pro),
+// CustomValidity (Pro), ReplaceURL (Pro), ViewTransitionName (Pro).
+//
+// The *Expr variants (ClassesExpr, StylesExpr, AttrsExpr) keep map values as
+// JavaScript expressions; Classes, Styles and Attrs JSON-encode them into
+// quoted string literals, which are always truthy.
+//
+// # Signals and composition
+//
+// Sig is a typed signal name: Sig("open").Toggle(), Sig("q").Clear(),
+// Sig("plan").Sub("open") (derived "plan_open"). Value has Not, And, Or and
+// Ternary combinators, Do bridges js statements into a Value for statement
+// positions, and Confirm guards actions behind a confirm() dialog. Datastar
+// expressions see evt and el — use Evt, El, EvtTarget, EvtValue and EvtKey,
+// not the event-based js package helpers.
 //
 // # HTTP actions
 //
