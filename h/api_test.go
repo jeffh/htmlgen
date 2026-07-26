@@ -234,6 +234,18 @@ func TestAttributeLineWrapping(t *testing.T) {
 	}
 }
 
+func TestMaxLineLengthInertWithoutIndent(t *testing.T) {
+	got := RenderString(func(b *B) {
+		b.SetMaxLineLength(10)
+		b.Div(Attrs("class", "one", "data-long", "two"), func(b *B) {
+			b.Text("x")
+		})
+	})
+	if strings.Contains(got, "\n") {
+		t.Fatalf("compact output contains newline: %q", got)
+	}
+}
+
 var errWrite = errors.New("write failure")
 
 type failAfterWriter struct {

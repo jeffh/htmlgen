@@ -105,7 +105,7 @@ func (b *B) writeAttrs(attrs Attributes, lineLen int) {
 
 		length := attrLen(attr)
 		wrapped := false
-		if b.maxLineLen > 0 && lineLen+length > b.maxLineLen {
+		if b.maxLineLen > 0 && b.isIndenting() && lineLen+length > b.maxLineLen {
 			b.writeString("\n")
 			if b.err != nil {
 				return
