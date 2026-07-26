@@ -63,6 +63,63 @@ Use `RenderIndent` for pretty-printed output and `RenderBytes` for an in-memory
 byte slice. The first write error is sticky: later output calls become no-ops,
 and `Render` returns that error.
 
+Output is buffered and written to the `io.Writer` in ~4 KiB chunks. `Render`,
+`RenderIndent`, `RenderString`, and `RenderBytes` all flush before returning, so
+most code never thinks about it. Call `Flush` yourself when bytes must reach the
+client before the render finishes — server-sent events, or a long response you
+want to start streaming early:
+
+```go
+err := h.Render(w, func(b *h.B) {
+    b.Div(h.Attrs("class", "feed"), func(b *h.B) {
+        for event := range events {
+            b.P(func(b *h.B) { b.Text(event) })
+            if err := b.Flush(); err != nil {
+                return
+            }
+            w.(http.Flusher).Flush()
+        }
+    })
+})
+```
+
+Because writes are buffered, `Err` reports only the errors seen as of the last
+flush; the value returned by `Render` is always current. Calling `Flush` at loop
+boundaries, as above, is also how you notice a disconnected client promptly
+instead of at the end of the render.
+
+Two consequences of buffering are worth knowing. If a body closure panics,
+whatever is still buffered — up to the flush threshold — is discarded rather
+than written. And the `*h.B` is valid only for the duration of the `Render` call
+that created it, because it returns to a pool afterwards; do not retain it or
+call `Flush` on it later. Values at or above the threshold (a large `Raw`, a
+large `Text`, a large attribute value) bypass the buffer and stream straight to
+the writer, so rendering a multi-megabyte value does not cost a multi-megabyte
+buffer.
+
+### Typed fast paths
+
+Every element method has a typed sibling ending in `E` that takes concrete
+parameters instead of `...any` — `DivE(attrs h.Attributes, body h.Body)` for
+containers, `ImgE(attrs h.Attributes)` for void elements, plus `ElE`, `VoidElE`,
+and `HtmlE`. They render identically, but nothing is boxed into an interface, so
+a body closure that captures a loop variable stays on the stack:
+
+```go
+b.DivE(h.Attrs("class", "grid"), func(b *h.B) {
+    for _, card := range cards {
+        b.DivE(h.Attrs("class", "card"), func(b *h.B) {
+            b.H3E(nil, func(b *h.B) { b.Text(card.Title) })
+            b.ImgE(h.Attrs("src", card.Image))
+        })
+    }
+})
+```
+
+`nil` attributes and a `nil` body are both fine. The variadic forms stay the
+ergonomic default — reach for `E` in hot paths, where it is roughly 1.8x faster
+and cuts allocations by two thirds.
+
 ### Attributes
 
 Create attributes using `Attrs()` with key-value pairs or `AttrsMap()` with a map:
@@ -104,6 +161,8 @@ All standard HTML5 elements are available as methods on `*h.B`:
 
 Void HTML elements such as `Img`, `Input`, and `Br` are self-closing and do not
 run body closures. `Html` emits the HTML5 doctype and defaults to `lang="en"`.
+Each element method also has a typed `E` sibling (`DivE`, `ImgE`, `HtmlE`, ...);
+see [Typed fast paths](#typed-fast-paths).
 
 ## Package `ds` - Datastar Integration
 
@@ -251,27 +310,24 @@ htmlgen is benchmarked against Go's standard `html/template` package. Run benchm
 go test -bench=. -benchmem ./h/
 ```
 
-```bash
-# Run with purego (no unsafe optimizations)
-go test -bench=. -benchmem -tags=purego ./h/
-```
-
 ### Performance Comparison
 
-| Scenario | htmlgen | htmlgen (purego) | html/template | Winner |
-|----------|---------|------------------|---------------|--------|
-| [Simple Div](h/benchmark_test.go#L20) | 79 ns | 80 ns | 489 ns | htmlgen ~6.2x faster |
-| [Div with Attributes](h/benchmark_test.go#L45) | 248 ns | 294 ns | 1969 ns | htmlgen ~7.9x faster |
-| [Nested Elements](h/benchmark_test.go#L80) | 535 ns | 548 ns | 1989 ns | htmlgen ~3.7x faster |
-| [List (10 items)](h/benchmark_test.go#L120) | 940 ns | 1059 ns | 4489 ns | htmlgen ~4.8x faster |
-| [List (100 items)](h/benchmark_test.go#L154) | 8.5 µs | 10.0 µs | 42.2 µs | htmlgen ~5.0x faster |
-| [Table (10 rows)](h/benchmark_test.go#L232) | 4.0 µs | 4.4 µs | 15.4 µs | htmlgen ~3.8x faster |
-| [Table (100 rows)](h/benchmark_test.go#L252) | 35.8 µs | 39.4 µs | 150.2 µs | htmlgen ~4.2x faster |
-| [Full Page](h/benchmark_test.go#L352) | 3.4 µs | 3.6 µs | 10.3 µs | htmlgen ~3.1x faster |
-| [Full Page (parallel)](h/benchmark_test.go#L580) | 1.5 µs | 1.5 µs | 5.5 µs | htmlgen ~3.7x faster |
-| [Escaping](h/benchmark_test.go#L376) | 380 ns | 441 ns | 1276 ns | htmlgen ~3.4x faster |
-| [Form](h/benchmark_test.go#L474) | 2.9 µs | 3.4 µs | 12.8 µs | htmlgen ~4.4x faster |
-| [Deep Nesting (10 levels)](h/benchmark_test.go#L426) | 683 ns | 697 ns | 481 ns | template ~1.4x faster |
+| Scenario | htmlgen | html/template | Winner |
+|----------|---------|---------------|--------|
+| [Card Grid (~90 elements)](h/benchmark_nested_test.go#L149) | 9.7 µs | 54.0 µs | htmlgen ~5.6x faster |
+| [Card Grid, typed `E` methods](h/benchmark_nested_test.go#L158) | 5.3 µs | 54.0 µs | htmlgen ~10.1x faster |
+| [Simple Div](h/benchmark_test.go#L20) | 43 ns | 487 ns | htmlgen ~11.3x faster |
+| [Div with Attributes](h/benchmark_test.go#L45) | 140 ns | 1994 ns | htmlgen ~14.3x faster |
+| [Nested Elements](h/benchmark_test.go#L80) | 195 ns | 2019 ns | htmlgen ~10.4x faster |
+| [List (10 items)](h/benchmark_test.go#L120) | 486 ns | 4.5 µs | htmlgen ~9.2x faster |
+| [List (100 items)](h/benchmark_test.go#L154) | 4.3 µs | 42.5 µs | htmlgen ~9.9x faster |
+| [Table (10 rows)](h/benchmark_test.go#L232) | 2.1 µs | 15.6 µs | htmlgen ~7.3x faster |
+| [Table (100 rows)](h/benchmark_test.go#L252) | 19.3 µs | 153.0 µs | htmlgen ~7.9x faster |
+| [Full Page](h/benchmark_test.go#L352) | 1.9 µs | 10.2 µs | htmlgen ~5.3x faster |
+| [Full Page (parallel)](h/benchmark_test.go#L580) | 1.5 µs | 6.5 µs | htmlgen ~4.3x faster |
+| [Escaping](h/benchmark_test.go#L376) | 250 ns | 1282 ns | htmlgen ~5.1x faster |
+| [Form](h/benchmark_test.go#L474) | 1.8 µs | 13.1 µs | htmlgen ~7.3x faster |
+| [Deep Nesting (10 levels)](h/benchmark_test.go#L426) | 318 ns | 475 ns | htmlgen ~1.5x faster |
 
 *Go 1.26.4, `darwin/arm64`, Apple M1 Ultra, `-count=8` medians via `benchstat`.
 Results may vary by hardware and Go version.*
@@ -283,6 +339,8 @@ being rendered rather than the shape of the document:
 
 | Scenario | htmlgen | html/template |
 |----------|---------|---------------|
+| Card Grid (~90 elements) | 9.8 KiB · 223 allocs | 14.4 KiB · 655 allocs |
+| Card Grid, typed `E` methods | 2.8 KiB · 72 allocs | 14.4 KiB · 655 allocs |
 | Simple Div | 0 B · 0 allocs | 240 B · 7 allocs |
 | Div with Attributes | 120 B · 2 allocs | 576 B · 22 allocs |
 | Nested Elements | 0 B · 0 allocs | 576 B · 22 allocs |
@@ -296,6 +354,37 @@ Static markup costs nothing: the simple-div and nested-element cases allocate
 zero bytes, because a body closure that captures no variables is a static
 function value.
 
+### Variadic vs. Typed Element Methods
+
+The card grid is the same ~90-element component tree written two ways — once
+with the variadic methods, once with their typed `E` siblings:
+
+| | Time | Bytes | Allocs |
+|---|------|-------|--------|
+| `Div(attrs, body)` (variadic) | 9.7 µs | 9.8 KiB | 223 |
+| `DivE(attrs, body)` (typed) | 5.3 µs | 2.8 KiB | 72 |
+
+The variadic form pays for a `[]any` per call, one interface box per argument,
+and the type switch that unpacks them. The typed form has none of that, and the
+body closure stays on the stack, so the only remaining allocations are the
+`Attrs` slices the caller builds.
+
+### Buffered Output
+
+Element methods append to an internal buffer that flushes to the `io.Writer`
+every ~4 KiB, instead of issuing an `io.Writer` call per tag, attribute, and
+text run. A single small element used to cost a dozen writes; it now costs one
+`append` each and shares a flush with its neighbors. That is most of the gain in
+the fine-grained benchmarks — simple div 82 ns to 43 ns, nested elements 532 ns
+to 195 ns — and it also removed the previous `unsafe` string-to-bytes conversion
+in the escaper, since escaping now appends into the buffer directly. The escape
+path itself is a 256-entry lookup table rather than a byte switch. Values at or
+above the threshold skip the buffer and stream through in bounded chunks, so
+buffering never trades memory for speed on large content.
+
+`Flush` is exported for callers who need bytes delivered before the render ends;
+see [Streaming API](#streaming-api).
+
 ### Streaming vs. the Previous Tree API
 
 The streaming rewrite replaced an API that built a node tree before rendering.
@@ -305,19 +394,19 @@ construction inside the timed loop on both sides:
 
 | Scenario | Tree API | Streaming API | Change |
 |----------|----------|---------------|--------|
-| Simple Div | 150 ns · 3 allocs | 79 ns · 0 allocs | 1.9x faster |
-| Div with Attributes | 301 ns · 5 allocs | 248 ns · 2 allocs | 1.2x faster |
-| Nested Elements | 1004 ns · 20 allocs | 535 ns · 0 allocs | 1.9x faster |
-| List (10 items) | 1695 ns · 35 allocs | 940 ns · 11 allocs | 1.8x faster |
-| List (100 items) | 15.5 µs · 308 allocs | 8.5 µs · 101 allocs | 1.8x faster |
-| Table (10 rows) | 6.7 µs · 130 allocs | 4.0 µs · 42 allocs | 1.6x faster |
-| Table (100 rows) | 57.9 µs · 1123 allocs | 35.8 µs · 402 allocs | 1.6x faster |
-| Full Page | 4.6 µs · 86 allocs | 3.4 µs · 41 allocs | 1.4x faster |
-| Escaping | 449 ns · 5 allocs | 380 ns · 2 allocs | 1.2x faster |
-| Deep Nesting (10 levels) | 1031 ns · 21 allocs | 683 ns · 10 allocs | 1.5x faster |
-| Form | 3.4 µs · 56 allocs | 2.9 µs · 37 allocs | 1.1x faster |
+| Simple Div | 150 ns · 3 allocs | 43 ns · 0 allocs | 3.5x faster |
+| Div with Attributes | 301 ns · 5 allocs | 140 ns · 2 allocs | 2.2x faster |
+| Nested Elements | 1004 ns · 20 allocs | 195 ns · 0 allocs | 5.2x faster |
+| List (10 items) | 1695 ns · 35 allocs | 486 ns · 11 allocs | 3.5x faster |
+| List (100 items) | 15.5 µs · 308 allocs | 4.3 µs · 101 allocs | 3.6x faster |
+| Table (10 rows) | 6.7 µs · 130 allocs | 2.1 µs · 42 allocs | 3.1x faster |
+| Table (100 rows) | 57.9 µs · 1123 allocs | 19.3 µs · 402 allocs | 3.0x faster |
+| Full Page | 4.6 µs · 86 allocs | 1.9 µs · 41 allocs | 2.4x faster |
+| Escaping | 449 ns · 5 allocs | 250 ns · 2 allocs | 1.8x faster |
+| Deep Nesting (10 levels) | 1031 ns · 21 allocs | 318 ns · 10 allocs | 3.2x faster |
+| Form | 3.4 µs · 56 allocs | 1.8 µs · 37 allocs | 1.9x faster |
 
-Every scenario improved, by 1.1x to 1.9x, and allocations fell by 30-100%. The
+Every scenario improved, by 1.8x to 5.2x, and allocations fell by 30-100%. The
 gain is largest where the old API built the most nodes and smallest where the
 work is dominated by escaping or attribute handling, which both APIs share.
 
@@ -331,30 +420,33 @@ the cached result yourself.
 
 | Operation | Cost |
 |-----------|------|
-| [`Render` call overhead (empty body)](h/benchmark_test.go#L531) | 13.1 ns · 0 B · 0 allocs |
-| `RenderBytes`, small fragment | 349 ns · 80 B · 1 alloc |
-| `RenderString`, small fragment | 433 ns · 280 B · 6 allocs |
-| `RenderIndent`, small fragment | 502 ns · 16 B · 2 allocs |
+| [`Render` call overhead (empty body)](h/benchmark_test.go#L531) | 14.1 ns · 0 B · 0 allocs |
+| `RenderBytes`, small fragment | 157 ns · 80 B · 1 alloc |
+| `RenderString`, small fragment | 166 ns · 112 B · 2 allocs |
+| `RenderIndent`, small fragment | 230 ns · 16 B · 2 allocs |
 
 `Render` itself is nearly free — the builder comes from a `sync.Pool`, so a
-render that writes nothing allocates nothing. Writing to an `io.Writer` directly
-is the cheapest path; `RenderBytes` adds one copy and `RenderString` adds
-`strings.Builder` growth. Pretty-printing costs roughly 15% over compact output,
-plus a small cached indent ladder.
+render that writes nothing allocates nothing. Buffering also makes the in-memory
+entry points cheap: a small fragment reaches `strings.Builder` or `bytes.Buffer`
+as one write, so neither has to grow. Pretty-printing costs roughly 40% over
+compact output, plus a small cached indent ladder.
 
 ### Key Insights
 
-- **htmlgen is faster** for dynamic content, by 3-8x across most scenarios
-- **Streaming beats the old tree API** on every benchmark, 1.1-1.9x, while
+- **htmlgen is faster** for dynamic content, by 5-14x across most scenarios
+- **Typed `E` methods are ~1.8x faster** than the variadic forms on a realistic
+  component tree, at a third of the allocations
+- **Buffering dominates the small cases**: writing whole tags into a 4 KiB
+  buffer instead of per-fragment `io.Writer` calls roughly halved the cost of
+  every fine-grained benchmark
+- **Streaming beats the old tree API** on every benchmark, 1.8-5.2x, while
   cutting allocations 30-100%
 - **Static markup is free**: body closures that capture nothing allocate nothing
-- htmlgen excels at list and table generation, where it is ~4-5x faster
-- For attribute-heavy elements, htmlgen is up to ~8x faster
+- htmlgen excels at list and table generation, where it is ~8-10x faster
+- For attribute-heavy elements, htmlgen is up to ~14x faster
 - Concurrency helps, but sub-linearly: on 20 cores, `RunParallel` cuts per-render
-  cost only ~2.3x (3.4 µs to 1.5 µs). The pooled builder is not the bottleneck —
-  allocation and GC pressure from the rendered data is. The advantage over
-  `html/template` holds at ~3.7x either way
-- **purego** adds ~1-19% overhead but remains far faster than html/template
+  cost only ~1.3x (1.9 µs to 1.5 µs). The pooled builder is not the bottleneck —
+  allocation and GC pressure from the rendered data is
 
 ### When to Use Each
 
@@ -364,19 +456,19 @@ plus a small cached indent ladder.
 | Forms with many attributes | htmlgen |
 | Full page generation with data | htmlgen |
 | Component-based UI architecture | htmlgen |
-| Streaming to an `http.ResponseWriter` | htmlgen (`Render`) |
+| Streaming to an `http.ResponseWriter` | htmlgen (`Render`, plus `Flush` for SSE) |
+| Hot paths measured to matter | htmlgen typed `E` methods |
 | Static markup rendered repeatedly | Render once, cache the bytes |
 | Designer-edited templates, no recompile | `html/template` |
 
 ### Caveats
 
-**Capturing closures allocate.** A body closure that captures a loop variable or
-parameter is a heap allocation (~16 B each), which is why the deep-nesting case —
-a recursive helper capturing its `depth` argument — is the one benchmark that
-loses to `html/template`. Rendering many small elements in a loop pays this per
-element; it is the reason the list and table benchmarks allocate roughly one
-object per row. That is usually cheap next to the tree allocations it replaces,
-but it does not disappear.
+**Capturing closures allocate — through the variadic methods.** A body closure
+passed as `...any` is boxed, which forces it to the heap (~16 B each). Rendering
+many small elements in a loop pays this per element; it is why the list and table
+benchmarks allocate roughly one object per row. The typed `E` siblings take the
+closure as a `Body` parameter instead, so it stays on the stack and the cost
+disappears — that alone is most of the 223 to 72 allocation drop in the card grid.
 
 **`html/template` does more.** It escapes context-sensitively (HTML, CSS, JS,
 URL) at execute time. htmlgen escapes text and attribute values only, and
@@ -394,14 +486,6 @@ they measured replaying a prebuilt tree rather than building and rendering one.
 They were re-run with construction inside the loop to match the streaming
 benchmarks. Every other tree-API row reproduced its previously published figure
 to within a few percent.
-
-### The `purego` build tag
-
-The `purego` build tag disables the unsafe string-to-bytes conversion in the
-escaper for environments that require pure Go. It costs about 4.5% geometric
-mean across the suite, up to ~18% on attribute-heavy paths, and adds one
-allocation per value that actually needs escaping — content with no escapable
-characters takes the same fast path either way.
 
 ## License
 

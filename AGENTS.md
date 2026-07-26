@@ -168,7 +168,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
 ### Special Patterns
 
 #### Escaping and Security
-- **HTML escaping**: Always escape attribute values and text content via `writeEscapedString()`
+- **HTML escaping**: Always escape attribute values and text content via `(*B).writeEscaped()`, which appends through `appendEscaped()` into the render buffer
 - **Raw content**: Only expose via explicit `Raw()` functions with security warnings
 - **JavaScript escaping**: Use `json.Marshal()` or manual escaping for JS strings
 - Document security implications in function comments
