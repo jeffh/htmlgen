@@ -12,7 +12,7 @@ jobs:
       GOPRIVATE: "github.com/jeffh/*"
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Configure git for private modules
         env:
