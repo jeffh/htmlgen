@@ -14,10 +14,12 @@
 //	)
 //
 //	// Simple click handler
-//	button := h.Button(
-//	    js.OnClick(js.Alert(js.String("Hello!")).Stmt()),
-//	    h.Text("Say Hello"),
-//	)
+//	button := h.RenderString(func(b *h.B) {
+//	    b.Button(
+//	        js.OnClick(js.Alert(js.String("Hello!")).Stmt()),
+//	        func(b *h.B) { b.Text("Say Hello") },
+//	    )
+//	})
 //	// Output: <button onclick="alert(&quot;Hello!&quot;)">Say Hello</button>
 //
 // # Type System

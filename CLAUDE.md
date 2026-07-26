@@ -21,22 +21,13 @@ This is a Go library (`github.com/jeffh/htmlgen`) for programmatic HTML generati
 
 ### Package `h` - Core HTML Generation
 
-**Writer API** (`h/writer.go`): Low-level streaming HTML writer wrapping `io.Writer`. Tracks open tags and provides:
-- `Doctype()`, `OpenTag()`, `CloseTag()`, `SelfClosingTag()` for tag manipulation
-- `Text()` (escaped) and `Raw()` (unescaped) for content
-- `CloseOneTag()` closes most recent tag, `Close()` closes all remaining tags
-- Attribute values are automatically HTML-escaped via `html/template`
+**Streaming API** (`h/writer.go`, `h/tags.go`, `h/render.go`): `Render` creates a per-render `*h.B` bound to an `io.Writer`. All standard HTML5 elements are methods on `B` (for example, `b.Div`, `b.Span`, and `b.A`). Container elements accept attributes plus a trailing `func(*h.B)` body, which runs immediately and streams its children. Void elements write self-closing tags. `Text`/`Textf` escape content, while `Raw`/`Rawf` write caller-sanitized content unchanged. `El` and `VoidEl` support custom tags.
 
-**Builder API** (`h/builder.go`, `h/tags.go`): Declarative tree-building API where nodes implement `Builder` interface (`Build(w *Writer) error`). Use `Render(w, builder)` to write a builder tree to an io.Writer. All standard HTML5 elements have corresponding functions (e.g., `Div()`, `Span()`, `A()`) that take `Attributes` and child `Builder` elements.
+`B` keeps the first write error as a sticky error; later output calls become no-ops, and `Render` returns that error. `RenderIndent` enables pretty-printing. `RenderString` and `RenderBytes` are in-memory convenience entry points. Each render owns its `B`, so callers use native Go `if` and `for` statements safely without ambient package state.
 
 **Attributes** (`h/attrs.go`): `Attributes` is a `[]Attribute` slice with `Get()`, `Set()`, `SetDefault()`, `Delete()` methods. Create via `Attrs("key", "value", ...)` or `AttrsMap(map[string]string{...})`.
 
-**Helpers** (`h/helpers.go`): Control flow and iteration utilities for builder composition:
-- `If(cond, ifTrue, ifElse)` - returns `ifTrue` if cond is true, else `ifElse`
-- `When(cond, ifTrue)` - returns `ifTrue` if cond is true, else nil (skipped during render)
-- `First(b...)` - returns first non-nil builder from arguments
-- `ForEach[X](seq, fn)` - lazily maps `iter.Seq[X]` to builders during render
-- `ForEach2[X,Y](seq, fn)` - lazily maps `iter.Seq2[X,Y]` (e.g., `slices.All()`, `maps.All()`) to builders
+Element arguments accept `Attributes`, `Attribute`, any `AttrBuilder`, a body closure, or `nil`. Later attributes override earlier values without changing their position. Companion-package attribute builders from `ds`, `hx`, and `js` can be passed directly to element methods.
 
 ### Package `ds` - Datastar Attribute Helpers
 

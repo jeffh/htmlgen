@@ -1,156 +1,70 @@
 package h
 
-// TagArg is a marker interface for types that can be passed to tag functions.
-// Valid types are: Attributes, Attribute, AttrBuilder, and Builder.
-type TagArg interface {
-	isTagArg()
-}
+import "fmt"
 
-// Builder is the interface implemented by all HTML node builders.
-// Implementations write their HTML representation to the provided Writer.
-type Builder interface {
-	TagArg
-	Build(w *Writer) error
-}
+// Body is an element body that streams child content through b.
+type Body = func(*B)
 
-type htmlTagBuilder struct {
-	Attrs    Attributes
-	Children []Builder
-}
+// parseArgs separates attributes from the optional body in an element's
+// argument list. Later attributes and bodies replace earlier ones. Caller
+// attribute slices are never mutated: the first Attributes arg is borrowed
+// as-is, and a private copy is made before any merge.
+func parseArgs(name string, args []any) (Attributes, Body) {
+	var attrs Attributes
+	var body Body
+	owned := false // attrs is a private copy safe to mutate
 
-func (b *htmlTagBuilder) isTagArg() {}
-func (b *htmlTagBuilder) Build(w *Writer) error {
-	const name = "html"
-	w.Doctype()
-	b.Attrs.SetDefault("lang", "en")
-	if err := w.OpenTag(name, b.Attrs); err != nil {
-		return err
-	}
-
-	for _, child := range b.Children {
-		if child != nil {
-			if err := child.Build(w); err != nil {
-				return err
-			}
+	ensureOwned := func() {
+		if !owned {
+			attrs = append(Attributes(nil), attrs...)
+			owned = true
 		}
 	}
-
-	return w.CloseTag(name)
-}
-
-// parseTagArgs separates attributes from children in a variadic argument list.
-// Multiple Attributes/Attribute are merged (later values override earlier ones).
-// All Builder arguments become children.
-func parseTagArgs(args []TagArg) (Attributes, []Builder) {
-	var attrs Attributes
-	var children []Builder
 
 	for _, arg := range args {
 		if arg == nil {
 			continue
 		}
-		switch v := arg.(type) {
+		switch value := arg.(type) {
 		case Attributes:
 			if attrs == nil {
-				attrs = v
+				attrs = value
 			} else {
-				attrs.Merge(v)
+				ensureOwned()
+				attrs.Merge(value)
 			}
 		case Attribute:
-			if attrs == nil {
-				attrs = Attributes{v}
-			} else {
-				attrs.Set(v.Name, v.Value)
-			}
-		case AttrBuilder:
-			a := v.Attribute()
-			if a.Name == "" {
+			// Skip zero attributes (e.g., from AttrIf when the condition is false).
+			if value.Name == "" {
 				continue
 			}
 			if attrs == nil {
-				attrs = Attributes{a}
+				attrs = Attributes{value}
+				owned = true
 			} else {
-				attrs.Set(a.Name, a.Value)
+				ensureOwned()
+				attrs.Set(value.Name, value.Value)
 			}
-		case Builder:
-			children = append(children, v)
+		case AttrBuilder:
+			attr := value.Attribute()
+			if attr.Name == "" {
+				continue
+			}
+			if attrs == nil {
+				attrs = Attributes{attr}
+				owned = true
+			} else {
+				ensureOwned()
+				attrs.Set(attr.Name, attr.Value)
+			}
+		case func(*B):
+			// A typed-nil body is ignored, like an untyped nil arg.
+			if value != nil {
+				body = value
+			}
+		default:
+			panic(fmt.Sprintf("htmlgen: unsupported argument type %T for <%s>", arg, name))
 		}
 	}
-	return attrs, children
-}
-
-func tag(name string, args ...TagArg) Builder {
-	attrs, children := parseTagArgs(args)
-	return &tagBuilder{
-		Name:     name,
-		Attrs:    attrs,
-		Children: children,
-	}
-}
-
-func stag(name string, args ...TagArg) Builder {
-	attrs, children := parseTagArgs(args)
-	return &tagBuilder{
-		Name:      name,
-		Attrs:     attrs,
-		Children:  children,
-		SelfClose: true,
-	}
-}
-
-type tagBuilder struct {
-	Name      string
-	Attrs     Attributes
-	Children  []Builder
-	SelfClose bool
-}
-
-func (b *tagBuilder) isTagArg() {}
-func (b *tagBuilder) Build(w *Writer) error {
-	if b.SelfClose && len(b.Children) == 0 {
-		return w.SelfClosingTag(b.Name, b.Attrs)
-	}
-
-	if err := w.OpenTag(b.Name, b.Attrs); err != nil {
-		return err
-	}
-
-	for _, child := range b.Children {
-		if child != nil {
-			if err := child.Build(w); err != nil {
-				return err
-			}
-		}
-	}
-
-	return w.CloseTag(b.Name)
-}
-
-type fragmentBuilder struct {
-	Children []Builder
-}
-
-func (b *fragmentBuilder) isTagArg() {}
-func (b *fragmentBuilder) Build(w *Writer) error {
-	for _, child := range b.Children {
-		if child != nil {
-			if err := child.Build(w); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-type textBuilder struct {
-	Text  string
-	IsRaw bool
-}
-
-func (b *textBuilder) isTagArg() {}
-func (b *textBuilder) Build(w *Writer) error {
-	if b.IsRaw {
-		return w.Raw(b.Text)
-	}
-	return w.Text(b.Text)
+	return attrs, body
 }

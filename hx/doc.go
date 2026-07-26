@@ -11,29 +11,29 @@
 //
 // Basic usage:
 //
-//	h.Button(
-//	    hx.Get("/api/data"),
-//	    hx.Target("#results"),
-//	    hx.Swap(hx.InnerHTML),
-//	    h.Text("Load"),
-//	)
+//	h.Render(w, func(b *h.B) {
+//	    b.Button(
+//	        hx.Get("/api/data"),
+//	        hx.Target("#results"),
+//	        hx.Swap(hx.InnerHTML),
+//	        func(b *h.B) { b.Text("Load") },
+//	    )
 //
-// Complex trigger:
+//	    // Complex trigger:
+//	    b.Input(
+//	        hx.Post("/search"),
+//	        hx.Trigger("keyup").Changed().Delay(500*time.Millisecond),
+//	        hx.Target("#results"),
+//	    )
 //
-//	h.Input(
-//	    hx.Post("/search"),
-//	    hx.Trigger("keyup").Changed().Delay(500*time.Millisecond),
-//	    hx.Target("#results"),
-//	)
-//
-// Swap with modifiers:
-//
-//	h.Div(
-//	    hx.Get("/content"),
-//	    hx.Swap(hx.OuterHTML).Transition().Delay(100*time.Millisecond),
-//	)
+//	    // Swap with modifiers:
+//	    b.Div(
+//	        hx.Get("/content"),
+//	        hx.Swap(hx.OuterHTML).Transition().Delay(100*time.Millisecond),
+//	    )
+//	})
 //
 // Trigger and Swap return fluent builders that auto-finalize as h.AttrBuilder,
-// so they can be passed directly to tag functions without an explicit
+// so they can be passed directly to element methods without an explicit
 // terminator method.
 package hx

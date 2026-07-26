@@ -17,8 +17,6 @@ type attrBase struct {
 	statements []string
 }
 
-func (a *attrBase) isTagArg() {}
-
 // Attribute returns the finished h.Attribute. Statements are joined with
 // "; " into the attribute value.
 func (a *attrBase) Attribute() h.Attribute {

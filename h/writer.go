@@ -1,448 +1,338 @@
-// Package h provides a low-level streaming HTML writer and a declarative builder API
-// for programmatic HTML generation.
+// Package h provides streaming, imperative HTML generation.
 package h
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"sync"
 )
 
-// ErrUnknownTagToClose is returned when attempting to close a tag that was not opened.
-var ErrUnknownTagToClose = errors.New("attempted to close tag not opened")
-
-// writerPool pools Writer objects to reduce allocations.
-var writerPool = sync.Pool{
-	New: func() any {
-		return &Writer{openTags: make([]string, 0, 32)}
-	},
-}
-
-// getPooledWriter returns a Writer from the pool, configured to write to w.
-func getPooledWriter(w io.Writer) *Writer {
-	writer := writerPool.Get().(*Writer)
-	writer.w = w
-	writer.atLineStart = true
-	return writer
-}
-
-// putPooledWriter returns a Writer to the pool after resetting it.
-func putPooledWriter(w *Writer) {
-	w.w = nil
-	w.indent = ""
-	w.indentCache = nil
-	w.openTags = w.openTags[:0]
-	w.atLineStart = false
-	w.maxLineLen = 0
-	writerPool.Put(w)
-}
-
-// NewWriter creates a new Writer that wraps the provided io.Writer.
-// The Writer tracks open tags and provides methods for writing HTML elements.
-func NewWriter(w io.Writer) *Writer {
-	return &Writer{w: w, openTags: make([]string, 0, 32), atLineStart: true}
-}
-
-// Writer is a low-level streaming HTML writer that wraps an io.Writer.
-// It tracks open tags and provides methods for writing HTML elements,
-// attributes, and content. Attribute values are automatically HTML-escaped.
-type Writer struct {
+// B is a streaming HTML builder bound to an io.Writer. It tracks open tags,
+// optional pretty-printing, and a sticky write error. A B is not safe for
+// concurrent use by multiple goroutines; each Render gets its own B.
+type B struct {
 	w           io.Writer
-	indent      string
-	indentCache []string // Cached indentation strings by depth
 	openTags    []string
-	atLineStart bool // Tracks if we're at the beginning of a line
-	maxLineLen  int  // Max line length before wrapping attributes (0 = disabled)
+	indent      string
+	indentCache []string
+	atLineStart bool
+	maxLineLen  int
+	err         error
 }
 
-// SetIndent sets the indentation prefix used for pretty-printing.
-// When set to a non-empty string, each nested element will be indented
-// by that prefix and newlines will be added after tags.
-func (w *Writer) SetIndent(prefix string) {
-	w.indent = prefix
+// Err returns the first write error encountered, if any.
+func (b *B) Err() error {
+	return b.err
 }
 
-// SetMaxLineLength sets the maximum line length before wrapping attributes
-// to new lines. When set to 0 (default), attributes are never wrapped.
-// When the combined tag + attributes would exceed this length, additional
-// attributes are placed on new lines with extra indentation.
-func (w *Writer) SetMaxLineLength(maxLen int) {
-	w.maxLineLen = maxLen
+// SetMaxLineLength sets the maximum line length before attributes wrap onto
+// new lines when pretty-printing. 0 (the default) disables wrapping. Call it
+// at the top of a RenderIndent body; it has no visible effect without
+// indentation.
+func (b *B) SetMaxLineLength(maxLen int) {
+	b.maxLineLen = maxLen
 }
 
-func (w *Writer) isIndenting() bool { return len(w.indent) != 0 }
-
-func (w *Writer) write(values ...string) error {
-	for _, v := range values {
-		_, err := io.WriteString(w.w, v)
-		if err != nil {
-			return err
-		}
+func (b *B) setErr(err error) {
+	if b.err == nil && err != nil {
+		b.err = err
 	}
-	return nil
 }
 
-// Doctype writes the HTML5 doctype declaration (<!DOCTYPE html>).
-func (w *Writer) Doctype() error { return w.write("<!DOCTYPE html>\n") }
-
-func (w *Writer) writeIndentNewline() error {
-	if w.isIndenting() {
-		if err := w.write("\n"); err != nil {
-			return err
-		}
-		w.atLineStart = true
+func (b *B) writeString(value string) {
+	if b.err != nil {
+		return
 	}
-	return nil
+	_, err := io.WriteString(b.w, value)
+	b.setErr(err)
 }
 
-func (w *Writer) writeIndent(modifier int) error {
-	if !w.isIndenting() {
-		return nil
+func (b *B) isIndenting() bool {
+	return b.indent != ""
+}
+
+func (b *B) writeIndentNewline() {
+	if !b.isIndenting() || b.err != nil {
+		return
 	}
-	depth := len(w.openTags) + modifier
+	b.writeString("\n")
+	if b.err == nil {
+		b.atLineStart = true
+	}
+}
+
+func (b *B) writeIndent(modifier int) {
+	if !b.isIndenting() || b.err != nil {
+		return
+	}
+	depth := len(b.openTags) + modifier
 	if depth <= 0 {
-		return nil
+		return
 	}
-	// Grow cache if needed
-	if depth > len(w.indentCache) {
-		w.growIndentCache(depth)
+	if depth > len(b.indentCache) {
+		b.growIndentCache(depth)
 	}
-	_, err := io.WriteString(w.w, w.indentCache[depth-1])
-	if err == nil {
-		w.atLineStart = false
+	b.writeString(b.indentCache[depth-1])
+	if b.err == nil {
+		b.atLineStart = false
 	}
-	return err
 }
 
-func (w *Writer) growIndentCache(depth int) {
-	for len(w.indentCache) < depth {
-		var s string
-		if len(w.indentCache) == 0 {
-			s = w.indent
-		} else {
-			s = w.indentCache[len(w.indentCache)-1] + w.indent
+func (b *B) growIndentCache(depth int) {
+	for len(b.indentCache) < depth {
+		value := b.indent
+		if len(b.indentCache) > 0 {
+			value = b.indentCache[len(b.indentCache)-1] + b.indent
 		}
-		w.indentCache = append(w.indentCache, s)
+		b.indentCache = append(b.indentCache, value)
 	}
 }
 
-// attrLen calculates the length of an attribute as it would be written.
-// Returns the length of " name" or " name=\"value\"".
 func attrLen(attr Attribute) int {
 	if attr.Value == "" {
-		return 1 + len(attr.Name) // " name"
+		return 1 + len(attr.Name)
 	}
-	return 1 + len(attr.Name) + 2 + len(attr.Value) + 1 // " name=\"value\""
+	return 1 + len(attr.Name) + 2 + len(attr.Value) + 1
 }
 
-// writeAttrs writes attributes, wrapping to new lines if maxLineLen is exceeded.
-// lineLen is the current line length before attributes.
-// Returns the final line length.
-// Attributes with empty names are skipped (useful for conditional attributes).
-func (w *Writer) writeAttrs(as Attributes, lineLen int) (int, error) {
-	for _, attr := range as {
-		// Skip attributes with empty names (e.g., from AttrIf when condition is false)
+func (b *B) writeAttrs(attrs Attributes, lineLen int) {
+	for _, attr := range attrs {
+		if b.err != nil {
+			return
+		}
 		if attr.Name == "" {
 			continue
 		}
 
-		aLen := attrLen(attr)
+		length := attrLen(attr)
 		wrapped := false
-
-		// Check if we need to wrap
-		if w.maxLineLen > 0 && lineLen+aLen > w.maxLineLen {
-			// Wrap: newline + extra indent (one deeper than current tag)
-			if _, err := io.WriteString(w.w, "\n"); err != nil {
-				return lineLen, err
+		if b.maxLineLen > 0 && b.isIndenting() && lineLen+length > b.maxLineLen {
+			b.writeString("\n")
+			if b.err != nil {
+				return
 			}
-			// Write indent at depth+1 (inside the tag for attributes)
-			depth := len(w.openTags) + 1
-			if depth > len(w.indentCache) {
-				w.growIndentCache(depth)
+			depth := len(b.openTags) + 1
+			if depth > len(b.indentCache) {
+				b.growIndentCache(depth)
 			}
-			indent := w.indentCache[depth-1]
-			if _, err := io.WriteString(w.w, indent); err != nil {
-				return lineLen, err
-			}
+			indent := b.indentCache[depth-1]
+			b.writeString(indent)
 			lineLen = len(indent)
 			wrapped = true
 		}
 
-		// Write the attribute (skip leading space if we just wrapped)
 		if !wrapped {
-			if _, err := io.WriteString(w.w, " "); err != nil {
-				return lineLen, err
-			}
+			b.writeString(" ")
 		}
-		if _, err := io.WriteString(w.w, attr.Name); err != nil {
-			return lineLen, err
-		}
+		b.writeString(attr.Name)
 		if attr.Value != "" {
-			if _, err := io.WriteString(w.w, "=\""); err != nil {
-				return lineLen, err
+			b.writeString("=\"")
+			if b.err == nil {
+				b.setErr(writeEscapedString(b.w, attr.Value))
 			}
-			if err := writeEscapedString(w.w, attr.Value); err != nil {
-				return lineLen, err
-			}
-			if _, err := io.WriteString(w.w, "\""); err != nil {
-				return lineLen, err
-			}
+			b.writeString("\"")
 		}
-		// Update line length (subtract 1 if we skipped the space)
 		if wrapped {
-			lineLen += aLen - 1
+			lineLen += length - 1
 		} else {
-			lineLen += aLen
+			lineLen += length
 		}
 	}
-	return lineLen, nil
 }
 
-// SelfClosingTag writes a self-closing HTML tag with the given name and attributes.
-// For example, SelfClosingTag("br", nil) writes "<br/>".
-func (w *Writer) SelfClosingTag(name string, as Attributes) error {
-	if err := w.writeIndent(0); err != nil {
-		return err
+func (b *B) openTag(name string, attrs Attributes) {
+	if b.err != nil {
+		return
 	}
+	b.writeIndent(0)
 
-	// Calculate initial line length (indent + "<" + name)
 	lineLen := 1 + len(name)
-	if w.isIndenting() {
-		depth := len(w.openTags)
-		if depth > 0 && depth <= len(w.indentCache) {
-			lineLen += len(w.indentCache[depth-1])
+	if b.isIndenting() {
+		depth := len(b.openTags)
+		if depth > 0 && depth <= len(b.indentCache) {
+			lineLen += len(b.indentCache[depth-1])
 		}
 	}
 
-	if _, err := io.WriteString(w.w, "<"); err != nil {
-		return err
+	b.writeString("<")
+	b.writeString(name)
+	b.writeAttrs(attrs, lineLen)
+	b.writeString(">")
+	b.writeIndentNewline()
+	if b.err == nil {
+		b.openTags = append(b.openTags, name)
 	}
-	if _, err := io.WriteString(w.w, name); err != nil {
-		return err
-	}
-
-	if _, err := w.writeAttrs(as, lineLen); err != nil {
-		return err
-	}
-	if _, err := io.WriteString(w.w, "/>"); err != nil {
-		return err
-	}
-	return w.writeIndentNewline()
 }
 
-// OpenTag writes an opening HTML tag with the given name and attributes.
-// The tag is added to the stack of open tags and must be closed with CloseTag,
-// CloseOneTag, or Close. Attribute values are automatically HTML-escaped.
-func (w *Writer) OpenTag(name string, as Attributes) error {
-	if err := w.writeIndent(0); err != nil {
-		return err
+func (b *B) voidTag(name string, attrs Attributes) {
+	if b.err != nil {
+		return
 	}
+	b.writeIndent(0)
 
-	// Calculate initial line length (indent + "<" + name)
 	lineLen := 1 + len(name)
-	if w.isIndenting() {
-		depth := len(w.openTags)
-		if depth > 0 && depth <= len(w.indentCache) {
-			lineLen += len(w.indentCache[depth-1])
+	if b.isIndenting() {
+		depth := len(b.openTags)
+		if depth > 0 && depth <= len(b.indentCache) {
+			lineLen += len(b.indentCache[depth-1])
 		}
 	}
 
-	if _, err := io.WriteString(w.w, "<"); err != nil {
-		return err
-	}
-	if _, err := io.WriteString(w.w, name); err != nil {
-		return err
-	}
-
-	if _, err := w.writeAttrs(as, lineLen); err != nil {
-		return err
-	}
-
-	if _, err := io.WriteString(w.w, ">"); err != nil {
-		return err
-	}
-	if err := w.writeIndentNewline(); err != nil {
-		return err
-	}
-	w.openTags = append(w.openTags, name)
-	return nil
+	b.writeString("<")
+	b.writeString(name)
+	b.writeAttrs(attrs, lineLen)
+	b.writeString("/>")
+	b.writeIndentNewline()
 }
 
-// Text writes HTML-escaped text content.
-// When indentation is enabled, text is indented at the current content depth
-// and followed by a newline.
-func (w *Writer) Text(txt string) error {
-	if w.isIndenting() && w.atLineStart {
-		if err := w.writeIndent(0); err != nil {
-			return err
-		}
+func (b *B) closeOneTag() {
+	if b.err != nil {
+		return
 	}
-	if err := writeEscapedString(w.w, txt); err != nil {
-		return err
-	}
-	if w.isIndenting() {
-		w.atLineStart = false
-		return w.writeIndentNewline()
-	}
-	return nil
-}
-
-// Raw writes unescaped HTML content. Use with caution as this can introduce
-// XSS vulnerabilities if the content is not properly sanitized.
-// When indentation is enabled, tracks whether content ends with newline.
-func (w *Writer) Raw(unsafeHtml string) error {
-	if err := w.write(unsafeHtml); err != nil {
-		return err
-	}
-	if w.isIndenting() && len(unsafeHtml) > 0 {
-		w.atLineStart = unsafeHtml[len(unsafeHtml)-1] == '\n'
-	}
-	return nil
-}
-
-// CloseTag closes the specified tag and all tags opened after it.
-// Returns ErrUnknownTagToClose if no tags are open or the specified tag is not found.
-func (w *Writer) CloseTag(name string) error {
-	size := len(w.openTags)
+	size := len(b.openTags)
 	if size == 0 {
-		return fmt.Errorf("%w: %s", ErrUnknownTagToClose, name)
+		return
 	}
-	// Ensure we're on a new line before closing tag
-	if w.isIndenting() && !w.atLineStart {
-		if err := w.write("\n"); err != nil {
-			return err
+	if b.isIndenting() && !b.atLineStart {
+		b.writeString("\n")
+		if b.err != nil {
+			return
 		}
-		w.atLineStart = true
+		b.atLineStart = true
 	}
-	if err := w.writeIndent(-1); err != nil {
-		return err
+	b.writeIndent(-1)
+	b.writeString("</")
+	b.writeString(b.openTags[size-1])
+	b.writeString(">")
+	b.writeIndentNewline()
+	if b.err == nil {
+		b.openTags = b.openTags[:size-1]
 	}
-	for i := size - 1; i >= 0; i-- {
-		if w.openTags[i] == name {
-			for j := size - 1; j >= i; j-- {
-				if _, err := io.WriteString(w.w, "</"); err != nil {
-					return err
-				}
-				if _, err := io.WriteString(w.w, w.openTags[j]); err != nil {
-					return err
-				}
-				if _, err := io.WriteString(w.w, ">"); err != nil {
-					return err
-				}
-			}
-			if err := w.writeIndentNewline(); err != nil {
-				return err
-			}
-			w.openTags = w.openTags[:i]
-			break
-		}
-	}
-	return nil
 }
 
-// CloseOneTag closes the most recently opened tag.
-// Returns ErrUnknownTagToClose if no tags are open.
-func (w *Writer) CloseOneTag() error {
-	size := len(w.openTags)
-	if size == 0 {
-		return ErrUnknownTagToClose
+func (b *B) closeAll() {
+	for b.err == nil && len(b.openTags) > 0 {
+		b.closeOneTag()
 	}
-	// Ensure we're on a new line before closing tag
-	if w.isIndenting() && !w.atLineStart {
-		if err := w.write("\n"); err != nil {
-			return err
-		}
-		w.atLineStart = true
-	}
-	if err := w.writeIndent(-1); err != nil {
-		return err
-	}
-	if _, err := io.WriteString(w.w, "</"); err != nil {
-		return err
-	}
-	if _, err := io.WriteString(w.w, w.openTags[size-1]); err != nil {
-		return err
-	}
-	if _, err := io.WriteString(w.w, ">"); err != nil {
-		return err
-	}
-	if err := w.writeIndentNewline(); err != nil {
-		return err
-	}
-	w.openTags = w.openTags[:size-1]
-	return nil
 }
 
-// Close closes all remaining open tags in reverse order (most recent first).
-func (w *Writer) Close() error {
-	for i := len(w.openTags) - 1; i >= 0; i-- {
-		// Ensure we're on a new line before closing tag
-		if w.isIndenting() && !w.atLineStart {
-			if err := w.write("\n"); err != nil {
-				return err
-			}
-			w.atLineStart = true
-		}
-		if err := w.writeIndent(-1); err != nil {
-			return err
-		}
-		if _, err := io.WriteString(w.w, "</"); err != nil {
-			return err
-		}
-		if _, err := io.WriteString(w.w, w.openTags[i]); err != nil {
-			return err
-		}
-		if _, err := io.WriteString(w.w, ">"); err != nil {
-			return err
-		}
-		if err := w.writeIndentNewline(); err != nil {
-			return err
-		}
+func (b *B) element(name string, args ...any) {
+	if b.err != nil {
+		return
 	}
-	w.openTags = nil
-	return nil
+	attrs, body := parseArgs(name, args)
+	b.openTag(name, attrs)
+	if b.err != nil {
+		return
+	}
+	if body != nil {
+		body(b)
+	}
+	b.closeOneTag()
 }
 
-// copied from text/template.HTMLEscape so we can return errors
+func (b *B) voidElement(name string, args ...any) {
+	if b.err != nil {
+		return
+	}
+	attrs, _ := parseArgs(name, args)
+	b.voidTag(name, attrs)
+}
+
+// Doctype writes the HTML5 doctype declaration.
+func (b *B) Doctype() {
+	b.writeString("<!DOCTYPE html>\n")
+}
+
+// Text writes HTML-escaped text.
+func (b *B) Text(value string) {
+	if b.err != nil {
+		return
+	}
+	if b.isIndenting() && b.atLineStart {
+		b.writeIndent(0)
+	}
+	if b.err == nil {
+		b.setErr(writeEscapedString(b.w, value))
+	}
+	if b.isIndenting() && b.err == nil {
+		b.atLineStart = false
+		b.writeIndentNewline()
+	}
+}
+
+// Textf writes HTML-escaped formatted text.
+func (b *B) Textf(format string, args ...any) {
+	if b.err == nil {
+		b.Text(fmt.Sprintf(format, args...))
+	}
+}
+
+// Raw writes unescaped HTML. The caller must ensure value is safe.
+func (b *B) Raw(value string) {
+	if b.err != nil {
+		return
+	}
+	b.writeString(value)
+	if b.isIndenting() && b.err == nil && value != "" {
+		b.atLineStart = value[len(value)-1] == '\n'
+	}
+}
+
+// Rawf writes unescaped formatted HTML. The caller must ensure the result is safe.
+func (b *B) Rawf(format string, args ...any) {
+	if b.err == nil {
+		b.Raw(fmt.Sprintf(format, args...))
+	}
+}
+
+// El writes an arbitrary container element.
+func (b *B) El(name string, args ...any) {
+	b.element(name, args...)
+}
+
+// VoidEl writes an arbitrary self-closing element.
+func (b *B) VoidEl(name string, args ...any) {
+	b.voidElement(name, args...)
+}
+
+// copied from text/template.HTMLEscape so escaping errors can be returned
 var (
-	htmlQuot = []byte("&#34;") // shorter than "&quot;"
-	htmlApos = []byte("&#39;") // shorter than "&apos;" and apos was not in HTML until HTML5
+	htmlQuot = []byte("&#34;")
+	htmlApos = []byte("&#39;")
 	htmlAmp  = []byte("&amp;")
 	htmlLt   = []byte("&lt;")
 	htmlGt   = []byte("&gt;")
 	htmlNull = []byte("\uFFFD")
 )
 
-// writeHTMLEscape writes to w the escaped HTML equivalent of the plain text data b.
-func writeHTMLEscape(w io.Writer, b []byte) error {
+func writeHTMLEscape(w io.Writer, value []byte) error {
 	last := 0
-	for i, c := range b {
-		var html []byte
-		switch c {
+	for i, char := range value {
+		var escaped []byte
+		switch char {
 		case '\000':
-			html = htmlNull
+			escaped = htmlNull
 		case '"':
-			html = htmlQuot
+			escaped = htmlQuot
 		case '\'':
-			html = htmlApos
+			escaped = htmlApos
 		case '&':
-			html = htmlAmp
+			escaped = htmlAmp
 		case '<':
-			html = htmlLt
+			escaped = htmlLt
 		case '>':
-			html = htmlGt
+			escaped = htmlGt
 		default:
 			continue
 		}
-		if _, err := w.Write(b[last:i]); err != nil {
+		if _, err := w.Write(value[last:i]); err != nil {
 			return err
 		}
-		if _, err := w.Write(html); err != nil {
+		if _, err := w.Write(escaped); err != nil {
 			return err
 		}
 		last = i + 1
 	}
-	_, err := w.Write(b[last:])
+	_, err := w.Write(value[last:])
 	return err
 }

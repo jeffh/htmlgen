@@ -32,12 +32,10 @@ func (s *triggerSpec) String() string {
 // TriggerBuilder builds an hx-trigger attribute value.
 //
 // TriggerBuilder implements h.AttrBuilder, so it can be passed directly to
-// tag functions like h.Div without calling a terminator method.
+// element methods like B.Div without calling a terminator method.
 type TriggerBuilder struct {
 	triggers []triggerSpec
 }
-
-func (t *TriggerBuilder) isTagArg() {}
 
 // Attribute returns the hx-trigger attribute. Joins all trigger specs with ", ".
 func (t *TriggerBuilder) Attribute() h.Attribute {
@@ -237,12 +235,10 @@ func TriggerRevealed() h.Attribute {
 // IntersectTriggerBuilder builds an hx-trigger attribute for the "intersect" event.
 //
 // IntersectTriggerBuilder implements h.AttrBuilder, so it can be passed directly
-// to tag functions.
+// to element methods.
 type IntersectTriggerBuilder struct {
 	spec triggerSpec
 }
-
-func (b *IntersectTriggerBuilder) isTagArg() {}
 
 // Attribute returns the hx-trigger attribute.
 func (b *IntersectTriggerBuilder) Attribute() h.Attribute {
@@ -276,12 +272,10 @@ func (b *IntersectTriggerBuilder) Once() *IntersectTriggerBuilder {
 // (e.g., "every 2s").
 //
 // IntervalTriggerBuilder implements h.AttrBuilder, so it can be passed directly
-// to tag functions.
+// to element methods.
 type IntervalTriggerBuilder struct {
 	spec triggerSpec
 }
-
-func (b *IntervalTriggerBuilder) isTagArg() {}
 
 // Attribute returns the hx-trigger attribute.
 func (b *IntervalTriggerBuilder) Attribute() h.Attribute {

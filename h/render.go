@@ -4,72 +4,79 @@ import (
 	"bytes"
 	"io"
 	"strings"
+	"sync"
 )
 
-// Render writes the HTML representation of the given Builder to w.
-// Returns nil if b is nil.
-func Render(w io.Writer, b Builder) error {
-	if b == nil {
-		return nil
-	}
-	writer := getPooledWriter(w)
-	err := b.Build(writer)
-	putPooledWriter(writer)
-	return err
+var builderPool = sync.Pool{
+	New: func() any {
+		return &B{openTags: make([]string, 0, 32)}
+	},
 }
 
-// RenderIndent writes the HTML representation of the given Builder to w
-// with indentation for readability. The indent parameter specifies the string
-// to use for each indentation level (e.g., "  " for two spaces or "\t" for tabs).
-// Returns nil if b is nil.
-func RenderIndent(w io.Writer, indent string, b Builder) error {
-	if b == nil {
-		return nil
-	}
-	writer := getPooledWriter(w)
-	writer.SetIndent(indent)
-	err := b.Build(writer)
-	putPooledWriter(writer)
-	return err
+var bufferPool = sync.Pool{
+	New: func() any {
+		return new(bytes.Buffer)
+	},
 }
 
-// RenderString renders the Builder and returns the result as a string.
-// Returns an empty string if b is nil. Panics if rendering fails.
-//
-//	html := h.RenderString(h.Div(h.Text("Hello")))
-func RenderString(b Builder) string {
-	if b == nil {
-		return ""
+func getBuilder(w io.Writer, indent string) *B {
+	b := builderPool.Get().(*B)
+	b.w = w
+	b.indent = indent
+	b.atLineStart = true
+	return b
+}
+
+func putBuilder(b *B) {
+	b.w = nil
+	b.openTags = b.openTags[:0]
+	b.indent = ""
+	b.indentCache = b.indentCache[:0]
+	b.atLineStart = false
+	b.maxLineLen = 0
+	b.err = nil
+	builderPool.Put(b)
+}
+
+// Render runs fn against a fresh B writing to w and returns the first write
+// error. Any tags left open by fn are closed defensively.
+func Render(w io.Writer, fn func(*B)) error {
+	b := getBuilder(w, "")
+	defer putBuilder(b)
+	if fn != nil {
+		fn(b)
 	}
-	var sb strings.Builder
-	writer := getPooledWriter(&sb)
-	err := b.Build(writer)
-	putPooledWriter(writer)
-	if err != nil {
+	b.closeAll()
+	return b.err
+}
+
+// RenderIndent runs fn with pretty-printing using indent for each nesting level.
+func RenderIndent(w io.Writer, indent string, fn func(*B)) error {
+	b := getBuilder(w, indent)
+	defer putBuilder(b)
+	if fn != nil {
+		fn(b)
+	}
+	b.closeAll()
+	return b.err
+}
+
+// RenderString renders fn to a string and panics if rendering fails.
+func RenderString(fn func(*B)) string {
+	var result strings.Builder
+	if err := Render(&result, fn); err != nil {
 		panic(err)
 	}
-	return sb.String()
+	return result.String()
 }
 
-// RenderBytes renders the Builder and returns the result as a byte slice.
-// Returns nil if b is nil. Panics if rendering fails.
-//
-//	html := h.RenderBytes(h.Div(h.Text("Hello")))
-func RenderBytes(b Builder) []byte {
-	if b == nil {
-		return nil
-	}
-	buf := bufPool.Get().(*bytes.Buffer)
-	buf.Reset()
-	writer := getPooledWriter(buf)
-	err := b.Build(writer)
-	putPooledWriter(writer)
-	if err != nil {
-		bufPool.Put(buf)
+// RenderBytes renders fn to a byte slice and panics if rendering fails.
+func RenderBytes(fn func(*B)) []byte {
+	buffer := bufferPool.Get().(*bytes.Buffer)
+	buffer.Reset()
+	defer bufferPool.Put(buffer)
+	if err := Render(buffer, fn); err != nil {
 		panic(err)
 	}
-	result := make([]byte, buf.Len())
-	copy(result, buf.Bytes())
-	bufPool.Put(buf)
-	return result
+	return append([]byte(nil), buffer.Bytes()...)
 }

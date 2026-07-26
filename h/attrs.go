@@ -12,14 +12,11 @@ type Attribute struct {
 	Value string
 }
 
-func (a Attribute) isTagArg() {}
-
-// AttrBuilder is a TagArg that produces a single Attribute on demand.
+// AttrBuilder produces a single Attribute on demand.
 // Fluent attribute builders (in companion packages like ds and hx) implement
-// this interface so that they can be passed directly to tag functions without
+// this interface so that they can be passed directly to element methods without
 // an explicit terminator method.
 type AttrBuilder interface {
-	TagArg
 	Attribute() Attribute
 }
 
@@ -36,10 +33,10 @@ func Attr(name, value string) Attribute {
 // which will be ignored during rendering. This is useful for conditionally
 // including attributes:
 //
-//	h.Button(
+//	b.Button(
 //	    h.AttrIf(isDisabled, "disabled", ""),
 //	    h.AttrIf(isPrimary, "class", "btn-primary"),
-//	    h.Text("Submit"),
+//	    func(b *h.B) { b.Text("Submit") },
 //	)
 func AttrIf(cond bool, name, value string) Attribute {
 	if cond {
@@ -51,8 +48,6 @@ func AttrIf(cond bool, name, value string) Attribute {
 // Attributes is a slice of Attribute values representing HTML element attributes.
 // It provides methods for getting, setting, and deleting attributes by name.
 type Attributes []Attribute
-
-func (a Attributes) isTagArg() {}
 
 // Attrs creates an Attributes slice from alternating key-value string pairs.
 // Panics if an odd number of arguments is provided or if any key is empty.
