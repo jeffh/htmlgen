@@ -256,39 +256,82 @@ go test -bench=. -benchmem ./h/
 go test -bench=. -benchmem -tags=purego ./h/
 ```
 
-The paired `_HtmlGen` / `_Template` benchmarks render byte-identical output into
-the same reusable `bytes.Buffer`, so they measure generation cost rather than
-destination allocation.
+### Performance Comparison
 
-### Results
+| Scenario | htmlgen | htmlgen (purego) | html/template | Winner |
+|----------|---------|------------------|---------------|--------|
+| [Simple Div](h/benchmark_test.go#L20) | 79 ns | 80 ns | 489 ns | htmlgen ~6.2x faster |
+| [Div with Attributes](h/benchmark_test.go#L45) | 248 ns | 294 ns | 1969 ns | htmlgen ~7.9x faster |
+| [Nested Elements](h/benchmark_test.go#L80) | 535 ns | 548 ns | 1989 ns | htmlgen ~3.7x faster |
+| [List (10 items)](h/benchmark_test.go#L120) | 940 ns | 1059 ns | 4489 ns | htmlgen ~4.8x faster |
+| [List (100 items)](h/benchmark_test.go#L154) | 8.5 µs | 10.0 µs | 42.2 µs | htmlgen ~5.0x faster |
+| [Table (10 rows)](h/benchmark_test.go#L232) | 4.0 µs | 4.4 µs | 15.4 µs | htmlgen ~3.8x faster |
+| [Table (100 rows)](h/benchmark_test.go#L252) | 35.8 µs | 39.4 µs | 150.2 µs | htmlgen ~4.2x faster |
+| [Full Page](h/benchmark_test.go#L352) | 3.4 µs | 3.6 µs | 10.3 µs | htmlgen ~3.1x faster |
+| [Full Page (parallel)](h/benchmark_test.go#L580) | 1.5 µs | 1.5 µs | 5.5 µs | htmlgen ~3.7x faster |
+| [Escaping](h/benchmark_test.go#L376) | 380 ns | 441 ns | 1276 ns | htmlgen ~3.4x faster |
+| [Form](h/benchmark_test.go#L474) | 2.9 µs | 3.4 µs | 12.8 µs | htmlgen ~4.4x faster |
+| [Deep Nesting (10 levels)](h/benchmark_test.go#L426) | 683 ns | 697 ns | 481 ns | template ~1.4x faster |
 
-Go 1.26.4, `darwin/arm64`, Apple M1 Ultra, `-count=8` (medians via `benchstat`).
-Results vary by Go version and hardware; run the suite locally for your own
-numbers.
+*Go 1.26.4, `darwin/arm64`, Apple M1 Ultra, `-count=8` medians via `benchstat`.
+Results may vary by hardware and Go version.*
 
-| Benchmark | htmlgen | `html/template` | Speedup |
-| --- | --- | --- | --- |
-| Simple div | 79.3 ns · 0 B · 0 allocs | 489 ns · 240 B · 7 allocs | 6.2× |
-| Div with 3 attributes | 248 ns · 120 B · 2 allocs | 1.97 µs · 576 B · 22 allocs | 7.9× |
-| Nested elements | 535 ns · 0 B · 0 allocs | 1.99 µs · 576 B · 22 allocs | 3.7× |
-| List, 100 items | 8.51 µs · 2.4 KiB · 101 allocs | 42.2 µs · 12.7 KiB · 604 allocs | 5.0× |
-| Table, 100 rows | 35.8 µs · 25.1 KiB · 402 allocs | 150 µs · 37.7 KiB · 1804 allocs | 4.2× |
-| Form, 4 fields | 2.93 µs · 2.5 KiB · 37 allocs | 12.8 µs · 3.2 KiB · 148 allocs | 4.4× |
-| Escaped text + attribute | 380 ns · 56 B · 2 allocs | 1.28 µs · 736 B · 16 allocs | 3.4× |
-| Full page | 3.37 µs · 2.3 KiB · 41 allocs | 10.3 µs · 2.7 KiB · 122 allocs | 3.1× |
-| Full page, `RunParallel` | 1.48 µs · 2.3 KiB · 41 allocs | 5.53 µs · 2.7 KiB · 122 allocs | 3.7× |
-| Deep nesting, 10 levels | 683 ns · 160 B · 10 allocs | 481 ns · 240 B · 7 allocs | 0.7× |
+### Allocations
 
 Streaming skips the intermediate node tree, so allocation counts track the data
-being rendered rather than the shape of the document. Static markup costs
-nothing: the simple-div and nested-element cases allocate zero bytes, because a
-body closure that captures no variables is a static function value.
+being rendered rather than the shape of the document:
 
-Entry-point overhead, measured separately:
+| Scenario | htmlgen | html/template |
+|----------|---------|---------------|
+| Simple Div | 0 B · 0 allocs | 240 B · 7 allocs |
+| Div with Attributes | 120 B · 2 allocs | 576 B · 22 allocs |
+| Nested Elements | 0 B · 0 allocs | 576 B · 22 allocs |
+| List (100 items) | 2.4 KiB · 101 allocs | 12.7 KiB · 604 allocs |
+| Table (100 rows) | 25.1 KiB · 402 allocs | 37.7 KiB · 1804 allocs |
+| Full Page | 2.3 KiB · 41 allocs | 2.7 KiB · 122 allocs |
+| Escaping | 56 B · 2 allocs | 736 B · 16 allocs |
+| Form | 2.5 KiB · 37 allocs | 3.2 KiB · 148 allocs |
+
+Static markup costs nothing: the simple-div and nested-element cases allocate
+zero bytes, because a body closure that captures no variables is a static
+function value.
+
+### Streaming vs. the Previous Tree API
+
+The streaming rewrite replaced an API that built a node tree before rendering.
+Tree-API figures were re-measured from the last pre-rewrite commit (`95e46b0`)
+on the same machine and Go version as everything above, with element
+construction inside the timed loop on both sides:
+
+| Scenario | Tree API | Streaming API | Change |
+|----------|----------|---------------|--------|
+| Simple Div | 150 ns · 3 allocs | 79 ns · 0 allocs | 1.9x faster |
+| Div with Attributes | 301 ns · 5 allocs | 248 ns · 2 allocs | 1.2x faster |
+| Nested Elements | 1004 ns · 20 allocs | 535 ns · 0 allocs | 1.9x faster |
+| List (10 items) | 1695 ns · 35 allocs | 940 ns · 11 allocs | 1.8x faster |
+| List (100 items) | 15.5 µs · 308 allocs | 8.5 µs · 101 allocs | 1.8x faster |
+| Table (10 rows) | 6.7 µs · 130 allocs | 4.0 µs · 42 allocs | 1.6x faster |
+| Table (100 rows) | 57.9 µs · 1123 allocs | 35.8 µs · 402 allocs | 1.6x faster |
+| Full Page | 4.6 µs · 86 allocs | 3.4 µs · 41 allocs | 1.4x faster |
+| Escaping | 449 ns · 5 allocs | 380 ns · 2 allocs | 1.2x faster |
+| Deep Nesting (10 levels) | 1031 ns · 21 allocs | 683 ns · 10 allocs | 1.5x faster |
+| Form | 3.4 µs · 56 allocs | 2.9 µs · 37 allocs | 1.1x faster |
+
+Every scenario improved, by 1.1x to 1.9x, and allocations fell by 30-100%. The
+gain is largest where the old API built the most nodes and smallest where the
+work is dominated by escaping or attribute handling, which both APIs share.
+
+One capability was lost. The tree API could pre-render a static subtree with
+`Compile`, replaying it in ~18 ns with zero allocations — faster than anything
+the streaming API can do, since streaming always re-walks the Go code. The
+equivalent is now to render once with `RenderString` or `RenderBytes` and write
+the cached result yourself.
+
+### Entry-Point Overhead
 
 | Operation | Cost |
-| --- | --- |
-| `Render` call overhead (empty body) | 13.1 ns · 0 B · 0 allocs |
+|-----------|------|
+| [`Render` call overhead (empty body)](h/benchmark_test.go#L531) | 13.1 ns · 0 B · 0 allocs |
 | `RenderBytes`, small fragment | 349 ns · 80 B · 1 alloc |
 | `RenderString`, small fragment | 433 ns · 280 B · 6 allocs |
 | `RenderIndent`, small fragment | 502 ns · 16 B · 2 allocs |
@@ -298,6 +341,32 @@ render that writes nothing allocates nothing. Writing to an `io.Writer` directly
 is the cheapest path; `RenderBytes` adds one copy and `RenderString` adds
 `strings.Builder` growth. Pretty-printing costs roughly 15% over compact output,
 plus a small cached indent ladder.
+
+### Key Insights
+
+- **htmlgen is faster** for dynamic content, by 3-8x across most scenarios
+- **Streaming beats the old tree API** on every benchmark, 1.1-1.9x, while
+  cutting allocations 30-100%
+- **Static markup is free**: body closures that capture nothing allocate nothing
+- htmlgen excels at list and table generation, where it is ~4-5x faster
+- For attribute-heavy elements, htmlgen is up to ~8x faster
+- Concurrency helps, but sub-linearly: on 20 cores, `RunParallel` cuts per-render
+  cost only ~2.3x (3.4 µs to 1.5 µs). The pooled builder is not the bottleneck —
+  allocation and GC pressure from the rendered data is. The advantage over
+  `html/template` holds at ~3.7x either way
+- **purego** adds ~1-19% overhead but remains far faster than html/template
+
+### When to Use Each
+
+| Use Case | Recommendation |
+|----------|----------------|
+| Dynamic lists/tables | htmlgen |
+| Forms with many attributes | htmlgen |
+| Full page generation with data | htmlgen |
+| Component-based UI architecture | htmlgen |
+| Streaming to an `http.ResponseWriter` | htmlgen (`Render`) |
+| Static markup rendered repeatedly | Render once, cache the bytes |
+| Designer-edited templates, no recompile | `html/template` |
 
 ### Caveats
 
@@ -313,6 +382,18 @@ but it does not disappear.
 URL) at execute time. htmlgen escapes text and attribute values only, and
 `Raw`/`Rawf` are unescaped by contract. These numbers are a cost-of-output
 comparison, not a claim of feature parity.
+
+**Methodology.** The paired `_HtmlGen` / `_Template` benchmarks were checked to
+emit byte-identical output before the ratios were recorded, and both write into
+the same reusable `bytes.Buffer`, so they measure generation cost rather than
+destination allocation.
+
+For the tree-API comparison, the two List rows do not use that suite's published
+numbers: its list benchmarks hoisted item construction out of the timed loop, so
+they measured replaying a prebuilt tree rather than building and rendering one.
+They were re-run with construction inside the loop to match the streaming
+benchmarks. Every other tree-API row reproduced its previously published figure
+to within a few percent.
 
 ### The `purego` build tag
 
