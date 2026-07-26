@@ -249,16 +249,78 @@ htmlgen is benchmarked against Go's standard `html/template` package. Run benchm
 
 ```bash
 go test -bench=. -benchmem ./h/
+```
 
+```bash
 # Run with purego (no unsafe optimizations)
 go test -bench=. -benchmem -tags=purego ./h/
 ```
 
-The `purego` build tag disables unsafe pointer optimizations for environments that require pure Go code.
+The paired `_HtmlGen` / `_Template` benchmarks render byte-identical output into
+the same reusable `bytes.Buffer`, so they measure generation cost rather than
+destination allocation.
 
-The benchmark suite covers nested output, iteration, escaping, and allocation
-counts for the pooled streaming builder. Results vary by Go version and
-hardware; run the suite locally for current measurements.
+### Results
+
+Go 1.26.4, `darwin/arm64`, Apple M1 Ultra, `-count=8` (medians via `benchstat`).
+Results vary by Go version and hardware; run the suite locally for your own
+numbers.
+
+| Benchmark | htmlgen | `html/template` | Speedup |
+| --- | --- | --- | --- |
+| Simple div | 79.3 ns · 0 B · 0 allocs | 489 ns · 240 B · 7 allocs | 6.2× |
+| Div with 3 attributes | 248 ns · 120 B · 2 allocs | 1.97 µs · 576 B · 22 allocs | 7.9× |
+| Nested elements | 535 ns · 0 B · 0 allocs | 1.99 µs · 576 B · 22 allocs | 3.7× |
+| List, 100 items | 8.51 µs · 2.4 KiB · 101 allocs | 42.2 µs · 12.7 KiB · 604 allocs | 5.0× |
+| Table, 100 rows | 35.8 µs · 25.1 KiB · 402 allocs | 150 µs · 37.7 KiB · 1804 allocs | 4.2× |
+| Form, 4 fields | 2.93 µs · 2.5 KiB · 37 allocs | 12.8 µs · 3.2 KiB · 148 allocs | 4.4× |
+| Escaped text + attribute | 380 ns · 56 B · 2 allocs | 1.28 µs · 736 B · 16 allocs | 3.4× |
+| Full page | 3.37 µs · 2.3 KiB · 41 allocs | 10.3 µs · 2.7 KiB · 122 allocs | 3.1× |
+| Full page, `RunParallel` | 1.48 µs · 2.3 KiB · 41 allocs | 5.53 µs · 2.7 KiB · 122 allocs | 3.7× |
+| Deep nesting, 10 levels | 683 ns · 160 B · 10 allocs | 481 ns · 240 B · 7 allocs | 0.7× |
+
+Streaming skips the intermediate node tree, so allocation counts track the data
+being rendered rather than the shape of the document. Static markup costs
+nothing: the simple-div and nested-element cases allocate zero bytes, because a
+body closure that captures no variables is a static function value.
+
+Entry-point overhead, measured separately:
+
+| Operation | Cost |
+| --- | --- |
+| `Render` call overhead (empty body) | 13.1 ns · 0 B · 0 allocs |
+| `RenderBytes`, small fragment | 349 ns · 80 B · 1 alloc |
+| `RenderString`, small fragment | 433 ns · 280 B · 6 allocs |
+| `RenderIndent`, small fragment | 502 ns · 16 B · 2 allocs |
+
+`Render` itself is nearly free — the builder comes from a `sync.Pool`, so a
+render that writes nothing allocates nothing. Writing to an `io.Writer` directly
+is the cheapest path; `RenderBytes` adds one copy and `RenderString` adds
+`strings.Builder` growth. Pretty-printing costs roughly 15% over compact output,
+plus a small cached indent ladder.
+
+### Caveats
+
+**Capturing closures allocate.** A body closure that captures a loop variable or
+parameter is a heap allocation (~16 B each), which is why the deep-nesting case —
+a recursive helper capturing its `depth` argument — is the one benchmark that
+loses to `html/template`. Rendering many small elements in a loop pays this per
+element; it is the reason the list and table benchmarks allocate roughly one
+object per row. That is usually cheap next to the tree allocations it replaces,
+but it does not disappear.
+
+**`html/template` does more.** It escapes context-sensitively (HTML, CSS, JS,
+URL) at execute time. htmlgen escapes text and attribute values only, and
+`Raw`/`Rawf` are unescaped by contract. These numbers are a cost-of-output
+comparison, not a claim of feature parity.
+
+### The `purego` build tag
+
+The `purego` build tag disables the unsafe string-to-bytes conversion in the
+escaper for environments that require pure Go. It costs about 4.5% geometric
+mean across the suite, up to ~18% on attribute-heavy paths, and adds one
+allocation per value that actually needs escaping — content with no escapable
+characters takes the same fast path either way.
 
 ## License
 
