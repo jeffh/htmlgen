@@ -21,7 +21,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) for programmatic HTML generati
 
 ### Package `h` - Core HTML Generation
 
-**Streaming API** (`h/writer.go`, `h/tags.go`, `h/render.go`): `Render` creates a per-render `*h.B` bound to an `io.Writer`. All standard HTML5 elements are methods on `B` (for example, `b.Div`, `b.Span`, and `b.A`). Container elements accept attributes plus a trailing `func(*h.B)` body, which runs immediately and streams its children. Void elements write self-closing tags. `Text`/`Textf` escape content, while `Raw`/`Rawf` write caller-sanitized content unchanged. `El` and `VoidEl` support custom tags.
+**Streaming API** (`h/writer.go`, `h/tags.go`, `h/render.go`): `Render` creates a per-render `*h.B` bound to an `io.Writer`. All standard HTML5 elements are methods on `B` (for example, `b.Div`, `b.Span`, and `b.A`). Container elements accept attributes plus a trailing `func(*h.B)` body, which runs immediately and streams its children. Void elements write self-closing tags. `Text`/`Textf` escape content, while `Raw`/`Rawf` write caller-sanitized content unchanged. `El` and `VoidEl` support custom tags; they panic unless the tag name matches `[A-Za-z][A-Za-z0-9_.:-]*` (attribute names are validated the same way in `Attr`/`Attrs`/`AttrsMap`/`AttrIf`/`Set`/`SetDefault`, since names are written unescaped; `Attribute` struct literals bypass validation and are trusted).
 
 `B` keeps the first write error as a sticky error; later output calls become no-ops, and `Render` returns that error. `RenderIndent` enables pretty-printing. `RenderString` and `RenderBytes` are in-memory convenience entry points. Each render owns its `B`, so callers use native Go `if` and `for` statements safely without ambient package state.
 
