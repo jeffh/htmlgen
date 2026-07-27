@@ -1,15 +1,26 @@
-# htmlgen streaming API redesign
+# htmlgen streaming API design
 
-Status: design spec for a full rewrite of package `h` from a tree-building
-`Builder` API to a **streaming, imperative** API inspired by Clay
-(https://github.com/nicbarker/clay). Native Go `if`/`for` become the control
-flow; a container is a function whose **body closure** runs immediately and
-streams children to the writer.
+Status: **shipped.** This began as the design spec for rewriting package `h`
+from a tree-building `Builder` API to a **streaming, imperative** API inspired
+by Clay (https://github.com/nicbarker/clay), and has been updated to describe
+the API as it now stands. Native Go `if`/`for` are the control flow; a container
+takes a **body closure** that runs immediately and streams children to the
+writer.
+
+Two revisions landed after the original rewrite and are folded in below:
+
+- **Buffered output.** `B` accumulates into an internal buffer and writes to the
+  `io.Writer` in ~4 KiB chunks instead of issuing a write per tag, attribute, and
+  text run. `Flush` is exported for callers who need bytes delivered mid-render.
+- **Typed element parameters.** Element methods originally took `...any` and
+  unpacked it with a type switch. They now take concrete `Attributes` and `Body`
+  parameters, so no argument is boxed and a capturing body closure stays on the
+  stack. The variadic form is gone; see [Element methods](#element-methods).
 
 ## Goals / decisions (locked with the user)
 
 1. **Element call style — "body receives handle".** Elements are **methods on
-   `*h.B`** (a per-render streaming builder). A container takes attribute args
+   `*h.B`** (a per-render streaming builder). A container takes its attributes
    and a trailing **body closure `func(b *h.B)`**. The body's `b` parameter is
    how nested elements are emitted. This keeps everything concurrency-safe (no
    package-level/ambient/goroutine-local state) — critical because the consumer
@@ -19,7 +30,7 @@ streams children to the writer.
    h.Render(w, func(b *h.B) {
        b.Div(h.Attrs("id", "container"), func(b *h.B) {
            for i := range 10 {
-               b.Span(func(b *h.B) { b.Textf("%d child element", i) })
+               b.Span(nil, func(b *h.B) { b.Textf("%d child element", i) })
            }
        })
    })
@@ -37,19 +48,23 @@ streams children to the writer.
    `Fragment`. Native Go replaces them (`if`, `for`, plain sequential calls,
    helper funcs). Keep the attribute layer intact (below).
 
-4. **Keep the attribute layer** so `ds`/`hx`/`js` keep working unchanged:
-   `Attribute`, `Attributes` (+ its methods), `Attr`, `Attrs`, `AttrsMap`,
-   `AttrIf`, and the `AttrBuilder` interface. These are values passed as
-   element args; they are not control flow, so they carry over as-is.
+4. **Keep the attribute layer** so `ds`/`hx`/`js` keep working: `Attribute`,
+   `Attributes` (+ its methods), `Attr`, `Attrs`, `AttrsMap`, `AttrIf`, and the
+   `AttrBuilder` interface. These are values, not control flow, so they carry
+   over as-is. Collecting a mix of them into one `Attributes` is what `AttrsOf`
+   and `Attributes.With` do (below).
 
 ## Core type
 
 ```go
 // B is a streaming HTML builder bound to an io.Writer. It tracks open tags,
-// optional pretty-printing, and a sticky write error. Not safe for concurrent
-// use by multiple goroutines; each Render gets its own *B.
+// optional pretty-printing, and a sticky write error. Output accumulates in an
+// internal buffer and is written to the io.Writer in chunks. Not safe for
+// concurrent use by multiple goroutines; each Render gets its own *B.
 type B struct {
     w           io.Writer
+    buf         []byte // flushed to w at ~4 KiB
+    scratch     []byte // one escaped chunk of an oversized value
     openTags    []string
     indent      string
     indentCache []string
@@ -58,60 +73,84 @@ type B struct {
     err         error // sticky; first write error wins
 }
 
-// Err returns the first write error encountered, if any.
-func (b *B) Err() error { return b.err }
+// Err returns the first write error observed as of the last flush.
+func (b *B) Err() error
+
+// Flush writes buffered output to the underlying io.Writer. Render and
+// RenderIndent flush before returning; call it explicitly when bytes must reach
+// the client mid-render (server-sent events, long streaming responses).
+func (b *B) Flush() error
+
+// SetMaxLineLength sets the width at which attributes wrap when pretty-printing.
+// 0 (the default) disables wrapping.
+func (b *B) SetMaxLineLength(maxLen int)
 ```
 
-Reuse the existing low-level writing/escaping/indent logic from `writer.go`
-(escaping tables, `writeAttrs`, indent cache, open-tag stack). The current
-`Writer` type may be folded into `B` or kept private as an internal helper —
-implementer's choice — but there must be **no exported `Builder` interface** and
-no separate exported `Writer` tree-walker. `Render` no longer takes a `Builder`.
+The low-level writing/escaping/indent logic lives in `writer.go` (a 256-entry
+escape table appended straight into the buffer, `writeAttrs`, indent cache,
+open-tag stack). There is **no exported `Builder` interface** and no separate
+exported `Writer` tree-walker; `Render` takes a `func(*B)`.
+
+Because output is buffered, `Err` reflects only errors seen as of the last
+flush — `Render`'s return value is always current. Values at or above the flush
+threshold (a large `Raw`, `Text`, or attribute value) bypass the buffer and
+stream through in bounded chunks, so a multi-megabyte value never costs a
+multi-megabyte buffer.
 
 ## Element methods
 
-Every HTML element in the current `tags.go` becomes a method on `*B` with the
-same Go name (`Div`, `Span`, `A`, `H1`, `Table`, `Button`, `Input`, `Img`, …).
+Every HTML element in `tags.go` is a method on `*B` with the same Go name
+(`Div`, `Span`, `A`, `H1`, `Table`, `Button`, `Input`, `Img`, …).
 
-Signature (variadic, accepts the union below):
+Signatures are concrete — one shape for containers, one for void elements:
 
 ```go
-func (b *B) Div(args ...any)   // normal (container) element
-func (b *B) Img(args ...any)   // void element: attrs only, body ignored/omitted
+func (b *B) Div(attrs Attributes, body Body)   // container element
+func (b *B) Img(attrs Attributes)              // void element: attributes only
 ```
 
-`args` are interpreted by type:
+- `attrs` is the element's attributes, or `nil` for none.
+- `body` runs between the open and close tags, or `nil` for an empty element.
+  Void elements take no body parameter at all, so passing one is a compile
+  error rather than a silently ignored argument.
 
-- `Attributes`, `Attribute`, `AttrBuilder` → merged into the element's
-  attributes (later values override earlier; same merge semantics as today's
-  `parseTagArgs`).
-- `func(b *B)` (and the alias `Body`) → the element's body closure, run between
-  the open and close tags. At most one; last wins. Void elements have no body.
-- `nil` → ignored (so `b.Div(cond && x)`-style and optional args are ergonomic).
-
-`any` is used (rather than a sealed interface) specifically so a
-`func(b *h.B){…}` literal can be passed directly, matching the target syntax.
-Unknown arg types should `panic` with a clear message (a programming error
-surfaced at dev time), consistent with how `Attrs` panics today.
-
-Provide a `Body` alias for readability and for typed component helpers:
+The `Body` alias keeps this readable and lets components declare a body
+parameter:
 
 ```go
 type Body = func(*B)
 ```
 
+**On the earlier variadic design.** Elements originally took `args ...any` and
+type-switched over `Attributes` / `Attribute` / `AttrBuilder` / `func(*B)` /
+`nil`, so a `func(b *h.B){…}` literal could be passed directly alongside
+attributes in any order. That reads well, but every call allocated a `[]any`,
+boxed each argument into an interface, and forced capturing body closures onto
+the heap. Typed siblings (`DivE`, `ImgE`, …) were added as a fast path, then the
+variadic form was dropped and the typed signatures took the plain names —
+carrying two spellings of every element was the worse trade. Removing the boxing
+took the list and table benchmarks to zero allocations and roughly halved them.
+
+The cost is that an `Attribute` or a `ds`/`hx` builder can no longer be handed
+straight to an element; `AttrsOf` and `Attributes.With` collect them first (see
+[Attribute layer](#attribute-layer)).
+
 ### Void / self-closing elements
 
 `Area, Base, Br, Col, Embed, Hr, Img, Input, Link, Meta, Source, Track, Wbr`
-(the current `stag` set) render self-closing and accept attributes only.
+render self-closing and take attributes only.
 
 ### Root document
 
 ```go
-func (b *B) Html(args ...any)   // writes <!DOCTYPE html> then <html lang="en"> ... </html>,
-                                 // defaulting lang="en" if not provided (as today)
+// Writes <!DOCTYPE html> then <html lang="en"> ... </html>, defaulting
+// lang="en" unless attrs provides one.
+func (b *B) Html(attrs Attributes, body Body)
 func (b *B) Doctype()
 ```
+
+`Html` appends its `lang` default with a full slice expression, so it can never
+write into a caller slice's spare capacity.
 
 ### Text / raw content (leaf statements)
 
@@ -125,11 +164,15 @@ func (b *B) Rawf(format string, a ...any)      // unescaped, fmt.Sprintf
 ### Custom elements
 
 ```go
-func (b *B) El(name string, args ...any)       // arbitrary container tag
-func (b *B) VoidEl(name string, args ...any)    // arbitrary void tag
+func (b *B) El(name string, attrs Attributes, body Body)  // arbitrary container tag
+func (b *B) VoidEl(name string, attrs Attributes)         // arbitrary void tag
 ```
 
-(Replaces `CustomElement`.)
+(Replaces `CustomElement`.) Tag names are written verbatim, never escaped, so
+both panic unless `name` matches `[A-Za-z][A-Za-z0-9_.:-]*` — a name derived
+from untrusted input could otherwise break out of its element context. The
+constant-name methods (`Div`, `Span`, …) skip this check, so the common path
+costs nothing at runtime.
 
 ## Render entry points
 
@@ -149,10 +192,11 @@ func RenderString(fn func(*B)) string
 func RenderBytes(fn func(*B)) []byte
 ```
 
-Keep the `sync.Pool` reuse of `*B`/buffers for allocation efficiency (as the
-current writer pool does). `SetMaxLineLength`-style knobs may remain as internal
-options configured by the Render* variants; no need to expose new public knobs
-beyond what exists, but preserve indent + max-line-length behavior for tests.
+`*B` and its buffer come from a `sync.Pool`, so a render that writes nothing
+allocates nothing. A `B` is valid only for the duration of the `Render` call
+that created it — callers must not retain it or call `Flush` on it afterwards.
+An oversized buffer is dropped rather than carried back into the pool, so one
+large render does not pin that memory for the process lifetime.
 
 ## Components / composition
 
@@ -162,14 +206,14 @@ a plain call — no wrapper types:
 ```go
 func Card(b *h.B, title string, body h.Body) {
     b.Div(h.Attrs("class", "card"), func(b *h.B) {
-        b.H2(func(b *h.B) { b.Text(title) })
+        b.H2(nil, func(b *h.B) { b.Text(title) })
         body(b)
     })
 }
 
 h.Render(w, func(b *h.B) {
     Card(b, "Hello", func(b *h.B) {
-        b.P(func(b *h.B) { b.Text("world") })
+        b.P(nil, func(b *h.B) { b.Text("world") })
     })
 })
 ```
@@ -177,31 +221,67 @@ h.Render(w, func(b *h.B) {
 Conditionals and iteration use native Go:
 
 ```go
-b.Ul(func(b *h.B) {
+b.Ul(nil, func(b *h.B) {
     for _, it := range items {
         if it.Visible {
-            b.Li(func(b *h.B) { b.Text(it.Name) })
+            b.Li(nil, func(b *h.B) { b.Text(it.Name) })
         }
     }
 })
 ```
 
-## Attribute layer (unchanged, keep exactly)
+## Attribute layer
 
 `Attribute`, `Attributes` (with `Get/Index/Set/SetDefault/Delete/Merge`), `Attr`,
-`Attrs`, `AttrsMap`, `AttrIf`, `AttrBuilder`. The only change: `AttrBuilder` and
-`Attribute`/`Attributes` no longer implement an `isTagArg()` marker (that
-interface is gone); element methods accept them via the `any` type switch. If a
-marker method (`isTagArg`) is referenced anywhere, remove it. `ds`/`hx` builders
-implement `AttrBuilder` (their `Attribute() h.Attribute` method) and must
-continue to compile and be accepted as element args.
+`Attrs`, `AttrsMap`, `AttrIf`, `AttrBuilder` all carry over from the tree API.
+The `isTagArg()` marker interface is gone.
+
+Element methods take a single `Attributes`, so combining loose `Attribute`
+values with the fluent `ds`/`hx`/`js` builders needs a collector:
+
+```go
+func AttrsOf(items ...AttrBuilder) Attributes
+func (a Attributes) With(items ...AttrBuilder) Attributes
+func (a Attribute) Attribute() Attribute  // Attribute satisfies AttrBuilder
+```
+
+```go
+b.Div(h.AttrsOf(h.Attr("id", "app"), ds.Signal("count", 0)), body)
+b.Button(h.Attrs("class", "btn").With(hx.Get("/api/data")), body)
+```
+
+Both carry the merge semantics the variadic type switch had: a later value
+overrides an earlier one of the same name **without changing its position**,
+zero attributes (an `AttrIf` whose condition was false) and `nil` builders are
+skipped, and neither call mutates its inputs — a caller's `Attributes` is never
+written through, including into its spare capacity.
+
+Attribute names are written verbatim, so `Attr`, `AttrIf`, `Attrs`, `AttrsMap`,
+`Set`, and `SetDefault` validate them against `[A-Za-z][A-Za-z0-9_.:-]*` and
+panic otherwise. `Attribute` struct literals bypass validation and are trusted;
+`AttrsOf`/`With` do not re-validate, since their inputs are already-constructed
+`Attribute` values.
 
 ## Tests
 
-Rewrite `h`'s test suite (`api_test.go`, `helpers_test.go`, `benchmark_test.go`)
-to exercise the streaming API. Preserve coverage of: escaping, attribute
-merging/ordering, void elements, doctype/html defaulting, indent + max-line
-wrapping, sticky-error propagation (a failing io.Writer makes Render return the
-error and stops output), and pooling. Update `ds`/`hx`/`js` `doc.go` example
-comments to the new API. Keep `go build ./... && go vet ./... && go test ./...`
-green.
+`h`'s suite (`api_test.go`, `helpers_test.go`, `validate_test.go`,
+`benchmark_test.go`, `benchmark_nested_test.go`) covers: escaping, attribute
+merging/ordering, `AttrsOf`/`With` semantics, void elements, doctype/html
+defaulting, name validation, indent + max-line wrapping, mid-render `Flush`,
+large values bypassing the buffer, sticky-error propagation (a failing
+io.Writer makes `Render` return the error and stop output), and pooling.
+
+Two properties are worth guarding explicitly because they are easy to
+regress:
+
+- **Caller `Attributes` are never mutated**, including through spare capacity —
+  see `TestCallerAttributesNotMutated`.
+- **A capturing body closure does not allocate** — see
+  `TestElementBodyDoesNotAllocate`, which is what makes the typed signatures
+  worth the ergonomic cost.
+
+The `_HtmlGen` / `_Template` benchmark pairs are checked to emit identical
+output (`TestCardGridOutputsMatch`) so the published ratios measure generation
+cost, not a difference in what is generated.
+
+Keep `go build ./... && go vet ./... && go test ./...` green.
