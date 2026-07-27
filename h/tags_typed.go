@@ -236,13 +236,13 @@ func (b *B) VarE(attrs Attributes, body Body) { b.elementTyped("<var", "</var>",
 // WbrE writes a self-closing <wbr> element. It is the non-boxing fast path of Wbr.
 func (b *B) WbrE(attrs Attributes) { b.voidElementTyped("<wbr", attrs) }
 
-// AreaE writes an self-closing <area> element. It is the non-boxing fast path of Area.
+// AreaE writes a self-closing <area> element. It is the non-boxing fast path of Area.
 func (b *B) AreaE(attrs Attributes) { b.voidElementTyped("<area", attrs) }
 
 // AudioE writes an <audio> element. It is the non-boxing fast path of Audio.
 func (b *B) AudioE(attrs Attributes, body Body) { b.elementTyped("<audio", "</audio>", attrs, body) }
 
-// ImgE writes an self-closing <img> element. It is the non-boxing fast path of Img.
+// ImgE writes a self-closing <img> element. It is the non-boxing fast path of Img.
 func (b *B) ImgE(attrs Attributes) { b.voidElementTyped("<img", attrs) }
 
 // MapE writes a <map> element. It is the non-boxing fast path of Map.
@@ -254,7 +254,7 @@ func (b *B) TrackE(attrs Attributes) { b.voidElementTyped("<track", attrs) }
 // VideoE writes a <video> element. It is the non-boxing fast path of Video.
 func (b *B) VideoE(attrs Attributes, body Body) { b.elementTyped("<video", "</video>", attrs, body) }
 
-// EmbedE writes an self-closing <embed> element. It is the non-boxing fast path of Embed.
+// EmbedE writes a self-closing <embed> element. It is the non-boxing fast path of Embed.
 func (b *B) EmbedE(attrs Attributes) { b.voidElementTyped("<embed", attrs) }
 
 // IframeE writes an <iframe> element. It is the non-boxing fast path of Iframe.
@@ -347,7 +347,7 @@ func (b *B) FieldsetE(attrs Attributes, body Body) {
 // FormE writes a <form> element. It is the non-boxing fast path of Form.
 func (b *B) FormE(attrs Attributes, body Body) { b.elementTyped("<form", "</form>", attrs, body) }
 
-// InputE writes an self-closing <input> element. It is the non-boxing fast path of Input.
+// InputE writes a self-closing <input> element. It is the non-boxing fast path of Input.
 func (b *B) InputE(attrs Attributes) { b.voidElementTyped("<input", attrs) }
 
 // LabelE writes a <label> element. It is the non-boxing fast path of Label.

@@ -340,6 +340,35 @@ func TestLargeRawBypassesBuffer(t *testing.T) {
 	}
 }
 
+// byteOnlyWriter hides bytes.Buffer's WriteString so writes exercise the
+// chunked non-StringWriter path.
+type byteOnlyWriter struct {
+	buf bytes.Buffer
+}
+
+func (w *byteOnlyWriter) Write(p []byte) (int, error) {
+	return w.buf.Write(p)
+}
+
+func TestLargeRawToNonStringWriter(t *testing.T) {
+	value := strings.Repeat("x", flushThreshold*2+7)
+	var w byteOnlyWriter
+	err := Render(&w, func(b *B) {
+		b.Div(func(b *B) {
+			b.Text("a")
+			b.Raw(value)
+			b.Text("b")
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "<div>a" + value + "b</div>"
+	if w.buf.String() != want {
+		t.Fatalf("output length = %d, want %d", w.buf.Len(), len(want))
+	}
+}
+
 func TestOutputSpanningManyFlushes(t *testing.T) {
 	const rows = 500
 	var want strings.Builder

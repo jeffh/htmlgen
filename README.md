@@ -77,7 +77,9 @@ err := h.Render(w, func(b *h.B) {
             if err := b.Flush(); err != nil {
                 return
             }
-            w.(http.Flusher).Flush()
+            if f, ok := w.(http.Flusher); ok {
+                f.Flush()
+            }
         }
     })
 })

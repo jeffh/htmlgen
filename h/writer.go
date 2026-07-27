@@ -405,8 +405,7 @@ func (b *B) Raw(value string) {
 		// Written straight through so one large value cannot inflate the
 		// pooled buffer past its working size.
 		if b.Flush() == nil {
-			_, err := io.WriteString(b.w, value)
-			b.setErr(err)
+			b.setErr(b.writeStringDirect(value))
 		}
 	} else {
 		b.writeString(value)
@@ -414,6 +413,29 @@ func (b *B) Raw(value string) {
 	if b.isIndenting() && b.err == nil && value != "" {
 		b.atLineStart = value[len(value)-1] == '\n'
 	}
+}
+
+// writeStringDirect writes value straight to the underlying writer, bypassing
+// the buffer. When w lacks io.StringWriter, the []byte conversion happens one
+// scratch-sized chunk at a time so a multi-megabyte value never allocates a
+// full copy.
+func (b *B) writeStringDirect(value string) error {
+	if sw, ok := b.w.(io.StringWriter); ok {
+		_, err := sw.WriteString(value)
+		return err
+	}
+	for len(value) > 0 {
+		chunk := value
+		if len(chunk) > flushThreshold {
+			chunk = chunk[:flushThreshold]
+		}
+		b.scratch = append(b.scratch[:0], chunk...)
+		if _, err := b.w.Write(b.scratch); err != nil {
+			return err
+		}
+		value = value[len(chunk):]
+	}
+	return nil
 }
 
 // Rawf writes unescaped formatted HTML. The caller must ensure the result is safe.
