@@ -286,12 +286,17 @@ func (b *B) Rawf(format string, args ...any) {
 }
 
 // El writes an arbitrary container element.
+// Panics if name is not an ASCII letter followed by ASCII letters, digits,
+// '_', '.', ':', or '-'; tag names must never come from untrusted input.
 func (b *B) El(name string, args ...any) {
+	validateTagName(name)
 	b.element(name, args...)
 }
 
 // VoidEl writes an arbitrary self-closing element.
+// Panics if name is not a valid element name (see El).
 func (b *B) VoidEl(name string, args ...any) {
+	validateTagName(name)
 	b.voidElement(name, args...)
 }
 
