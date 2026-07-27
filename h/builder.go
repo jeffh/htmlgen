@@ -43,7 +43,7 @@ func parseArgs(name string, args []any) (Attributes, Body) {
 				owned = true
 			} else {
 				ensureOwned()
-				attrs.Set(value.Name, value.Value)
+				attrs.set(value.Name, value.Value)
 			}
 		case AttrBuilder:
 			attr := value.Attribute()
@@ -55,7 +55,7 @@ func parseArgs(name string, args []any) (Attributes, Body) {
 				owned = true
 			} else {
 				ensureOwned()
-				attrs.Set(attr.Name, attr.Value)
+				attrs.set(attr.Name, attr.Value)
 			}
 		case func(*B):
 			// A typed-nil body is ignored, like an untyped nil arg.

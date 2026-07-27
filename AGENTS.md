@@ -170,6 +170,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
 #### Escaping and Security
 - **HTML escaping**: Always escape attribute values and text content via `(*B).writeEscaped()`, which appends through `appendEscaped()` into the render buffer
 - **Raw content**: Only expose via explicit `Raw()` functions with security warnings
+- **Name validation**: Attribute and custom tag names are written verbatim (never escaped), so they are validated with panic against `[A-Za-z][A-Za-z0-9_.:-]*` at construction — `Attr`, `AttrIf`, `Attrs`, `AttrsMap`, `Set`, `SetDefault` for attributes; `El`, `VoidEl` for tags. Constant-name tag methods (`Div`, `Span`, ...) bypass validation, so the common path has no runtime cost. `Attribute` struct literals and `AttrBuilder` outputs are trusted; never derive their names from untrusted input
 - **JavaScript escaping**: Use `json.Marshal()` or manual escaping for JS strings
 - Document security implications in function comments
 
@@ -185,7 +186,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
 - Support both `Attrs("k", "v", ...)` and `AttrsMap(map[string]string)`
 
 ### Common Gotchas
-- **Panic on empty attribute names**: `Attr()` and `Attrs()` panic if name is empty
+- **Panic on invalid names**: `Attr()`, `Attrs()`, `AttrsMap()`, `AttrIf()`, `Set()`, `SetDefault()`, `El()`, and `VoidEl()` panic if a name doesn't match `[A-Za-z][A-Za-z0-9_.:-]*` (empty names included)
 - **Indentation tracking**: Writer tracks `atLineStart` to properly indent content
 - **Tag stack**: Writer maintains `openTags` slice for proper closing
 - **Line wrapping**: Writer can wrap attributes based on `maxLineLen` setting

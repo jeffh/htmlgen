@@ -166,6 +166,18 @@ run body closures. `Html` emits the HTML5 doctype and defaults to `lang="en"`.
 Each element method also has a typed `E` sibling (`DivE`, `ImgE`, `HtmlE`, ...);
 see [Typed fast paths](#typed-fast-paths).
 
+### Security
+
+Text and attribute *values* are always HTML-escaped (`Raw`/`Rawf` are the
+explicit opt-outs). Attribute *names* and custom tag names are written
+verbatim, so `Attr`, `Attrs`, `AttrsMap`, `AttrIf`, `Set`, `SetDefault`, `El`,
+`VoidEl`, `ElE`, and `VoidElE` validate names against `[A-Za-z][A-Za-z0-9_.:-]*`
+and panic on
+anything else, preventing injection through a name that breaks out of its
+attribute or element context. `Attribute` struct literals bypass this
+validation and are trusted — never build one with a name derived from
+untrusted input.
+
 ## Package `ds` - Datastar Integration
 
 Build reactive attributes for [Datastar](https://data-star.dev/) applications:

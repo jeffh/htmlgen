@@ -446,22 +446,30 @@ func (b *B) Rawf(format string, args ...any) {
 }
 
 // El writes an arbitrary container element.
+// Panics if name is not an ASCII letter followed by ASCII letters, digits,
+// '_', '.', ':', or '-'; tag names must never come from untrusted input.
 func (b *B) El(name string, args ...any) {
+	validateTagName(name)
 	b.element("<"+name, "</"+name+">", args...)
 }
 
 // VoidEl writes an arbitrary self-closing element.
+// Panics if name is not a valid element name (see El).
 func (b *B) VoidEl(name string, args ...any) {
+	validateTagName(name)
 	b.voidElement("<"+name, args...)
 }
 
-// ElE writes an arbitrary container element. It is the non-boxing fast path of El.
+// ElE writes an arbitrary container element. It is the non-boxing fast path of
+// El. Panics if name is not a valid element name (see El).
 func (b *B) ElE(name string, attrs Attributes, body Body) {
+	validateTagName(name)
 	b.elementTyped("<"+name, "</"+name+">", attrs, body)
 }
 
 // VoidElE writes an arbitrary self-closing element. It is the non-boxing fast
-// path of VoidEl.
+// path of VoidEl. Panics if name is not a valid element name (see El).
 func (b *B) VoidElE(name string, attrs Attributes) {
+	validateTagName(name)
 	b.voidElementTyped("<"+name, attrs)
 }
