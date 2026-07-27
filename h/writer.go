@@ -323,32 +323,10 @@ func (b *B) closeAll() {
 	}
 }
 
-func (b *B) element(open, close string, args ...any) {
-	if b.err != nil {
-		return
-	}
-	attrs, body := parseArgs(open[1:], args)
-	b.openTag(open, close, attrs)
-	if b.err != nil {
-		return
-	}
-	if body != nil {
-		body(b)
-	}
-	b.closeOneTag()
-}
-
-func (b *B) voidElement(open string, args ...any) {
-	if b.err != nil {
-		return
-	}
-	attrs, _ := parseArgs(open[1:], args)
-	b.voidTag(open, attrs)
-}
-
-// elementTyped is the non-boxing counterpart of element: attrs and body arrive
-// with concrete types, so no argument escapes to the heap.
-func (b *B) elementTyped(open, close string, attrs Attributes, body Body) {
+// element writes a container element. attrs and body arrive with concrete
+// types, so no argument is boxed and a capturing body closure stays on the
+// stack.
+func (b *B) element(open, close string, attrs Attributes, body Body) {
 	if b.err != nil {
 		return
 	}
@@ -362,7 +340,7 @@ func (b *B) elementTyped(open, close string, attrs Attributes, body Body) {
 	b.closeOneTag()
 }
 
-func (b *B) voidElementTyped(open string, attrs Attributes) {
+func (b *B) voidElement(open string, attrs Attributes) {
 	if b.err != nil {
 		return
 	}
@@ -448,28 +426,14 @@ func (b *B) Rawf(format string, args ...any) {
 // El writes an arbitrary container element.
 // Panics if name is not an ASCII letter followed by ASCII letters, digits,
 // '_', '.', ':', or '-'; tag names must never come from untrusted input.
-func (b *B) El(name string, args ...any) {
+func (b *B) El(name string, attrs Attributes, body Body) {
 	validateTagName(name)
-	b.element("<"+name, "</"+name+">", args...)
+	b.element("<"+name, "</"+name+">", attrs, body)
 }
 
 // VoidEl writes an arbitrary self-closing element.
 // Panics if name is not a valid element name (see El).
-func (b *B) VoidEl(name string, args ...any) {
+func (b *B) VoidEl(name string, attrs Attributes) {
 	validateTagName(name)
-	b.voidElement("<"+name, args...)
-}
-
-// ElE writes an arbitrary container element. It is the non-boxing fast path of
-// El. Panics if name is not a valid element name (see El).
-func (b *B) ElE(name string, attrs Attributes, body Body) {
-	validateTagName(name)
-	b.elementTyped("<"+name, "</"+name+">", attrs, body)
-}
-
-// VoidElE writes an arbitrary self-closing element. It is the non-boxing fast
-// path of VoidEl. Panics if name is not a valid element name (see El).
-func (b *B) VoidElE(name string, attrs Attributes) {
-	validateTagName(name)
-	b.voidElementTyped("<"+name, attrs)
+	b.voidElement("<"+name, attrs)
 }

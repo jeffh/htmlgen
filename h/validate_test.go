@@ -40,16 +40,10 @@ func TestValidName(t *testing.T) {
 func TestInvalidTagNamesPanic(t *testing.T) {
 	for _, name := range []string{"", "div><script>alert(1)</script", "a b", "1div"} {
 		mustPanic(t, func() {
-			_ = Render(io.Discard, func(b *B) { b.El(name) })
+			_ = Render(io.Discard, func(b *B) { b.El(name, nil, nil) })
 		})
 		mustPanic(t, func() {
-			_ = Render(io.Discard, func(b *B) { b.VoidEl(name) })
-		})
-		mustPanic(t, func() {
-			_ = Render(io.Discard, func(b *B) { b.ElE(name, nil, nil) })
-		})
-		mustPanic(t, func() {
-			_ = Render(io.Discard, func(b *B) { b.VoidElE(name, nil) })
+			_ = Render(io.Discard, func(b *B) { b.VoidEl(name, nil) })
 		})
 	}
 }
@@ -57,12 +51,9 @@ func TestInvalidTagNamesPanic(t *testing.T) {
 func TestValidCustomTagNames(t *testing.T) {
 	got := RenderString(func(b *B) {
 		b.El("my-widget", Attrs("class", "x"), func(b *B) { b.Text("hi") })
-		b.VoidEl("spacer-el")
-		b.ElE("my-widget", Attrs("class", "x"), func(b *B) { b.Text("hi") })
-		b.VoidElE("spacer-el", nil)
+		b.VoidEl("spacer-el", nil)
 	})
-	want := `<my-widget class="x">hi</my-widget><spacer-el/>` +
-		`<my-widget class="x">hi</my-widget><spacer-el/>`
+	want := `<my-widget class="x">hi</my-widget><spacer-el/>`
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}

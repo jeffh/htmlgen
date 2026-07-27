@@ -53,11 +53,15 @@ func validateTagName(name string) {
 
 // AttrBuilder produces a single Attribute on demand.
 // Fluent attribute builders (in companion packages like ds and hx) implement
-// this interface so that they can be passed directly to element methods without
-// an explicit terminator method.
+// this interface so that they can be collected by AttrsOf and Attributes.With
+// without an explicit terminator method.
 type AttrBuilder interface {
 	Attribute() Attribute
 }
+
+// Attribute satisfies AttrBuilder by returning itself, so values from Attr and
+// AttrIf mix with companion-package builders in AttrsOf and Attributes.With.
+func (a Attribute) Attribute() Attribute { return a }
 
 // Attr creates a new Attribute with the given name and value.
 // Panics if name is not an ASCII letter followed by ASCII letters, digits,
@@ -72,8 +76,10 @@ func Attr(name, value string) Attribute {
 // including attributes:
 //
 //	b.Button(
-//	    h.AttrIf(isDisabled, "disabled", ""),
-//	    h.AttrIf(isPrimary, "class", "btn-primary"),
+//	    h.AttrsOf(
+//	        h.AttrIf(isDisabled, "disabled", ""),
+//	        h.AttrIf(isPrimary, "class", "btn-primary"),
+//	    ),
 //	    func(b *h.B) { b.Text("Submit") },
 //	)
 //
@@ -120,6 +126,44 @@ func AttrsMap(m map[string]string) Attributes {
 	for _, k := range keys {
 		validateAttrName(k)
 		result = append(result, Attribute{k, m[k]})
+	}
+	return result
+}
+
+// AttrsOf collects attribute values and fluent builders into one Attributes.
+//
+//	b.Div(h.AttrsOf(h.Attr("id", "app"), ds.Signal("count", 0)), body)
+//
+// It is shorthand for calling With on an empty Attributes; see With for the
+// merge and validation rules.
+func AttrsOf(items ...AttrBuilder) Attributes {
+	return Attributes(nil).With(items...)
+}
+
+// With returns a copy of a with items merged in. Nil builders and zero
+// attributes (an AttrIf whose condition was false, say) are skipped, and a
+// later value overrides an earlier one of the same name without changing its
+// position. The receiver is never modified.
+//
+//	attrs := h.Attrs("class", "card").With(hx.Get("/api/data"))
+//
+// Names are not re-validated; items carry already-constructed Attribute
+// values, which are trusted (see Attribute).
+func (a Attributes) With(items ...AttrBuilder) Attributes {
+	result := make(Attributes, len(a), len(a)+len(items))
+	copy(result, a)
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		attr := item.Attribute()
+		if attr.Name == "" {
+			continue
+		}
+		result.set(attr.Name, attr.Value)
+	}
+	if len(result) == 0 {
+		return nil
 	}
 	return result
 }

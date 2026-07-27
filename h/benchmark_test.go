@@ -23,7 +23,7 @@ func BenchmarkSimpleDiv_HtmlGen(b *testing.B) {
 	for b.Loop() {
 		buf.Reset()
 		Render(&buf, func(h *B) {
-			h.Div(func(h *B) { h.Text("Hello, World!") })
+			h.Div(nil, func(h *B) { h.Text("Hello, World!") })
 		})
 	}
 }
@@ -83,16 +83,16 @@ func BenchmarkNestedElements_HtmlGen(b *testing.B) {
 	for b.Loop() {
 		buf.Reset()
 		Render(&buf, func(h *B) {
-			h.Div(func(h *B) {
-				h.Header(func(h *B) {
-					h.H1(func(h *B) { h.Text("Title") })
+			h.Div(nil, func(h *B) {
+				h.Header(nil, func(h *B) {
+					h.H1(nil, func(h *B) { h.Text("Title") })
 				})
-				h.Main(func(h *B) {
-					h.P(func(h *B) { h.Text("Paragraph 1") })
-					h.P(func(h *B) { h.Text("Paragraph 2") })
+				h.Main(nil, func(h *B) {
+					h.P(nil, func(h *B) { h.Text("Paragraph 1") })
+					h.P(nil, func(h *B) { h.Text("Paragraph 2") })
 				})
-				h.Footer(func(h *B) {
-					h.Span(func(h *B) { h.Text("Footer text") })
+				h.Footer(nil, func(h *B) {
+					h.Span(nil, func(h *B) { h.Text("Footer text") })
 				})
 			})
 		})
@@ -127,9 +127,9 @@ func BenchmarkList10Items_HtmlGen(b *testing.B) {
 	for b.Loop() {
 		buf.Reset()
 		Render(&buf, func(h *B) {
-			h.Ul(func(h *B) {
+			h.Ul(nil, func(h *B) {
 				for _, item := range items {
-					h.Li(func(h *B) { h.Text(item) })
+					h.Li(nil, func(h *B) { h.Text(item) })
 				}
 			})
 		})
@@ -161,9 +161,9 @@ func BenchmarkList100Items_HtmlGen(b *testing.B) {
 	for b.Loop() {
 		buf.Reset()
 		Render(&buf, func(h *B) {
-			h.Ul(func(h *B) {
+			h.Ul(nil, func(h *B) {
 				for _, item := range items {
-					h.Li(func(h *B) { h.Text(item) })
+					h.Li(nil, func(h *B) { h.Text(item) })
 				}
 			})
 		})
@@ -205,20 +205,20 @@ func makeRows(n int) []TableRow {
 
 func renderTable(w io.Writer, rows []TableRow) {
 	Render(w, func(h *B) {
-		h.Table(func(h *B) {
-			h.Thead(func(h *B) {
-				h.Tr(func(h *B) {
-					h.Th(func(h *B) { h.Text("Name") })
-					h.Th(func(h *B) { h.Text("Email") })
-					h.Th(func(h *B) { h.Text("Age") })
+		h.Table(nil, func(h *B) {
+			h.Thead(nil, func(h *B) {
+				h.Tr(nil, func(h *B) {
+					h.Th(nil, func(h *B) { h.Text("Name") })
+					h.Th(nil, func(h *B) { h.Text("Email") })
+					h.Th(nil, func(h *B) { h.Text("Age") })
 				})
 			})
-			h.Tbody(func(h *B) {
+			h.Tbody(nil, func(h *B) {
 				for _, row := range rows {
-					h.Tr(func(h *B) {
-						h.Td(func(h *B) { h.Text(row.Name) })
-						h.Td(func(h *B) { h.Text(row.Email) })
-						h.Td(func(h *B) { h.Text(row.Age) })
+					h.Tr(nil, func(h *B) {
+						h.Td(nil, func(h *B) { h.Text(row.Name) })
+						h.Td(nil, func(h *B) { h.Text(row.Email) })
+						h.Td(nil, func(h *B) { h.Text(row.Age) })
 					})
 				}
 			})
@@ -309,38 +309,38 @@ var pageData = PageData{
 
 func renderPage(w io.Writer, data PageData) {
 	Render(w, func(h *B) {
-		h.Html(func(h *B) {
-			h.Head(func(h *B) {
+		h.Html(nil, func(h *B) {
+			h.Head(nil, func(h *B) {
 				h.Meta(Attrs("charset", "utf-8"))
 				h.Meta(Attrs("name", "viewport", "content", "width=device-width, initial-scale=1"))
 				h.Meta(Attrs("name", "description", "content", data.Description))
-				h.Title(func(h *B) { h.Text(data.Title) })
+				h.Title(nil, func(h *B) { h.Text(data.Title) })
 				h.Link(Attrs("rel", "stylesheet", "href", "/css/style.css"))
 			})
-			h.Body(func(h *B) {
-				h.Header(func(h *B) {
-					h.Nav(func(h *B) {
-						h.Ul(func(h *B) {
+			h.Body(nil, func(h *B) {
+				h.Header(nil, func(h *B) {
+					h.Nav(nil, func(h *B) {
+						h.Ul(nil, func(h *B) {
 							for _, item := range data.NavItems {
-								h.Li(func(h *B) {
+								h.Li(nil, func(h *B) {
 									h.A(Attrs("href", item.Href), func(h *B) { h.Text(item.Text) })
 								})
 							}
 						})
 					})
 				})
-				h.Main(func(h *B) {
+				h.Main(nil, func(h *B) {
 					for _, article := range data.Articles {
-						h.Article(func(h *B) {
-							h.H2(func(h *B) { h.Text(article.Title) })
-							h.P(func(h *B) { h.Text(article.Content) })
+						h.Article(nil, func(h *B) {
+							h.H2(nil, func(h *B) { h.Text(article.Title) })
+							h.P(nil, func(h *B) { h.Text(article.Content) })
 						})
 					}
 				})
-				h.Footer(func(h *B) {
-					h.P(func(h *B) { h.Text(data.FooterText) })
+				h.Footer(nil, func(h *B) {
+					h.P(nil, func(h *B) { h.Text(data.FooterText) })
 				})
-				h.Script(Attrs("src", "/js/app.js"))
+				h.Script(Attrs("src", "/js/app.js"), nil)
 			})
 		})
 	})
@@ -406,7 +406,7 @@ func BenchmarkTextPlain_HtmlGen(b *testing.B) {
 	for b.Loop() {
 		buf.Reset()
 		Render(&buf, func(h *B) {
-			h.Div(func(h *B) { h.Text(plain) })
+			h.Div(nil, func(h *B) { h.Text(plain) })
 		})
 	}
 }
@@ -420,7 +420,7 @@ func renderNested(h *B, depth int) {
 		h.Text("Nested")
 		return
 	}
-	h.Div(func(h *B) { renderNested(h, depth-1) })
+	h.Div(nil, func(h *B) { renderNested(h, depth-1) })
 }
 
 func BenchmarkDeepNesting10_HtmlGen(b *testing.B) {
@@ -539,9 +539,9 @@ func BenchmarkRenderString_Fragment(b *testing.B) {
 	b.ReportAllocs()
 	for b.Loop() {
 		RenderString(func(h *B) {
-			h.Div(func(h *B) {
-				h.Header(func(h *B) { h.H1(func(h *B) { h.Text("Title") }) })
-				h.Main(func(h *B) { h.P(func(h *B) { h.Text("Content") }) })
+			h.Div(nil, func(h *B) {
+				h.Header(nil, func(h *B) { h.H1(nil, func(h *B) { h.Text("Title") }) })
+				h.Main(nil, func(h *B) { h.P(nil, func(h *B) { h.Text("Content") }) })
 			})
 		})
 	}
@@ -551,9 +551,9 @@ func BenchmarkRenderBytes_Fragment(b *testing.B) {
 	b.ReportAllocs()
 	for b.Loop() {
 		RenderBytes(func(h *B) {
-			h.Div(func(h *B) {
-				h.Header(func(h *B) { h.H1(func(h *B) { h.Text("Title") }) })
-				h.Main(func(h *B) { h.P(func(h *B) { h.Text("Content") }) })
+			h.Div(nil, func(h *B) {
+				h.Header(nil, func(h *B) { h.H1(nil, func(h *B) { h.Text("Title") }) })
+				h.Main(nil, func(h *B) { h.P(nil, func(h *B) { h.Text("Content") }) })
 			})
 		})
 	}
@@ -565,9 +565,9 @@ func BenchmarkRenderIndent_Fragment(b *testing.B) {
 	for b.Loop() {
 		buf.Reset()
 		RenderIndent(&buf, "  ", func(h *B) {
-			h.Div(func(h *B) {
-				h.Header(func(h *B) { h.H1(func(h *B) { h.Text("Title") }) })
-				h.Main(func(h *B) { h.P(func(h *B) { h.Text("Content") }) })
+			h.Div(nil, func(h *B) {
+				h.Header(nil, func(h *B) { h.H1(nil, func(h *B) { h.Text("Title") }) })
+				h.Main(nil, func(h *B) { h.P(nil, func(h *B) { h.Text("Content") }) })
 			})
 		})
 	}

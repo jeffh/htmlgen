@@ -2,365 +2,361 @@ package h
 
 // Html writes the root <html> element, preceded by the HTML5 doctype. It uses
 // lang="en" unless a lang attribute is provided.
-func (b *B) Html(args ...any) {
+func (b *B) Html(attrs Attributes, body Body) {
 	if b.err != nil {
 		return
 	}
-	attrs, body := parseArgs("html", args)
 	if _, ok := attrs.Get("lang"); !ok {
 		// Full slice expression so appending never writes into a caller-owned
 		// slice's spare capacity.
 		attrs = append(attrs[:len(attrs):len(attrs)], Attribute{Name: "lang", Value: "en"})
 	}
 	b.Doctype()
-	b.openTag("<html", "</html>", attrs)
-	if b.err != nil {
-		return
-	}
-	if body != nil {
-		body(b)
-	}
-	b.closeOneTag()
+	b.element("<html", "</html>", attrs, body)
 }
 
 // Head writes a <head> element.
-func (b *B) Head(args ...any) { b.element("<head", "</head>", args...) }
+func (b *B) Head(attrs Attributes, body Body) { b.element("<head", "</head>", attrs, body) }
 
 // Title writes a <title> element.
-func (b *B) Title(args ...any) { b.element("<title", "</title>", args...) }
+func (b *B) Title(attrs Attributes, body Body) { b.element("<title", "</title>", attrs, body) }
 
 // Meta writes a self-closing <meta> element.
-func (b *B) Meta(args ...any) { b.voidElement("<meta", args...) }
+func (b *B) Meta(attrs Attributes) { b.voidElement("<meta", attrs) }
 
 // Link writes a self-closing <link> element.
-func (b *B) Link(args ...any) { b.voidElement("<link", args...) }
+func (b *B) Link(attrs Attributes) { b.voidElement("<link", attrs) }
 
 // Style writes a <style> element.
-func (b *B) Style(args ...any) { b.element("<style", "</style>", args...) }
+func (b *B) Style(attrs Attributes, body Body) { b.element("<style", "</style>", attrs, body) }
 
 // Script writes a <script> element.
-func (b *B) Script(args ...any) { b.element("<script", "</script>", args...) }
+func (b *B) Script(attrs Attributes, body Body) { b.element("<script", "</script>", attrs, body) }
 
 // Noscript writes a <noscript> element.
-func (b *B) Noscript(args ...any) { b.element("<noscript", "</noscript>", args...) }
+func (b *B) Noscript(attrs Attributes, body Body) { b.element("<noscript", "</noscript>", attrs, body) }
 
 // Base writes a self-closing <base> element.
-func (b *B) Base(args ...any) { b.voidElement("<base", args...) }
+func (b *B) Base(attrs Attributes) { b.voidElement("<base", attrs) }
 
 // Body writes a <body> element.
-func (b *B) Body(args ...any) { b.element("<body", "</body>", args...) }
+func (b *B) Body(attrs Attributes, body Body) { b.element("<body", "</body>", attrs, body) }
 
 // Address writes an <address> element.
-func (b *B) Address(args ...any) { b.element("<address", "</address>", args...) }
+func (b *B) Address(attrs Attributes, body Body) { b.element("<address", "</address>", attrs, body) }
 
 // Article writes an <article> element.
-func (b *B) Article(args ...any) { b.element("<article", "</article>", args...) }
+func (b *B) Article(attrs Attributes, body Body) { b.element("<article", "</article>", attrs, body) }
 
 // Aside writes an <aside> element.
-func (b *B) Aside(args ...any) { b.element("<aside", "</aside>", args...) }
+func (b *B) Aside(attrs Attributes, body Body) { b.element("<aside", "</aside>", attrs, body) }
 
 // Footer writes a <footer> element.
-func (b *B) Footer(args ...any) { b.element("<footer", "</footer>", args...) }
+func (b *B) Footer(attrs Attributes, body Body) { b.element("<footer", "</footer>", attrs, body) }
 
 // Header writes a <header> element.
-func (b *B) Header(args ...any) { b.element("<header", "</header>", args...) }
+func (b *B) Header(attrs Attributes, body Body) { b.element("<header", "</header>", attrs, body) }
 
 // H1 writes an <h1> element.
-func (b *B) H1(args ...any) { b.element("<h1", "</h1>", args...) }
+func (b *B) H1(attrs Attributes, body Body) { b.element("<h1", "</h1>", attrs, body) }
 
 // H2 writes an <h2> element.
-func (b *B) H2(args ...any) { b.element("<h2", "</h2>", args...) }
+func (b *B) H2(attrs Attributes, body Body) { b.element("<h2", "</h2>", attrs, body) }
 
 // H3 writes an <h3> element.
-func (b *B) H3(args ...any) { b.element("<h3", "</h3>", args...) }
+func (b *B) H3(attrs Attributes, body Body) { b.element("<h3", "</h3>", attrs, body) }
 
 // H4 writes an <h4> element.
-func (b *B) H4(args ...any) { b.element("<h4", "</h4>", args...) }
+func (b *B) H4(attrs Attributes, body Body) { b.element("<h4", "</h4>", attrs, body) }
 
 // H5 writes an <h5> element.
-func (b *B) H5(args ...any) { b.element("<h5", "</h5>", args...) }
+func (b *B) H5(attrs Attributes, body Body) { b.element("<h5", "</h5>", attrs, body) }
 
 // H6 writes an <h6> element.
-func (b *B) H6(args ...any) { b.element("<h6", "</h6>", args...) }
+func (b *B) H6(attrs Attributes, body Body) { b.element("<h6", "</h6>", attrs, body) }
 
 // Hgroup writes an <hgroup> element.
-func (b *B) Hgroup(args ...any) { b.element("<hgroup", "</hgroup>", args...) }
+func (b *B) Hgroup(attrs Attributes, body Body) { b.element("<hgroup", "</hgroup>", attrs, body) }
 
 // Main writes a <main> element.
-func (b *B) Main(args ...any) { b.element("<main", "</main>", args...) }
+func (b *B) Main(attrs Attributes, body Body) { b.element("<main", "</main>", attrs, body) }
 
 // Nav writes a <nav> element.
-func (b *B) Nav(args ...any) { b.element("<nav", "</nav>", args...) }
+func (b *B) Nav(attrs Attributes, body Body) { b.element("<nav", "</nav>", attrs, body) }
 
 // Section writes a <section> element.
-func (b *B) Section(args ...any) { b.element("<section", "</section>", args...) }
+func (b *B) Section(attrs Attributes, body Body) { b.element("<section", "</section>", attrs, body) }
 
 // Search writes a <search> element.
-func (b *B) Search(args ...any) { b.element("<search", "</search>", args...) }
+func (b *B) Search(attrs Attributes, body Body) { b.element("<search", "</search>", attrs, body) }
 
 // Blockquote writes a <blockquote> element.
-func (b *B) Blockquote(args ...any) { b.element("<blockquote", "</blockquote>", args...) }
+func (b *B) Blockquote(attrs Attributes, body Body) {
+	b.element("<blockquote", "</blockquote>", attrs, body)
+}
 
 // Dd writes a <dd> element.
-func (b *B) Dd(args ...any) { b.element("<dd", "</dd>", args...) }
+func (b *B) Dd(attrs Attributes, body Body) { b.element("<dd", "</dd>", attrs, body) }
 
 // Div writes a <div> element.
-func (b *B) Div(args ...any) { b.element("<div", "</div>", args...) }
+func (b *B) Div(attrs Attributes, body Body) { b.element("<div", "</div>", attrs, body) }
 
 // Dl writes a <dl> element.
-func (b *B) Dl(args ...any) { b.element("<dl", "</dl>", args...) }
+func (b *B) Dl(attrs Attributes, body Body) { b.element("<dl", "</dl>", attrs, body) }
 
 // Dt writes a <dt> element.
-func (b *B) Dt(args ...any) { b.element("<dt", "</dt>", args...) }
+func (b *B) Dt(attrs Attributes, body Body) { b.element("<dt", "</dt>", attrs, body) }
 
 // Figcaption writes a <figcaption> element.
-func (b *B) Figcaption(args ...any) { b.element("<figcaption", "</figcaption>", args...) }
+func (b *B) Figcaption(attrs Attributes, body Body) {
+	b.element("<figcaption", "</figcaption>", attrs, body)
+}
 
 // Figure writes a <figure> element.
-func (b *B) Figure(args ...any) { b.element("<figure", "</figure>", args...) }
+func (b *B) Figure(attrs Attributes, body Body) { b.element("<figure", "</figure>", attrs, body) }
 
 // Hr writes a self-closing <hr> element.
-func (b *B) Hr(args ...any) { b.voidElement("<hr", args...) }
+func (b *B) Hr(attrs Attributes) { b.voidElement("<hr", attrs) }
 
 // Li writes an <li> element.
-func (b *B) Li(args ...any) { b.element("<li", "</li>", args...) }
+func (b *B) Li(attrs Attributes, body Body) { b.element("<li", "</li>", attrs, body) }
 
 // Menu writes a <menu> element.
-func (b *B) Menu(args ...any) { b.element("<menu", "</menu>", args...) }
+func (b *B) Menu(attrs Attributes, body Body) { b.element("<menu", "</menu>", attrs, body) }
 
 // Ol writes an <ol> element.
-func (b *B) Ol(args ...any) { b.element("<ol", "</ol>", args...) }
+func (b *B) Ol(attrs Attributes, body Body) { b.element("<ol", "</ol>", attrs, body) }
 
 // P writes a <p> element.
-func (b *B) P(args ...any) { b.element("<p", "</p>", args...) }
+func (b *B) P(attrs Attributes, body Body) { b.element("<p", "</p>", attrs, body) }
 
 // Pre writes a <pre> element.
-func (b *B) Pre(args ...any) { b.element("<pre", "</pre>", args...) }
+func (b *B) Pre(attrs Attributes, body Body) { b.element("<pre", "</pre>", attrs, body) }
 
 // Ul writes a <ul> element.
-func (b *B) Ul(args ...any) { b.element("<ul", "</ul>", args...) }
+func (b *B) Ul(attrs Attributes, body Body) { b.element("<ul", "</ul>", attrs, body) }
 
 // A writes an <a> element.
-func (b *B) A(args ...any) { b.element("<a", "</a>", args...) }
+func (b *B) A(attrs Attributes, body Body) { b.element("<a", "</a>", attrs, body) }
 
 // Abbr writes an <abbr> element.
-func (b *B) Abbr(args ...any) { b.element("<abbr", "</abbr>", args...) }
+func (b *B) Abbr(attrs Attributes, body Body) { b.element("<abbr", "</abbr>", attrs, body) }
 
 // B writes a <b> element.
-func (b *B) B(args ...any) { b.element("<b", "</b>", args...) }
+func (b *B) B(attrs Attributes, body Body) { b.element("<b", "</b>", attrs, body) }
 
 // Bdi writes a <bdi> element.
-func (b *B) Bdi(args ...any) { b.element("<bdi", "</bdi>", args...) }
+func (b *B) Bdi(attrs Attributes, body Body) { b.element("<bdi", "</bdi>", attrs, body) }
 
 // Bdo writes a <bdo> element.
-func (b *B) Bdo(args ...any) { b.element("<bdo", "</bdo>", args...) }
+func (b *B) Bdo(attrs Attributes, body Body) { b.element("<bdo", "</bdo>", attrs, body) }
 
 // Br writes a self-closing <br> element.
-func (b *B) Br(args ...any) { b.voidElement("<br", args...) }
+func (b *B) Br(attrs Attributes) { b.voidElement("<br", attrs) }
 
 // Cite writes a <cite> element.
-func (b *B) Cite(args ...any) { b.element("<cite", "</cite>", args...) }
+func (b *B) Cite(attrs Attributes, body Body) { b.element("<cite", "</cite>", attrs, body) }
 
 // Code writes a <code> element.
-func (b *B) Code(args ...any) { b.element("<code", "</code>", args...) }
+func (b *B) Code(attrs Attributes, body Body) { b.element("<code", "</code>", attrs, body) }
 
 // Data writes a <data> element.
-func (b *B) Data(args ...any) { b.element("<data", "</data>", args...) }
+func (b *B) Data(attrs Attributes, body Body) { b.element("<data", "</data>", attrs, body) }
 
 // Dfn writes a <dfn> element.
-func (b *B) Dfn(args ...any) { b.element("<dfn", "</dfn>", args...) }
+func (b *B) Dfn(attrs Attributes, body Body) { b.element("<dfn", "</dfn>", attrs, body) }
 
 // Em writes an <em> element.
-func (b *B) Em(args ...any) { b.element("<em", "</em>", args...) }
+func (b *B) Em(attrs Attributes, body Body) { b.element("<em", "</em>", attrs, body) }
 
 // I writes an <i> element.
-func (b *B) I(args ...any) { b.element("<i", "</i>", args...) }
+func (b *B) I(attrs Attributes, body Body) { b.element("<i", "</i>", attrs, body) }
 
 // Kbd writes a <kbd> element.
-func (b *B) Kbd(args ...any) { b.element("<kbd", "</kbd>", args...) }
+func (b *B) Kbd(attrs Attributes, body Body) { b.element("<kbd", "</kbd>", attrs, body) }
 
 // Mark writes a <mark> element.
-func (b *B) Mark(args ...any) { b.element("<mark", "</mark>", args...) }
+func (b *B) Mark(attrs Attributes, body Body) { b.element("<mark", "</mark>", attrs, body) }
 
 // Q writes a <q> element.
-func (b *B) Q(args ...any) { b.element("<q", "</q>", args...) }
+func (b *B) Q(attrs Attributes, body Body) { b.element("<q", "</q>", attrs, body) }
 
 // Rp writes an <rp> element.
-func (b *B) Rp(args ...any) { b.element("<rp", "</rp>", args...) }
+func (b *B) Rp(attrs Attributes, body Body) { b.element("<rp", "</rp>", attrs, body) }
 
 // Rt writes an <rt> element.
-func (b *B) Rt(args ...any) { b.element("<rt", "</rt>", args...) }
+func (b *B) Rt(attrs Attributes, body Body) { b.element("<rt", "</rt>", attrs, body) }
 
 // Ruby writes a <ruby> element.
-func (b *B) Ruby(args ...any) { b.element("<ruby", "</ruby>", args...) }
+func (b *B) Ruby(attrs Attributes, body Body) { b.element("<ruby", "</ruby>", attrs, body) }
 
 // S writes an <s> element.
-func (b *B) S(args ...any) { b.element("<s", "</s>", args...) }
+func (b *B) S(attrs Attributes, body Body) { b.element("<s", "</s>", attrs, body) }
 
 // Samp writes a <samp> element.
-func (b *B) Samp(args ...any) { b.element("<samp", "</samp>", args...) }
+func (b *B) Samp(attrs Attributes, body Body) { b.element("<samp", "</samp>", attrs, body) }
 
 // Small writes a <small> element.
-func (b *B) Small(args ...any) { b.element("<small", "</small>", args...) }
+func (b *B) Small(attrs Attributes, body Body) { b.element("<small", "</small>", attrs, body) }
 
 // Span writes a <span> element.
-func (b *B) Span(args ...any) { b.element("<span", "</span>", args...) }
+func (b *B) Span(attrs Attributes, body Body) { b.element("<span", "</span>", attrs, body) }
 
 // Strong writes a <strong> element.
-func (b *B) Strong(args ...any) { b.element("<strong", "</strong>", args...) }
+func (b *B) Strong(attrs Attributes, body Body) { b.element("<strong", "</strong>", attrs, body) }
 
 // Sub writes a <sub> element.
-func (b *B) Sub(args ...any) { b.element("<sub", "</sub>", args...) }
+func (b *B) Sub(attrs Attributes, body Body) { b.element("<sub", "</sub>", attrs, body) }
 
 // Sup writes a <sup> element.
-func (b *B) Sup(args ...any) { b.element("<sup", "</sup>", args...) }
+func (b *B) Sup(attrs Attributes, body Body) { b.element("<sup", "</sup>", attrs, body) }
 
 // Time writes a <time> element.
-func (b *B) Time(args ...any) { b.element("<time", "</time>", args...) }
+func (b *B) Time(attrs Attributes, body Body) { b.element("<time", "</time>", attrs, body) }
 
 // U writes a <u> element.
-func (b *B) U(args ...any) { b.element("<u", "</u>", args...) }
+func (b *B) U(attrs Attributes, body Body) { b.element("<u", "</u>", attrs, body) }
 
 // Var writes a <var> element.
-func (b *B) Var(args ...any) { b.element("<var", "</var>", args...) }
+func (b *B) Var(attrs Attributes, body Body) { b.element("<var", "</var>", attrs, body) }
 
 // Wbr writes a self-closing <wbr> element.
-func (b *B) Wbr(args ...any) { b.voidElement("<wbr", args...) }
+func (b *B) Wbr(attrs Attributes) { b.voidElement("<wbr", attrs) }
 
 // Area writes a self-closing <area> element.
-func (b *B) Area(args ...any) { b.voidElement("<area", args...) }
+func (b *B) Area(attrs Attributes) { b.voidElement("<area", attrs) }
 
 // Audio writes an <audio> element.
-func (b *B) Audio(args ...any) { b.element("<audio", "</audio>", args...) }
+func (b *B) Audio(attrs Attributes, body Body) { b.element("<audio", "</audio>", attrs, body) }
 
 // Img writes a self-closing <img> element.
-func (b *B) Img(args ...any) { b.voidElement("<img", args...) }
+func (b *B) Img(attrs Attributes) { b.voidElement("<img", attrs) }
 
 // Map writes a <map> element.
-func (b *B) Map(args ...any) { b.element("<map", "</map>", args...) }
+func (b *B) Map(attrs Attributes, body Body) { b.element("<map", "</map>", attrs, body) }
 
 // Track writes a self-closing <track> element.
-func (b *B) Track(args ...any) { b.voidElement("<track", args...) }
+func (b *B) Track(attrs Attributes) { b.voidElement("<track", attrs) }
 
 // Video writes a <video> element.
-func (b *B) Video(args ...any) { b.element("<video", "</video>", args...) }
+func (b *B) Video(attrs Attributes, body Body) { b.element("<video", "</video>", attrs, body) }
 
 // Embed writes a self-closing <embed> element.
-func (b *B) Embed(args ...any) { b.voidElement("<embed", args...) }
+func (b *B) Embed(attrs Attributes) { b.voidElement("<embed", attrs) }
 
 // Iframe writes an <iframe> element.
-func (b *B) Iframe(args ...any) { b.element("<iframe", "</iframe>", args...) }
+func (b *B) Iframe(attrs Attributes, body Body) { b.element("<iframe", "</iframe>", attrs, body) }
 
 // Object writes an <object> element.
-func (b *B) Object(args ...any) { b.element("<object", "</object>", args...) }
+func (b *B) Object(attrs Attributes, body Body) { b.element("<object", "</object>", attrs, body) }
 
 // Picture writes a <picture> element.
-func (b *B) Picture(args ...any) { b.element("<picture", "</picture>", args...) }
+func (b *B) Picture(attrs Attributes, body Body) { b.element("<picture", "</picture>", attrs, body) }
 
 // Portal writes a <portal> element.
-func (b *B) Portal(args ...any) { b.element("<portal", "</portal>", args...) }
+func (b *B) Portal(attrs Attributes, body Body) { b.element("<portal", "</portal>", attrs, body) }
 
 // Source writes a self-closing <source> element.
-func (b *B) Source(args ...any) { b.voidElement("<source", args...) }
+func (b *B) Source(attrs Attributes) { b.voidElement("<source", attrs) }
 
 // Svg writes an <svg> element.
-func (b *B) Svg(args ...any) { b.element("<svg", "</svg>", args...) }
+func (b *B) Svg(attrs Attributes, body Body) { b.element("<svg", "</svg>", attrs, body) }
 
 // Math writes a <math> element.
-func (b *B) Math(args ...any) { b.element("<math", "</math>", args...) }
+func (b *B) Math(attrs Attributes, body Body) { b.element("<math", "</math>", attrs, body) }
 
 // Canvas writes a <canvas> element.
-func (b *B) Canvas(args ...any) { b.element("<canvas", "</canvas>", args...) }
+func (b *B) Canvas(attrs Attributes, body Body) { b.element("<canvas", "</canvas>", attrs, body) }
 
 // Template writes a <template> element.
-func (b *B) Template(args ...any) { b.element("<template", "</template>", args...) }
+func (b *B) Template(attrs Attributes, body Body) { b.element("<template", "</template>", attrs, body) }
 
 // Slot writes a <slot> element.
-func (b *B) Slot(args ...any) { b.element("<slot", "</slot>", args...) }
+func (b *B) Slot(attrs Attributes, body Body) { b.element("<slot", "</slot>", attrs, body) }
 
 // Del writes a <del> element.
-func (b *B) Del(args ...any) { b.element("<del", "</del>", args...) }
+func (b *B) Del(attrs Attributes, body Body) { b.element("<del", "</del>", attrs, body) }
 
 // Ins writes an <ins> element.
-func (b *B) Ins(args ...any) { b.element("<ins", "</ins>", args...) }
+func (b *B) Ins(attrs Attributes, body Body) { b.element("<ins", "</ins>", attrs, body) }
 
 // Caption writes a <caption> element.
-func (b *B) Caption(args ...any) { b.element("<caption", "</caption>", args...) }
+func (b *B) Caption(attrs Attributes, body Body) { b.element("<caption", "</caption>", attrs, body) }
 
 // Col writes a self-closing <col> element.
-func (b *B) Col(args ...any) { b.voidElement("<col", args...) }
+func (b *B) Col(attrs Attributes) { b.voidElement("<col", attrs) }
 
 // Colgroup writes a <colgroup> element.
-func (b *B) Colgroup(args ...any) { b.element("<colgroup", "</colgroup>", args...) }
+func (b *B) Colgroup(attrs Attributes, body Body) { b.element("<colgroup", "</colgroup>", attrs, body) }
 
 // Table writes a <table> element.
-func (b *B) Table(args ...any) { b.element("<table", "</table>", args...) }
+func (b *B) Table(attrs Attributes, body Body) { b.element("<table", "</table>", attrs, body) }
 
 // Tbody writes a <tbody> element.
-func (b *B) Tbody(args ...any) { b.element("<tbody", "</tbody>", args...) }
+func (b *B) Tbody(attrs Attributes, body Body) { b.element("<tbody", "</tbody>", attrs, body) }
 
 // Td writes a <td> element.
-func (b *B) Td(args ...any) { b.element("<td", "</td>", args...) }
+func (b *B) Td(attrs Attributes, body Body) { b.element("<td", "</td>", attrs, body) }
 
 // Tfoot writes a <tfoot> element.
-func (b *B) Tfoot(args ...any) { b.element("<tfoot", "</tfoot>", args...) }
+func (b *B) Tfoot(attrs Attributes, body Body) { b.element("<tfoot", "</tfoot>", attrs, body) }
 
 // Th writes a <th> element.
-func (b *B) Th(args ...any) { b.element("<th", "</th>", args...) }
+func (b *B) Th(attrs Attributes, body Body) { b.element("<th", "</th>", attrs, body) }
 
 // Thead writes a <thead> element.
-func (b *B) Thead(args ...any) { b.element("<thead", "</thead>", args...) }
+func (b *B) Thead(attrs Attributes, body Body) { b.element("<thead", "</thead>", attrs, body) }
 
 // Tr writes a <tr> element.
-func (b *B) Tr(args ...any) { b.element("<tr", "</tr>", args...) }
+func (b *B) Tr(attrs Attributes, body Body) { b.element("<tr", "</tr>", attrs, body) }
 
 // Button writes a <button> element.
-func (b *B) Button(args ...any) { b.element("<button", "</button>", args...) }
+func (b *B) Button(attrs Attributes, body Body) { b.element("<button", "</button>", attrs, body) }
 
 // Datalist writes a <datalist> element.
-func (b *B) Datalist(args ...any) { b.element("<datalist", "</datalist>", args...) }
+func (b *B) Datalist(attrs Attributes, body Body) { b.element("<datalist", "</datalist>", attrs, body) }
 
 // Fieldset writes a <fieldset> element.
-func (b *B) Fieldset(args ...any) { b.element("<fieldset", "</fieldset>", args...) }
+func (b *B) Fieldset(attrs Attributes, body Body) { b.element("<fieldset", "</fieldset>", attrs, body) }
 
 // Form writes a <form> element.
-func (b *B) Form(args ...any) { b.element("<form", "</form>", args...) }
+func (b *B) Form(attrs Attributes, body Body) { b.element("<form", "</form>", attrs, body) }
 
 // Input writes a self-closing <input> element.
-func (b *B) Input(args ...any) { b.voidElement("<input", args...) }
+func (b *B) Input(attrs Attributes) { b.voidElement("<input", attrs) }
 
 // Label writes a <label> element.
-func (b *B) Label(args ...any) { b.element("<label", "</label>", args...) }
+func (b *B) Label(attrs Attributes, body Body) { b.element("<label", "</label>", attrs, body) }
 
 // Legend writes a <legend> element.
-func (b *B) Legend(args ...any) { b.element("<legend", "</legend>", args...) }
+func (b *B) Legend(attrs Attributes, body Body) { b.element("<legend", "</legend>", attrs, body) }
 
 // Meter writes a <meter> element.
-func (b *B) Meter(args ...any) { b.element("<meter", "</meter>", args...) }
+func (b *B) Meter(attrs Attributes, body Body) { b.element("<meter", "</meter>", attrs, body) }
 
 // Optgroup writes an <optgroup> element.
-func (b *B) Optgroup(args ...any) { b.element("<optgroup", "</optgroup>", args...) }
+func (b *B) Optgroup(attrs Attributes, body Body) { b.element("<optgroup", "</optgroup>", attrs, body) }
 
 // Option writes an <option> element.
-func (b *B) Option(args ...any) { b.element("<option", "</option>", args...) }
+func (b *B) Option(attrs Attributes, body Body) { b.element("<option", "</option>", attrs, body) }
 
 // Output writes an <output> element.
-func (b *B) Output(args ...any) { b.element("<output", "</output>", args...) }
+func (b *B) Output(attrs Attributes, body Body) { b.element("<output", "</output>", attrs, body) }
 
 // Progress writes a <progress> element.
-func (b *B) Progress(args ...any) { b.element("<progress", "</progress>", args...) }
+func (b *B) Progress(attrs Attributes, body Body) { b.element("<progress", "</progress>", attrs, body) }
 
 // Select writes a <select> element.
-func (b *B) Select(args ...any) { b.element("<select", "</select>", args...) }
+func (b *B) Select(attrs Attributes, body Body) { b.element("<select", "</select>", attrs, body) }
 
 // Textarea writes a <textarea> element.
-func (b *B) Textarea(args ...any) { b.element("<textarea", "</textarea>", args...) }
+func (b *B) Textarea(attrs Attributes, body Body) { b.element("<textarea", "</textarea>", attrs, body) }
 
 // Details writes a <details> element.
-func (b *B) Details(args ...any) { b.element("<details", "</details>", args...) }
+func (b *B) Details(attrs Attributes, body Body) { b.element("<details", "</details>", attrs, body) }
 
 // Dialog writes a <dialog> element.
-func (b *B) Dialog(args ...any) { b.element("<dialog", "</dialog>", args...) }
+func (b *B) Dialog(attrs Attributes, body Body) { b.element("<dialog", "</dialog>", attrs, body) }
 
 // Summary writes a <summary> element.
-func (b *B) Summary(args ...any) { b.element("<summary", "</summary>", args...) }
+func (b *B) Summary(attrs Attributes, body Body) { b.element("<summary", "</summary>", attrs, body) }
