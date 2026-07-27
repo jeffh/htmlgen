@@ -5,12 +5,12 @@ import "testing"
 func TestNativeControlFlowAndComposition(t *testing.T) {
 	items := []string{"one", "hidden", "three"}
 	list := func(b *B, values []string) {
-		b.Ul(func(b *B) {
+		b.Ul(nil, func(b *B) {
 			for _, item := range values {
 				if item == "hidden" {
 					continue
 				}
-				b.Li(func(b *B) { b.Text(item) })
+				b.Li(nil, func(b *B) { b.Text(item) })
 			}
 		})
 	}

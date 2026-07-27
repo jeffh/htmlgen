@@ -636,34 +636,31 @@ import (
 
 func CounterComponent(b *h.B) {
     b.Div(
-        ds.Signal("count", 0),
+        h.AttrsOf(ds.Signal("count", 0)),
         func(b *h.B) {
             b.Button(
-                h.Attrs("type", "button"),
-                ds.OnClick(ds.Raw("$count++")),
+                h.Attrs("type", "button").With(ds.OnClick(ds.Raw("$count++"))),
                 func(b *h.B) { b.Text("Increment") },
             )
-            b.Span(ds.Text(ds.Raw("`Count: ${$count}`")))
+            b.Span(h.AttrsOf(ds.Text(ds.Raw("`Count: ${$count}`"))), nil)
         },
     )
 }
 
 func SearchForm(b *h.B) {
     b.Form(
-        ds.Signal("query", ""),
-        ds.Indicator("searching"),
+        h.AttrsOf(ds.Signal("query", ""), ds.Indicator("searching")),
         func(b *h.B) {
-            b.Input(
-                h.Attrs("type", "text", "placeholder", "Search..."),
+            b.Input(h.Attrs("type", "text", "placeholder", "Search...").With(
                 ds.Bind("query"),
                 ds.OnInput(ds.Get("/search")).Debounce(300*time.Millisecond),
+            ))
+            b.Div(
+                h.Attrs("id", "results").With(ds.Show(ds.Raw("!$searching"))),
+                nil,
             )
             b.Div(
-                h.Attrs("id", "results"),
-                ds.Show(ds.Raw("!$searching")),
-            )
-            b.Div(
-                ds.Show(ds.Raw("$searching")),
+                h.AttrsOf(ds.Show(ds.Raw("$searching"))),
                 func(b *h.B) { b.Text("Loading...") },
             )
         },

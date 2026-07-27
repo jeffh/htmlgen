@@ -766,6 +766,9 @@ pre[class*="language-"] {
 .language-css .token.string,
 .style .token.string {
   color: var(--gold);
+  /* The upstream Prism theme puts a translucent white background on these,
+     which reads as a grey box against the dark code block. */
+  background: none;
 }
 
 .token.atrule,

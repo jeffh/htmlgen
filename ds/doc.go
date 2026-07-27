@@ -2,19 +2,19 @@
 //
 // The package uses a fluent builder API: each event/signal/etc. constructor
 // returns a builder type with chainable modifier methods. Builders implement
-// h.AttrBuilder so they can be passed directly to element methods without an
-// explicit terminator method.
+// h.AttrBuilder, so h.AttrsOf and h.Attributes.With collect them into the
+// h.Attributes an element method takes, with no explicit terminator method.
 //
 // Common usage:
 //
 //	h.Render(w, func(b *h.B) {
 //	    b.Button(
-//	        ds.OnClick(ds.Raw("$count++")).PreventDefault().Debounce(300*time.Millisecond),
+//	        h.AttrsOf(ds.OnClick(ds.Raw("$count++")).PreventDefault().Debounce(300*time.Millisecond)),
 //	        func(b *h.B) { b.Text("Click me") },
 //	    )
-//	    b.Input(ds.Bind("name").Case(ds.CamelCase))
+//	    b.Input(h.AttrsOf(ds.Bind("name").Case(ds.CamelCase)))
 //	    b.Div(
-//	        ds.Show(ds.Raw("$visible")),
+//	        h.Attrs("class", "panel").With(ds.Show(ds.Raw("$visible"))),
 //	        func(b *h.B) { b.Text("Hello") },
 //	    )
 //	})

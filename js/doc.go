@@ -16,7 +16,7 @@
 //	// Simple click handler
 //	button := h.RenderString(func(b *h.B) {
 //	    b.Button(
-//	        js.OnClick(js.Alert(js.String("Hello!")).Stmt()),
+//	        h.AttrsOf(js.OnClick(js.Alert(js.String("Hello!")).Stmt())),
 //	        func(b *h.B) { b.Text("Say Hello") },
 //	    )
 //	})

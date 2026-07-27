@@ -19,12 +19,13 @@ func (a staticAttr) Attribute() Attribute {
 func TestStreamingElementsAndEscaping(t *testing.T) {
 	got := RenderString(func(b *B) {
 		b.Div(
-			Attrs("class", "first", "title", `"<&`),
-			Attr("class", "last"),
-			staticAttr{Attr("data-value", "a&b")},
+			Attrs("class", "first", "title", `"<&`).With(
+				Attr("class", "last"),
+				staticAttr{Attr("data-value", "a&b")},
+			),
 			func(b *B) {
 				b.Text(`"<tag>" & '` + "\x00")
-				b.Br(Attr("hidden", ""))
+				b.Br(AttrsOf(Attr("hidden", "")))
 				b.Raw("<strong>safe</strong>")
 			},
 		)
@@ -46,49 +47,23 @@ func TestFormattedContent(t *testing.T) {
 	}
 }
 
-func TestBodyLastWinsAndNilIgnored(t *testing.T) {
-	var body Body = func(b *B) { b.Text("last") }
-	got := RenderString(func(b *B) {
-		b.Div(
-			nil,
-			func(b *B) { b.Text("first") },
-			body,
-		)
-	})
-	if got != "<div>last</div>" {
-		t.Fatalf("output = %q", got)
-	}
-}
-
-func TestUnknownElementArgumentPanics(t *testing.T) {
-	defer func() {
-		value := recover()
-		if value == nil {
-			t.Fatal("expected panic")
-		}
-		if !strings.Contains(value.(string), "unsupported argument type int for <div>") {
-			t.Fatalf("panic = %q", value)
-		}
-	}()
-	Render(io.Discard, func(b *B) {
-		b.Div(42)
-	})
-}
-
-func TestTypedNilBodyIsIgnored(t *testing.T) {
+func TestNilAttrsAndNilBody(t *testing.T) {
 	var nilBody Body
 	got := RenderString(func(b *B) {
-		b.Div(func(b *B) { b.Text("kept") }, nilBody)
+		b.Div(nil, nil)
+		b.Span(nil, func(b *B) { b.Text("kept") })
+		b.P(nil, nilBody)
 	})
-	if got != "<div>kept</div>" {
-		t.Fatalf("output = %q, want %q", got, "<div>kept</div>")
+	want := "<div></div><span>kept</span><p></p>"
+	if got != want {
+		t.Fatalf("output = %q, want %q", got, want)
 	}
 }
 
 func TestCallerAttributesNotMutated(t *testing.T) {
 	shared := Attrs("class", "a")
 	got := RenderString(func(b *B) {
-		b.Div(shared, Attr("class", "b"))
+		b.Div(shared.With(Attr("class", "b")), nil)
 	})
 	if got != `<div class="b"></div>` {
 		t.Fatalf("output = %q", got)
@@ -97,59 +72,59 @@ func TestCallerAttributesNotMutated(t *testing.T) {
 		t.Fatalf("caller Attributes mutated: class = %q, want %q", value, "a")
 	}
 
-	// Html must not write its lang default into a caller slice's spare capacity.
+	// With must not write into a caller slice's spare capacity either.
 	shared = make(Attributes, 0, 4)
 	shared = append(shared, Attribute{Name: "class", Value: "page"})
-	RenderString(func(b *B) { b.Html(shared) })
+	if got := shared.With(Attr("id", "main")); len(got) != 2 {
+		t.Fatalf("With result = %v", got)
+	}
+	if len(shared) != 1 {
+		t.Fatalf("caller Attributes grew: %v", shared)
+	}
+
+	// Html must not write its lang default into a caller slice's spare capacity.
+	RenderString(func(b *B) { b.Html(shared, nil) })
 	if len(shared) != 1 {
 		t.Fatalf("caller Attributes grew: %v", shared)
 	}
 }
 
-func TestZeroAttributeArgSkipped(t *testing.T) {
+func TestZeroAttributeSkipped(t *testing.T) {
 	got := RenderString(func(b *B) {
-		b.Div(Attrs("id", "x"), AttrIf(false, "disabled", ""))
+		b.Div(Attrs("id", "x").With(AttrIf(false, "disabled", ""), nil), nil)
 	})
 	if got != `<div id="x"></div>` {
 		t.Fatalf("output = %q", got)
 	}
 }
 
-func TestVoidElementsIgnoreBodies(t *testing.T) {
-	called := false
-	body := func(b *B) {
-		called = true
-		b.Text("ignored")
-	}
+func TestVoidElements(t *testing.T) {
 	got := RenderString(func(b *B) {
-		b.Area(body)
-		b.Base(body)
-		b.Br(body)
-		b.Col(body)
-		b.Embed(body)
-		b.Hr(body)
-		b.Img(body)
-		b.Input(body)
-		b.Link(body)
-		b.Meta(body)
-		b.Source(body)
-		b.Track(body)
-		b.Wbr(body)
+		b.Area(nil)
+		b.Base(nil)
+		b.Br(nil)
+		b.Col(nil)
+		b.Embed(nil)
+		b.Hr(nil)
+		b.Img(nil)
+		b.Input(nil)
+		b.Link(nil)
+		b.Meta(nil)
+		b.Source(nil)
+		b.Track(nil)
+		b.Wbr(nil)
 	})
 	want := "<area/><base/><br/><col/><embed/><hr/><img/><input/><link/><meta/><source/><track/><wbr/>"
 	if got != want {
 		t.Fatalf("void output = %q, want %q", got, want)
-	}
-	if called {
-		t.Fatal("void element ran its body")
 	}
 }
 
 func TestHtmlDoctypeAndLanguage(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		got := RenderString(func(b *B) {
-			b.Html(func(b *B) {
-				b.Body(func(b *B) { b.Text("hello") })
+			b.Html(nil, func(b *B) {
+				b.Body(nil, func(b *B) { b.Text("hello") })
 			})
 		})
 		want := "<!DOCTYPE html>\n<html lang=\"en\"><body>hello</body></html>"
@@ -160,7 +135,7 @@ func TestHtmlDoctypeAndLanguage(t *testing.T) {
 
 	t.Run("override", func(t *testing.T) {
 		got := RenderString(func(b *B) {
-			b.Html(Attrs("lang", "fr", "class", "page"))
+			b.Html(Attrs("lang", "fr", "class", "page"), nil)
 		})
 		want := "<!DOCTYPE html>\n<html lang=\"fr\" class=\"page\"></html>"
 		if got != want {
@@ -172,8 +147,8 @@ func TestHtmlDoctypeAndLanguage(t *testing.T) {
 func TestDoctypeAndCustomElements(t *testing.T) {
 	got := RenderString(func(b *B) {
 		b.Doctype()
-		b.El("user-card", Attr("name", "Ada"), func(b *B) {
-			b.VoidEl("avatar", Attr("src", "/ada.png"))
+		b.El("user-card", AttrsOf(Attr("name", "Ada")), func(b *B) {
+			b.VoidEl("avatar", AttrsOf(Attr("src", "/ada.png")))
 		})
 	})
 	want := "<!DOCTYPE html>\n<user-card name=\"Ada\"><avatar src=\"/ada.png\"/></user-card>"
@@ -185,10 +160,10 @@ func TestDoctypeAndCustomElements(t *testing.T) {
 func TestRenderIndent(t *testing.T) {
 	var output strings.Builder
 	err := RenderIndent(&output, "  ", func(b *B) {
-		b.Html(func(b *B) {
-			b.Body(func(b *B) {
-				b.H1(func(b *B) { b.Text("Title") })
-				b.Img(Attr("src", "photo.jpg"))
+		b.Html(nil, func(b *B) {
+			b.Body(nil, func(b *B) {
+				b.H1(nil, func(b *B) { b.Text("Title") })
+				b.Img(Attrs("src", "photo.jpg"))
 			})
 		})
 	})
@@ -216,7 +191,7 @@ func TestAttributeLineWrapping(t *testing.T) {
 		b.Div(
 			Attrs("class", "one", "data-long", "two"),
 			func(b *B) {
-				b.Span(func(b *B) { b.Text("x") })
+				b.Span(nil, func(b *B) { b.Text("x") })
 			},
 		)
 	})
@@ -271,11 +246,11 @@ func TestStickyErrorStopsOutput(t *testing.T) {
 	writer := &failAfterWriter{remain: 8}
 	sawError := false
 	err := Render(writer, func(b *B) {
-		b.Div(func(b *B) {
+		b.Div(nil, func(b *B) {
 			b.Text(strings.Repeat("a", flushThreshold))
 			sawError = errors.Is(b.Err(), errWrite)
 			b.Raw("not-written")
-			b.Span(func(b *B) { b.Text("also-not-written") })
+			b.Span(nil, func(b *B) { b.Text("also-not-written") })
 		})
 		b.Raw("still-not-written")
 	})
@@ -293,7 +268,7 @@ func TestStickyErrorStopsOutput(t *testing.T) {
 func TestStickyErrorSurfacesFromFinalFlush(t *testing.T) {
 	writer := &failAfterWriter{remain: 3}
 	err := Render(writer, func(b *B) {
-		b.Div(func(b *B) { b.Text("hello") })
+		b.Div(nil, func(b *B) { b.Text("hello") })
 	})
 	if !errors.Is(err, errWrite) {
 		t.Fatalf("Render error = %v, want %v", err, errWrite)
@@ -306,7 +281,7 @@ func TestStickyErrorSurfacesFromFinalFlush(t *testing.T) {
 func TestFlushDeliversBufferedOutput(t *testing.T) {
 	var output bytes.Buffer
 	err := Render(&output, func(b *B) {
-		b.Div(func(b *B) {
+		b.Div(nil, func(b *B) {
 			b.Text("first")
 			if flushErr := b.Flush(); flushErr != nil {
 				t.Error(flushErr)
@@ -328,7 +303,7 @@ func TestFlushDeliversBufferedOutput(t *testing.T) {
 func TestLargeRawBypassesBuffer(t *testing.T) {
 	value := strings.Repeat("x", flushThreshold*2)
 	got := RenderString(func(b *B) {
-		b.Div(func(b *B) {
+		b.Div(nil, func(b *B) {
 			b.Text("a")
 			b.Raw(value)
 			b.Text("b")
@@ -354,7 +329,7 @@ func TestLargeRawToNonStringWriter(t *testing.T) {
 	value := strings.Repeat("x", flushThreshold*2+7)
 	var w byteOnlyWriter
 	err := Render(&w, func(b *B) {
-		b.Div(func(b *B) {
+		b.Div(nil, func(b *B) {
 			b.Text("a")
 			b.Raw(value)
 			b.Text("b")
@@ -374,7 +349,7 @@ func TestOutputSpanningManyFlushes(t *testing.T) {
 	var want strings.Builder
 	got := RenderString(func(b *B) {
 		for i := 0; i < rows; i++ {
-			b.LiE(Attrs("class", "row"), func(b *B) { b.Text("a&b") })
+			b.Li(Attrs("class", "row"), func(b *B) { b.Text("a&b") })
 			want.WriteString(`<li class="row">a&amp;b</li>`)
 		}
 	})
@@ -388,7 +363,7 @@ func TestIndentedOutputSpanningManyFlushes(t *testing.T) {
 	var want strings.Builder
 	err := RenderIndent(&output, "  ", func(b *B) {
 		for i := 0; i < 500; i++ {
-			b.PE(nil, func(b *B) { b.Text("x") })
+			b.P(nil, func(b *B) { b.Text("x") })
 			want.WriteString("<p>\n  x\n</p>\n")
 		}
 	})
@@ -414,7 +389,7 @@ func TestLargeEscapedValuesDoNotGrowBuffer(t *testing.T) {
 
 	var output bytes.Buffer
 	err := Render(&output, func(b *B) {
-		b.DivE(Attrs("data-big", attrValue), func(b *B) {
+		b.Div(Attrs("data-big", attrValue), func(b *B) {
 			observe(b)
 			b.Text("before")
 			b.Text(text)
@@ -444,53 +419,34 @@ func TestLargeEscapedValuesDoNotGrowBuffer(t *testing.T) {
 	}
 }
 
-func TestTypedElements(t *testing.T) {
+func TestNestedAndCustomElements(t *testing.T) {
 	got := RenderString(func(b *B) {
-		b.DivE(Attrs("class", "card"), func(b *B) {
-			b.H1E(nil, func(b *B) { b.Text("<title>") })
-			b.ImgE(Attrs("src", "a.png"))
-			b.BrE(nil)
-			b.SpanE(nil, nil)
-			b.ElE("user-card", Attrs("name", "Ada"), func(b *B) {
-				b.VoidElE("avatar", nil)
+		b.Div(Attrs("class", "card"), func(b *B) {
+			b.H1(nil, func(b *B) { b.Text("<title>") })
+			b.Img(Attrs("src", "a.png"))
+			b.Br(nil)
+			b.Span(nil, nil)
+			b.El("user-card", Attrs("name", "Ada"), func(b *B) {
+				b.VoidEl("avatar", nil)
 			})
 		})
 	})
 	want := `<div class="card"><h1>&lt;title&gt;</h1><img src="a.png"/><br/><span></span>` +
 		`<user-card name="Ada"><avatar/></user-card></div>`
 	if got != want {
-		t.Fatalf("typed output = %q, want %q", got, want)
+		t.Fatalf("output = %q, want %q", got, want)
 	}
 }
 
-func TestTypedHtmlDoctypeAndLanguage(t *testing.T) {
-	got := RenderString(func(b *B) {
-		b.HtmlE(nil, func(b *B) { b.BodyE(nil, nil) })
-	})
-	if want := "<!DOCTYPE html>\n<html lang=\"en\"><body></body></html>"; got != want {
-		t.Fatalf("output = %q, want %q", got, want)
-	}
-
-	shared := make(Attributes, 0, 4)
-	shared = append(shared, Attribute{Name: "lang", Value: "fr"})
-	got = RenderString(func(b *B) { b.HtmlE(shared, nil) })
-	if want := "<!DOCTYPE html>\n<html lang=\"fr\"></html>"; got != want {
-		t.Fatalf("output = %q, want %q", got, want)
-	}
-	if len(shared) != 1 {
-		t.Fatalf("caller Attributes grew: %v", shared)
-	}
-}
-
-func TestTypedElementBodyDoesNotAllocate(t *testing.T) {
+func TestElementBodyDoesNotAllocate(t *testing.T) {
 	label := "captured"
 	allocs := testing.AllocsPerRun(100, func() {
 		Render(io.Discard, func(b *B) {
-			b.DivE(nil, func(b *B) { b.Text(label) })
+			b.Div(nil, func(b *B) { b.Text(label) })
 		})
 	})
 	if allocs != 0 {
-		t.Fatalf("DivE with a capturing closure allocated %v times, want 0", allocs)
+		t.Fatalf("Div with a capturing closure allocated %v times, want 0", allocs)
 	}
 }
 
@@ -568,6 +524,35 @@ func TestAttributesAPI(t *testing.T) {
 		if attrs[index] != want[index] {
 			t.Fatalf("attributes = %#v, want %#v", attrs, want)
 		}
+	}
+}
+
+func TestAttrsOfAndWith(t *testing.T) {
+	got := AttrsOf(
+		Attr("class", "one"),
+		staticAttr{Attr("data-x", "1")},
+		Attr("class", "two"),
+		AttrIf(false, "hidden", ""),
+		nil,
+	)
+	want := Attributes{
+		{Name: "class", Value: "two"},
+		{Name: "data-x", Value: "1"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("AttrsOf = %#v, want %#v", got, want)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("AttrsOf = %#v, want %#v", got, want)
+		}
+	}
+
+	if got := AttrsOf(); got != nil {
+		t.Fatalf("AttrsOf() = %#v, want nil", got)
+	}
+	if got := Attributes(nil).With(AttrIf(false, "hidden", "")); got != nil {
+		t.Fatalf("With(zero attribute) = %#v, want nil", got)
 	}
 }
 

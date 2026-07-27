@@ -29,21 +29,25 @@ htmlgen provides four packages:
 
 Render HTML imperatively through a per-render `*h.B`. Container bodies execute
 immediately, so normal Go control flow and component functions work without an
-intermediate tree:
+intermediate tree.
+
+Every container element takes attributes and a body — `Div(attrs h.Attributes,
+body h.Body)` — and every void element takes attributes alone — `Img(attrs
+h.Attributes)`. `nil` is valid for either:
 
 ```go
 import "github.com/jeffh/htmlgen/h"
 
 err := h.Render(os.Stdout, func(b *h.B) {
-    b.Html(func(b *h.B) {
-        b.Head(func(b *h.B) {
-            b.Title(func(b *h.B) { b.Text("My Page") })
+    b.Html(nil, func(b *h.B) {
+        b.Head(nil, func(b *h.B) {
+            b.Title(nil, func(b *h.B) { b.Text("My Page") })
         })
-        b.Body(func(b *h.B) {
+        b.Body(nil, func(b *h.B) {
             b.Div(h.Attrs("class", "container"), func(b *h.B) {
-                b.H1(func(b *h.B) { b.Text("Hello, World!") })
-                b.P(func(b *h.B) { b.Text("Welcome to htmlgen.") })
-                b.A(h.Attr("href", "/about"), func(b *h.B) {
+                b.H1(nil, func(b *h.B) { b.Text("Hello, World!") })
+                b.P(nil, func(b *h.B) { b.Text("Welcome to htmlgen.") })
+                b.A(h.Attrs("href", "/about"), func(b *h.B) {
                     b.Text("About")
                 })
             })
@@ -55,7 +59,21 @@ if err != nil {
 }
 
 html := h.RenderString(func(b *h.B) {
-    b.Strong(func(b *h.B) { b.Text("Rendered to a string") })
+    b.Strong(nil, func(b *h.B) { b.Text("Rendered to a string") })
+})
+```
+
+Concrete parameter types mean nothing is boxed into an interface, so a body
+closure that captures a loop variable stays on the stack:
+
+```go
+b.Div(h.Attrs("class", "grid"), func(b *h.B) {
+    for _, card := range cards {
+        b.Div(h.Attrs("class", "card"), func(b *h.B) {
+            b.H3(nil, func(b *h.B) { b.Text(card.Title) })
+            b.Img(h.Attrs("src", card.Image))
+        })
+    }
 })
 ```
 
@@ -73,7 +91,7 @@ want to start streaming early:
 err := h.Render(w, func(b *h.B) {
     b.Div(h.Attrs("class", "feed"), func(b *h.B) {
         for event := range events {
-            b.P(func(b *h.B) { b.Text(event) })
+            b.P(nil, func(b *h.B) { b.Text(event) })
             if err := b.Flush(); err != nil {
                 return
             }
@@ -99,29 +117,6 @@ large `Text`, a large attribute value) bypass the buffer and stream straight to
 the writer, so rendering a multi-megabyte value does not cost a multi-megabyte
 buffer.
 
-### Typed fast paths
-
-Every element method has a typed sibling ending in `E` that takes concrete
-parameters instead of `...any` — `DivE(attrs h.Attributes, body h.Body)` for
-containers, `ImgE(attrs h.Attributes)` for void elements, plus `ElE`, `VoidElE`,
-and `HtmlE`. They render identically, but nothing is boxed into an interface, so
-a body closure that captures a loop variable stays on the stack:
-
-```go
-b.DivE(h.Attrs("class", "grid"), func(b *h.B) {
-    for _, card := range cards {
-        b.DivE(h.Attrs("class", "card"), func(b *h.B) {
-            b.H3E(nil, func(b *h.B) { b.Text(card.Title) })
-            b.ImgE(h.Attrs("src", card.Image))
-        })
-    }
-})
-```
-
-`nil` attributes and a `nil` body are both fine. The variadic forms stay the
-ergonomic default — reach for `E` in hot paths, where it is roughly 1.8x faster
-and cuts allocations by two thirds.
-
 ### Attributes
 
 Create attributes using `Attrs()` with key-value pairs or `AttrsMap()` with a map:
@@ -143,9 +138,23 @@ attrs.Delete("disabled")
 value, ok := attrs.Get("class")
 ```
 
-Element arguments may be `Attributes`, an `Attribute`, an `AttrBuilder` from a
-companion package, a trailing `func(*h.B)` body, or `nil`. Later attribute
-values override earlier values.
+Element methods take an `Attributes` (or `nil`). Single `Attribute` values and
+the fluent builders from `ds`, `hx`, and `js` implement `AttrBuilder`, so
+`AttrsOf` collects them into one `Attributes`, and the `With` method adds them
+to an existing set:
+
+```go
+b.Div(h.AttrsOf(h.Attr("id", "app"), ds.Signal("count", 0)), body)
+
+b.Button(h.Attrs("class", "btn").With(
+    hx.Get("/api/data"),
+    hx.Target("#results"),
+), body)
+```
+
+Later values override earlier values of the same name, keeping the earlier
+position. Zero attributes — an `AttrIf` whose condition was false, or a `nil`
+builder — are skipped, and neither `AttrsOf` nor `With` modifies its inputs.
 
 ### Available Elements
 
@@ -161,18 +170,15 @@ All standard HTML5 elements are available as methods on `*h.B`:
 - **Media**: `Img`, `Video`, `Audio`, `Picture`, `Source`, `Canvas`, `Svg`
 - **Content and custom tags**: `Text`, `Textf`, `Raw`, `Rawf`, `El`, `VoidEl`
 
-Void HTML elements such as `Img`, `Input`, and `Br` are self-closing and do not
-run body closures. `Html` emits the HTML5 doctype and defaults to `lang="en"`.
-Each element method also has a typed `E` sibling (`DivE`, `ImgE`, `HtmlE`, ...);
-see [Typed fast paths](#typed-fast-paths).
+Void HTML elements such as `Img`, `Input`, and `Br` are self-closing and take no
+body parameter. `Html` emits the HTML5 doctype and defaults to `lang="en"`.
 
 ### Security
 
 Text and attribute *values* are always HTML-escaped (`Raw`/`Rawf` are the
 explicit opt-outs). Attribute *names* and custom tag names are written
 verbatim, so `Attr`, `Attrs`, `AttrsMap`, `AttrIf`, `Set`, `SetDefault`, `El`,
-`VoidEl`, `ElE`, and `VoidElE` validate names against `[A-Za-z][A-Za-z0-9_.:-]*`
-and panic on
+and `VoidEl` validate names against `[A-Za-z][A-Za-z0-9_.:-]*` and panic on
 anything else, preventing injection through a name that breaks out of its
 attribute or element context. `Attribute` struct literals bypass this
 validation and are trusted — never build one with a name derived from
@@ -278,21 +284,20 @@ import (
 
 func main() {
     if err := h.Render(os.Stdout, func(b *h.B) {
-        b.Html(func(b *h.B) {
-            b.Head(func(b *h.B) {
-                b.Title(func(b *h.B) { b.Text("Counter") })
-                b.Script(h.Attrs("type", "module", "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.2/bundles/datastar.js"))
+        b.Html(nil, func(b *h.B) {
+            b.Head(nil, func(b *h.B) {
+                b.Title(nil, func(b *h.B) { b.Text("Counter") })
+                b.Script(h.Attrs("type", "module", "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.2/bundles/datastar.js"), nil)
             })
-            b.Body(func(b *h.B) {
+            b.Body(nil, func(b *h.B) {
                 b.Div(
-                    h.Attr("id", "app"),
-                    ds.Signal("count", 0),
+                    h.AttrsOf(h.Attr("id", "app"), ds.Signal("count", 0)),
                     func(b *h.B) {
                         b.Button(
-                            ds.OnClick(ds.SetSignal("count", ds.Raw("$count + 1"))),
+                            h.AttrsOf(ds.OnClick(ds.SetSignal("count", ds.Raw("$count + 1")))),
                             func(b *h.B) { b.Text("Count: ") },
                         )
-                        b.Span(ds.Text(ds.Raw("$count")))
+                        b.Span(h.AttrsOf(ds.Text(ds.Raw("$count"))), nil)
                     },
                 )
             })
@@ -328,69 +333,56 @@ go test -bench=. -benchmem ./h/
 
 | Scenario | htmlgen | html/template | Winner |
 |----------|---------|---------------|--------|
-| [Card Grid (~90 elements)](h/benchmark_nested_test.go#L149) | 9.7 µs | 54.0 µs | htmlgen ~5.6x faster |
-| [Card Grid, typed `E` methods](h/benchmark_nested_test.go#L158) | 5.3 µs | 54.0 µs | htmlgen ~10.1x faster |
-| [Simple Div](h/benchmark_test.go#L20) | 43 ns | 487 ns | htmlgen ~11.3x faster |
-| [Div with Attributes](h/benchmark_test.go#L45) | 140 ns | 1994 ns | htmlgen ~14.3x faster |
-| [Nested Elements](h/benchmark_test.go#L80) | 195 ns | 2019 ns | htmlgen ~10.4x faster |
-| [List (10 items)](h/benchmark_test.go#L120) | 486 ns | 4.5 µs | htmlgen ~9.2x faster |
-| [List (100 items)](h/benchmark_test.go#L154) | 4.3 µs | 42.5 µs | htmlgen ~9.9x faster |
-| [Table (10 rows)](h/benchmark_test.go#L232) | 2.1 µs | 15.6 µs | htmlgen ~7.3x faster |
-| [Table (100 rows)](h/benchmark_test.go#L252) | 19.3 µs | 153.0 µs | htmlgen ~7.9x faster |
-| [Full Page](h/benchmark_test.go#L352) | 1.9 µs | 10.2 µs | htmlgen ~5.3x faster |
-| [Full Page (parallel)](h/benchmark_test.go#L580) | 1.5 µs | 6.5 µs | htmlgen ~4.3x faster |
-| [Escaping](h/benchmark_test.go#L376) | 250 ns | 1282 ns | htmlgen ~5.1x faster |
-| [Form](h/benchmark_test.go#L474) | 1.8 µs | 13.1 µs | htmlgen ~7.3x faster |
-| [Deep Nesting (10 levels)](h/benchmark_test.go#L426) | 318 ns | 475 ns | htmlgen ~1.5x faster |
+| [Card Grid (~90 elements)](h/benchmark_nested_test.go#L106) | 5.8 µs | 54.4 µs | htmlgen ~9.4x faster |
+| [Simple Div](h/benchmark_test.go#L20) | 41 ns | 491 ns | htmlgen ~11.9x faster |
+| [Div with Attributes](h/benchmark_test.go#L45) | 127 ns | 1975 ns | htmlgen ~15.5x faster |
+| [Nested Elements](h/benchmark_test.go#L80) | 172 ns | 1997 ns | htmlgen ~11.6x faster |
+| [List (10 items)](h/benchmark_test.go#L120) | 258 ns | 4.5 µs | htmlgen ~17.5x faster |
+| [List (100 items)](h/benchmark_test.go#L154) | 2.2 µs | 41.8 µs | htmlgen ~18.6x faster |
+| [Table (10 rows)](h/benchmark_test.go#L232) | 1.1 µs | 15.3 µs | htmlgen ~14.2x faster |
+| [Table (100 rows)](h/benchmark_test.go#L252) | 9.4 µs | 150.7 µs | htmlgen ~16.1x faster |
+| [Full Page](h/benchmark_test.go#L352) | 1.1 µs | 10.1 µs | htmlgen ~9.6x faster |
+| [Full Page (parallel)](h/benchmark_test.go#L580) | 382 ns | 6.5 µs | htmlgen ~16.9x faster |
+| [Escaping](h/benchmark_test.go#L376) | 227 ns | 1322 ns | htmlgen ~5.8x faster |
+| [Form](h/benchmark_test.go#L474) | 1.3 µs | 13.0 µs | htmlgen ~9.7x faster |
+| [Deep Nesting (10 levels)](h/benchmark_test.go#L426) | 178 ns | 481 ns | htmlgen ~2.7x faster |
 
 *Go 1.26.4, `darwin/arm64`, Apple M1 Ultra, `-count=8` medians via `benchstat`.
 Results may vary by hardware and Go version.*
 
 ### Allocations
 
-Streaming skips the intermediate node tree, so allocation counts track the data
-being rendered rather than the shape of the document:
+Streaming skips the intermediate node tree, and concrete element parameters mean
+nothing is boxed, so what is left to allocate is whatever the caller itself
+builds — mostly `Attrs` slices:
 
 | Scenario | htmlgen | html/template |
 |----------|---------|---------------|
-| Card Grid (~90 elements) | 9.8 KiB · 223 allocs | 14.4 KiB · 655 allocs |
-| Card Grid, typed `E` methods | 2.8 KiB · 72 allocs | 14.4 KiB · 655 allocs |
+| Card Grid (~90 elements) | 2.8 KiB · 72 allocs | 14.4 KiB · 655 allocs |
 | Simple Div | 0 B · 0 allocs | 240 B · 7 allocs |
-| Div with Attributes | 120 B · 2 allocs | 576 B · 22 allocs |
+| Div with Attributes | 96 B · 1 alloc | 576 B · 22 allocs |
 | Nested Elements | 0 B · 0 allocs | 576 B · 22 allocs |
-| List (100 items) | 2.4 KiB · 101 allocs | 12.7 KiB · 604 allocs |
-| Table (100 rows) | 25.1 KiB · 402 allocs | 37.7 KiB · 1804 allocs |
-| Full Page | 2.3 KiB · 41 allocs | 2.7 KiB · 122 allocs |
-| Escaping | 56 B · 2 allocs | 736 B · 16 allocs |
-| Form | 2.5 KiB · 37 allocs | 3.2 KiB · 148 allocs |
+| List (100 items) | 0 B · 0 allocs | 12.7 KiB · 604 allocs |
+| Table (100 rows) | 0 B · 0 allocs | 37.7 KiB · 1804 allocs |
+| Full Page | 352 B · 8 allocs | 2.7 KiB · 122 allocs |
+| Escaping | 32 B · 1 alloc | 736 B · 16 allocs |
+| Form | 1.6 KiB · 16 allocs | 3.2 KiB · 148 allocs |
 
 Static markup costs nothing: the simple-div and nested-element cases allocate
 zero bytes, because a body closure that captures no variables is a static
-function value.
-
-### Variadic vs. Typed Element Methods
-
-The card grid is the same ~90-element component tree written two ways — once
-with the variadic methods, once with their typed `E` siblings:
-
-| | Time | Bytes | Allocs |
-|---|------|-------|--------|
-| `Div(attrs, body)` (variadic) | 9.7 µs | 9.8 KiB | 223 |
-| `DivE(attrs, body)` (typed) | 5.3 µs | 2.8 KiB | 72 |
-
-The variadic form pays for a `[]any` per call, one interface box per argument,
-and the type switch that unpacks them. The typed form has none of that, and the
-body closure stays on the stack, so the only remaining allocations are the
-`Attrs` slices the caller builds.
+function value. The list and table benchmarks are also allocation-free — their
+bodies capture loop variables, but a `Body` parameter keeps the closure on the
+stack.
 
 ### Buffered Output
 
 Element methods append to an internal buffer that flushes to the `io.Writer`
 every ~4 KiB, instead of issuing an `io.Writer` call per tag, attribute, and
 text run. A single small element used to cost a dozen writes; it now costs one
-`append` each and shares a flush with its neighbors. That is most of the gain in
-the fine-grained benchmarks — simple div 82 ns to 43 ns, nested elements 532 ns
-to 195 ns — and it also removed the previous `unsafe` string-to-bytes conversion
+`append` each and shares a flush with its neighbors. That roughly halved every
+fine-grained benchmark when it landed — simple div 82 ns to 43 ns, nested
+elements 532 ns to 195 ns, measured before element methods dropped `...any` —
+and it also removed the previous `unsafe` string-to-bytes conversion
 in the escaper, since escaping now appends into the buffer directly. The escape
 path itself is a 256-entry lookup table rather than a byte switch. Values at or
 above the threshold skip the buffer and stream through in bounded chunks, so
@@ -408,19 +400,19 @@ construction inside the timed loop on both sides:
 
 | Scenario | Tree API | Streaming API | Change |
 |----------|----------|---------------|--------|
-| Simple Div | 150 ns · 3 allocs | 43 ns · 0 allocs | 3.5x faster |
-| Div with Attributes | 301 ns · 5 allocs | 140 ns · 2 allocs | 2.2x faster |
-| Nested Elements | 1004 ns · 20 allocs | 195 ns · 0 allocs | 5.2x faster |
-| List (10 items) | 1695 ns · 35 allocs | 486 ns · 11 allocs | 3.5x faster |
-| List (100 items) | 15.5 µs · 308 allocs | 4.3 µs · 101 allocs | 3.6x faster |
-| Table (10 rows) | 6.7 µs · 130 allocs | 2.1 µs · 42 allocs | 3.1x faster |
-| Table (100 rows) | 57.9 µs · 1123 allocs | 19.3 µs · 402 allocs | 3.0x faster |
-| Full Page | 4.6 µs · 86 allocs | 1.9 µs · 41 allocs | 2.4x faster |
-| Escaping | 449 ns · 5 allocs | 250 ns · 2 allocs | 1.8x faster |
-| Deep Nesting (10 levels) | 1031 ns · 21 allocs | 318 ns · 10 allocs | 3.2x faster |
-| Form | 3.4 µs · 56 allocs | 1.8 µs · 37 allocs | 1.9x faster |
+| Simple Div | 150 ns · 3 allocs | 41 ns · 0 allocs | 3.7x faster |
+| Div with Attributes | 301 ns · 5 allocs | 127 ns · 1 alloc | 2.4x faster |
+| Nested Elements | 1004 ns · 20 allocs | 172 ns · 0 allocs | 5.8x faster |
+| List (10 items) | 1695 ns · 35 allocs | 258 ns · 0 allocs | 6.6x faster |
+| List (100 items) | 15.5 µs · 308 allocs | 2.2 µs · 0 allocs | 6.9x faster |
+| Table (10 rows) | 6.7 µs · 130 allocs | 1.1 µs · 0 allocs | 6.2x faster |
+| Table (100 rows) | 57.9 µs · 1123 allocs | 9.4 µs · 0 allocs | 6.2x faster |
+| Full Page | 4.6 µs · 86 allocs | 1.1 µs · 8 allocs | 4.4x faster |
+| Escaping | 449 ns · 5 allocs | 227 ns · 1 alloc | 2.0x faster |
+| Deep Nesting (10 levels) | 1031 ns · 21 allocs | 178 ns · 0 allocs | 5.8x faster |
+| Form | 3.4 µs · 56 allocs | 1.3 µs · 16 allocs | 2.5x faster |
 
-Every scenario improved, by 1.8x to 5.2x, and allocations fell by 30-100%. The
+Every scenario improved, by 2.0x to 6.9x, and allocations fell by 71-100%. The
 gain is largest where the old API built the most nodes and smallest where the
 work is dominated by escaping or attribute handling, which both APIs share.
 
@@ -434,10 +426,10 @@ the cached result yourself.
 
 | Operation | Cost |
 |-----------|------|
-| [`Render` call overhead (empty body)](h/benchmark_test.go#L531) | 14.1 ns · 0 B · 0 allocs |
-| `RenderBytes`, small fragment | 157 ns · 80 B · 1 alloc |
-| `RenderString`, small fragment | 166 ns · 112 B · 2 allocs |
-| `RenderIndent`, small fragment | 230 ns · 16 B · 2 allocs |
+| [`Render` call overhead (empty body)](h/benchmark_test.go#L531) | 14.4 ns · 0 B · 0 allocs |
+| `RenderBytes`, small fragment | 145 ns · 80 B · 1 alloc |
+| `RenderString`, small fragment | 153 ns · 112 B · 2 allocs |
+| `RenderIndent`, small fragment | 212 ns · 16 B · 2 allocs |
 
 `Render` itself is nearly free — the builder comes from a `sync.Pool`, so a
 render that writes nothing allocates nothing. Buffering also makes the in-memory
@@ -447,20 +439,23 @@ compact output, plus a small cached indent ladder.
 
 ### Key Insights
 
-- **htmlgen is faster** for dynamic content, by 5-14x across most scenarios
-- **Typed `E` methods are ~1.8x faster** than the variadic forms on a realistic
-  component tree, at a third of the allocations
+- **htmlgen is faster** for dynamic content, by 6-19x across most scenarios
+- **Nothing is boxed**: element methods take concrete `Attributes` and `Body`
+  parameters, so a capturing body closure stays on the stack and the only
+  allocations left are the `Attrs` slices the caller builds
 - **Buffering dominates the small cases**: writing whole tags into a 4 KiB
   buffer instead of per-fragment `io.Writer` calls roughly halved the cost of
   every fine-grained benchmark
-- **Streaming beats the old tree API** on every benchmark, 1.8-5.2x, while
-  cutting allocations 30-100%
-- **Static markup is free**: body closures that capture nothing allocate nothing
-- htmlgen excels at list and table generation, where it is ~8-10x faster
-- For attribute-heavy elements, htmlgen is up to ~14x faster
-- Concurrency helps, but sub-linearly: on 20 cores, `RunParallel` cuts per-render
-  cost only ~1.3x (1.9 µs to 1.5 µs). The pooled builder is not the bottleneck —
-  allocation and GC pressure from the rendered data is
+- **Streaming beats the old tree API** on every benchmark, 2.0-6.9x, while
+  cutting allocations 71-100%
+- **Static markup is free**: body closures that capture nothing allocate nothing,
+  and closures that capture only loop variables stay on the stack
+- htmlgen excels at list and table generation, where it is ~14-19x faster and
+  allocates nothing
+- For attribute-heavy elements, htmlgen is up to ~16x faster
+- Concurrency scales well now that rendering allocates so little: on 20 cores,
+  `RunParallel` cuts per-render cost ~2.8x (1.05 µs to 382 ns), up from ~1.3x
+  when every element call boxed its arguments
 
 ### When to Use Each
 
@@ -471,18 +466,10 @@ compact output, plus a small cached indent ladder.
 | Full page generation with data | htmlgen |
 | Component-based UI architecture | htmlgen |
 | Streaming to an `http.ResponseWriter` | htmlgen (`Render`, plus `Flush` for SSE) |
-| Hot paths measured to matter | htmlgen typed `E` methods |
 | Static markup rendered repeatedly | Render once, cache the bytes |
 | Designer-edited templates, no recompile | `html/template` |
 
 ### Caveats
-
-**Capturing closures allocate — through the variadic methods.** A body closure
-passed as `...any` is boxed, which forces it to the heap (~16 B each). Rendering
-many small elements in a loop pays this per element; it is why the list and table
-benchmarks allocate roughly one object per row. The typed `E` siblings take the
-closure as a `Body` parameter instead, so it stays on the stack and the cost
-disappears — that alone is most of the 223 to 72 allocation drop in the card grid.
 
 **`html/template` does more.** It escapes context-sensitively (HTML, CSS, JS,
 URL) at execute time. htmlgen escapes text and attribute values only, and

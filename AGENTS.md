@@ -77,7 +77,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
 
 ### Naming Conventions
 - **Exported types/functions**: PascalCase (e.g., `Render`, `Html`, `AttrBuilder`)
-- **Unexported types/functions**: camelCase (e.g., `parseArgs`, `writeAttrs`)
+- **Unexported types/functions**: camelCase (e.g., `validName`, `writeAttrs`)
 - **Interfaces**: Typically use nouns (e.g., `AttrBuilder`, `Callable`) or descriptive names
 - **Element methods on `*h.B`**: Match HTML element names (e.g., `Div`, `Span`, `A`)
 - **Attribute helpers**: Descriptive names (e.g., `Attrs`, `AttrsMap`, `Attr`)
@@ -85,7 +85,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
 - **Benchmark functions**: Start with `Benchmark` (e.g., `BenchmarkRender`)
 
 ### Type Definitions
-- Element methods accept `...any` and type-switch over Attributes, Attribute, AttrBuilder, nil, and `func(*h.B)` bodies; unknown types panic with a clear message
+- Element methods take concrete parameters, never `...any`: `Xxx(attrs Attributes, body Body)` for containers, `Xxx(attrs Attributes)` for void elements; `nil` is valid for either
 - Prefer struct types over type aliases for builders (`h.Body` is the one alias: `func(*h.B)`)
 - Use interfaces to define behavior (e.g., `AttrBuilder`, `Stmt`, `Expr`, `Callable`)
 
@@ -116,7 +116,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
   ```
 
 ### Function Structure
-- **Variadic parameters**: Use `...any` (element args) or `...Stmt` for flexibility
+- **Variadic parameters**: Use a typed variadic (`...AttrBuilder` in `AttrsOf`, `...Stmt` in `js`) rather than `...any`
 - **Options pattern**: Use interfaces like `AttrMutator` with `Modify()` method
 - **Builder pattern**: Chain method calls where appropriate
 - **Function order**: Exported functions first, then unexported helpers
@@ -176,7 +176,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
 
 #### Builder Interface
 - All builders implement: `Build(w *Writer) error`
-- Element args are dispatched by an `any` type switch in `parseArgs`; fluent attribute builders implement `AttrBuilder` (`Attribute() h.Attribute`)
+- Fluent attribute builders implement `AttrBuilder` (`Attribute() h.Attribute`), as does `h.Attribute` itself; `h.AttrsOf` and `h.Attributes.With` collect them into the `Attributes` an element method takes
 - Support nil builders by checking before calling `Build()`
 
 #### Attributes API

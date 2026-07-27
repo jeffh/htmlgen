@@ -21,9 +21,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) for programmatic HTML generati
 
 ### Package `h` - Core HTML Generation
 
-**Streaming API** (`h/writer.go`, `h/tags.go`, `h/tags_typed.go`, `h/render.go`): `Render` creates a per-render `*h.B` bound to an `io.Writer`. All standard HTML5 elements are methods on `B` (for example, `b.Div`, `b.Span`, and `b.A`). Container elements accept attributes plus a trailing `func(*h.B)` body, which runs immediately and streams its children. Void elements write self-closing tags. `Text`/`Textf` escape content, while `Raw`/`Rawf` write caller-sanitized content unchanged. `El`, `VoidEl`, `ElE`, and `VoidElE` support custom tags; they panic unless the tag name matches `[A-Za-z][A-Za-z0-9_.:-]*` (attribute names are validated the same way in `Attr`/`Attrs`/`AttrsMap`/`AttrIf`/`Set`/`SetDefault`, since names are written unescaped; `Attribute` struct literals bypass validation and are trusted).
-
-**Typed fast paths** (`h/tags_typed.go`): every element method `Xxx` has a sibling `XxxE(attrs Attributes, body Body)` (void elements: `XxxE(attrs Attributes)`), plus `ElE`, `VoidElE`, and `HtmlE`. They take concrete parameters instead of `...any`, so arguments are never boxed and a capturing body closure stays stack-allocated. `nil` attrs and a `nil` body are valid. Prefer them in hot paths; the variadic forms remain the ergonomic default.
+**Streaming API** (`h/writer.go`, `h/tags.go`, `h/render.go`): `Render` creates a per-render `*h.B` bound to an `io.Writer`. All standard HTML5 elements are methods on `B` (for example, `b.Div`, `b.Span`, and `b.A`). Every method takes concrete parameters, never `...any`: container elements are `Xxx(attrs Attributes, body Body)`, where the body runs immediately and streams its children; void elements are `Xxx(attrs Attributes)` and write self-closing tags. `nil` attrs and a `nil` body are valid. Nothing is boxed into an interface, so a capturing body closure stays stack-allocated. `Text`/`Textf` escape content, while `Raw`/`Rawf` write caller-sanitized content unchanged. `El(name, attrs, body)` and `VoidEl(name, attrs)` support custom tags; they panic unless the tag name matches `[A-Za-z][A-Za-z0-9_.:-]*` (attribute names are validated the same way in `Attr`/`Attrs`/`AttrsMap`/`AttrIf`/`Set`/`SetDefault`, since names are written unescaped; `Attribute` struct literals bypass validation and are trusted).
 
 `B` buffers output internally and writes to the `io.Writer` in ~4 KiB chunks. `Render`/`RenderIndent` flush before returning; call `Flush()` explicitly when bytes must reach the client mid-render (server-sent events, long streaming responses). A `Raw` value at or above the flush threshold bypasses the buffer.
 
@@ -31,7 +29,7 @@ This is a Go library (`github.com/jeffh/htmlgen`) for programmatic HTML generati
 
 **Attributes** (`h/attrs.go`): `Attributes` is a `[]Attribute` slice with `Get()`, `Set()`, `SetDefault()`, `Delete()` methods. Create via `Attrs("key", "value", ...)` or `AttrsMap(map[string]string{...})`.
 
-Element arguments accept `Attributes`, `Attribute`, any `AttrBuilder`, a body closure, or `nil`. Later attributes override earlier values without changing their position. Companion-package attribute builders from `ds`, `hx`, and `js` can be passed directly to element methods.
+`Attribute` and the fluent builders from `ds`, `hx`, and `js` implement `AttrBuilder`; `AttrsOf(items ...AttrBuilder)` collects them into an `Attributes`, and `Attributes.With(items ...AttrBuilder)` returns a copy with them merged in. Later values override earlier values of the same name without changing their position; zero attributes and `nil` builders are skipped, and neither call modifies its inputs.
 
 ### Package `ds` - Datastar Attribute Helpers
 
