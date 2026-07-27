@@ -6,11 +6,18 @@ import (
 	"io"
 )
 
+// flushThreshold is the buffered byte count that triggers a write to the
+// underlying io.Writer.
+const flushThreshold = 4 << 10
+
 // B is a streaming HTML builder bound to an io.Writer. It tracks open tags,
-// optional pretty-printing, and a sticky write error. A B is not safe for
-// concurrent use by multiple goroutines; each Render gets its own B.
+// optional pretty-printing, and a sticky write error. Output accumulates in an
+// internal buffer and is written to the io.Writer in chunks. A B is not safe
+// for concurrent use by multiple goroutines; each Render gets its own B.
 type B struct {
 	w           io.Writer
+	buf         []byte
+	scratch     []byte
 	openTags    []string
 	indent      string
 	indentCache []string
@@ -19,8 +26,32 @@ type B struct {
 	err         error
 }
 
-// Err returns the first write error encountered, if any.
+// Err returns the first write error encountered, if any. Because output is
+// buffered, Err reflects only the errors observed as of the last flush; a
+// failing writer may not surface until the buffer fills or Flush is called. In
+// a long streaming loop, call Flush at loop boundaries to observe write errors
+// promptly. Render and RenderIndent flush before returning, so their return
+// value always reports the write error.
 func (b *B) Err() error {
+	return b.err
+}
+
+// Flush writes any buffered output to the underlying io.Writer and returns the
+// sticky error. Render and RenderIndent flush on completion; call Flush
+// explicitly when bytes must reach the client mid-render, as with server-sent
+// events or a long streaming response. After a failed flush all further output
+// is discarded.
+//
+// A B is valid only for the duration of the Render call that created it, since
+// it is returned to a pool afterwards. Do not retain it, and do not call Flush
+// once that Render has returned.
+func (b *B) Flush() error {
+	if b.err != nil || len(b.buf) == 0 {
+		return b.err
+	}
+	_, err := b.w.Write(b.buf)
+	b.buf = b.buf[:0]
+	b.setErr(err)
 	return b.err
 }
 
@@ -38,12 +69,79 @@ func (b *B) setErr(err error) {
 	}
 }
 
+func (b *B) maybeFlush() {
+	if len(b.buf) >= flushThreshold {
+		b.Flush()
+	}
+}
+
 func (b *B) writeString(value string) {
 	if b.err != nil {
 		return
 	}
-	_, err := io.WriteString(b.w, value)
-	b.setErr(err)
+	b.buf = append(b.buf, value...)
+	b.maybeFlush()
+}
+
+func (b *B) writeEscaped(value string) {
+	if b.err != nil {
+		return
+	}
+	if len(value) >= flushThreshold {
+		b.writeEscapedLarge(value)
+		return
+	}
+	b.buf = appendEscaped(b.buf, value)
+	b.maybeFlush()
+}
+
+// writeEscapedLarge escapes value a chunk of input at a time, writing each
+// chunk straight through, so a multi-megabyte value costs a bounded amount of
+// memory instead of an escaped copy of the whole input. scratch holds one
+// escaped chunk, at most 5x the chunk size because that is the longest
+// replacement.
+func (b *B) writeEscapedLarge(value string) {
+	if b.Flush() != nil {
+		return
+	}
+	for len(value) > 0 {
+		chunk := value
+		if len(chunk) > flushThreshold {
+			chunk = chunk[:flushThreshold]
+		}
+		value = value[len(chunk):]
+		b.scratch = appendEscaped(b.scratch[:0], chunk)
+		if _, err := b.w.Write(b.scratch); err != nil {
+			b.setErr(err)
+			return
+		}
+	}
+}
+
+// escapeTable maps each byte to its HTML replacement; an empty string means the
+// byte is written unchanged.
+var escapeTable = func() (table [256]string) {
+	table['\000'] = "\uFFFD"
+	table['"'] = "&#34;"
+	table['\''] = "&#39;"
+	table['&'] = "&amp;"
+	table['<'] = "&lt;"
+	table['>'] = "&gt;"
+	return
+}()
+
+func appendEscaped(dst []byte, value string) []byte {
+	last := 0
+	for i := 0; i < len(value); i++ {
+		escaped := escapeTable[value[i]]
+		if escaped == "" {
+			continue
+		}
+		dst = append(dst, value[last:i]...)
+		dst = append(dst, escaped...)
+		last = i + 1
+	}
+	return append(dst, value[last:]...)
 }
 
 func (b *B) isIndenting() bool {
@@ -121,16 +219,22 @@ func (b *B) writeAttrs(attrs Attributes, lineLen int) {
 		}
 
 		if !wrapped {
-			b.writeString(" ")
+			b.buf = append(b.buf, ' ')
 		}
-		b.writeString(attr.Name)
+		b.buf = append(b.buf, attr.Name...)
 		if attr.Value != "" {
-			b.writeString("=\"")
-			if b.err == nil {
-				b.setErr(writeEscapedString(b.w, attr.Value))
+			b.buf = append(b.buf, '=', '"')
+			if len(attr.Value) >= flushThreshold {
+				b.writeEscapedLarge(attr.Value)
+				if b.err != nil {
+					return
+				}
+			} else {
+				b.buf = appendEscaped(b.buf, attr.Value)
 			}
-			b.writeString("\"")
+			b.buf = append(b.buf, '"')
 		}
+		b.maybeFlush()
 		if wrapped {
 			lineLen += length - 1
 		} else {
@@ -139,48 +243,53 @@ func (b *B) writeAttrs(attrs Attributes, lineLen int) {
 	}
 }
 
-func (b *B) openTag(name string, attrs Attributes) {
+// openTag writes an opening tag and pushes close onto the open-tag stack. open
+// is the tag's literal prefix ("<div") and close its literal end tag
+// ("</div>"), both precomputed so writing a tag is a plain append.
+func (b *B) openTag(open, close string, attrs Attributes) {
 	if b.err != nil {
 		return
 	}
-	b.writeIndent(0)
-
-	lineLen := 1 + len(name)
+	lineLen := len(open)
 	if b.isIndenting() {
+		b.writeIndent(0)
 		depth := len(b.openTags)
 		if depth > 0 && depth <= len(b.indentCache) {
 			lineLen += len(b.indentCache[depth-1])
 		}
 	}
 
-	b.writeString("<")
-	b.writeString(name)
-	b.writeAttrs(attrs, lineLen)
-	b.writeString(">")
+	b.buf = append(b.buf, open...)
+	if len(attrs) > 0 {
+		b.writeAttrs(attrs, lineLen)
+	}
+	b.buf = append(b.buf, '>')
+	b.maybeFlush()
 	b.writeIndentNewline()
 	if b.err == nil {
-		b.openTags = append(b.openTags, name)
+		b.openTags = append(b.openTags, close)
 	}
 }
 
-func (b *B) voidTag(name string, attrs Attributes) {
+func (b *B) voidTag(open string, attrs Attributes) {
 	if b.err != nil {
 		return
 	}
-	b.writeIndent(0)
-
-	lineLen := 1 + len(name)
+	lineLen := len(open)
 	if b.isIndenting() {
+		b.writeIndent(0)
 		depth := len(b.openTags)
 		if depth > 0 && depth <= len(b.indentCache) {
 			lineLen += len(b.indentCache[depth-1])
 		}
 	}
 
-	b.writeString("<")
-	b.writeString(name)
-	b.writeAttrs(attrs, lineLen)
-	b.writeString("/>")
+	b.buf = append(b.buf, open...)
+	if len(attrs) > 0 {
+		b.writeAttrs(attrs, lineLen)
+	}
+	b.buf = append(b.buf, '/', '>')
+	b.maybeFlush()
 	b.writeIndentNewline()
 }
 
@@ -200,9 +309,8 @@ func (b *B) closeOneTag() {
 		b.atLineStart = true
 	}
 	b.writeIndent(-1)
-	b.writeString("</")
-	b.writeString(b.openTags[size-1])
-	b.writeString(">")
+	b.buf = append(b.buf, b.openTags[size-1]...)
+	b.maybeFlush()
 	b.writeIndentNewline()
 	if b.err == nil {
 		b.openTags = b.openTags[:size-1]
@@ -215,12 +323,12 @@ func (b *B) closeAll() {
 	}
 }
 
-func (b *B) element(name string, args ...any) {
+func (b *B) element(open, close string, args ...any) {
 	if b.err != nil {
 		return
 	}
-	attrs, body := parseArgs(name, args)
-	b.openTag(name, attrs)
+	attrs, body := parseArgs(open[1:], args)
+	b.openTag(open, close, attrs)
 	if b.err != nil {
 		return
 	}
@@ -230,12 +338,35 @@ func (b *B) element(name string, args ...any) {
 	b.closeOneTag()
 }
 
-func (b *B) voidElement(name string, args ...any) {
+func (b *B) voidElement(open string, args ...any) {
 	if b.err != nil {
 		return
 	}
-	attrs, _ := parseArgs(name, args)
-	b.voidTag(name, attrs)
+	attrs, _ := parseArgs(open[1:], args)
+	b.voidTag(open, attrs)
+}
+
+// elementTyped is the non-boxing counterpart of element: attrs and body arrive
+// with concrete types, so no argument escapes to the heap.
+func (b *B) elementTyped(open, close string, attrs Attributes, body Body) {
+	if b.err != nil {
+		return
+	}
+	b.openTag(open, close, attrs)
+	if b.err != nil {
+		return
+	}
+	if body != nil {
+		body(b)
+	}
+	b.closeOneTag()
+}
+
+func (b *B) voidElementTyped(open string, attrs Attributes) {
+	if b.err != nil {
+		return
+	}
+	b.voidTag(open, attrs)
 }
 
 // Doctype writes the HTML5 doctype declaration.
@@ -251,9 +382,7 @@ func (b *B) Text(value string) {
 	if b.isIndenting() && b.atLineStart {
 		b.writeIndent(0)
 	}
-	if b.err == nil {
-		b.setErr(writeEscapedString(b.w, value))
-	}
+	b.writeEscaped(value)
 	if b.isIndenting() && b.err == nil {
 		b.atLineStart = false
 		b.writeIndentNewline()
@@ -272,10 +401,41 @@ func (b *B) Raw(value string) {
 	if b.err != nil {
 		return
 	}
-	b.writeString(value)
+	if len(value) >= flushThreshold {
+		// Written straight through so one large value cannot inflate the
+		// pooled buffer past its working size.
+		if b.Flush() == nil {
+			b.setErr(b.writeStringDirect(value))
+		}
+	} else {
+		b.writeString(value)
+	}
 	if b.isIndenting() && b.err == nil && value != "" {
 		b.atLineStart = value[len(value)-1] == '\n'
 	}
+}
+
+// writeStringDirect writes value straight to the underlying writer, bypassing
+// the buffer. When w lacks io.StringWriter, the []byte conversion happens one
+// scratch-sized chunk at a time so a multi-megabyte value never allocates a
+// full copy.
+func (b *B) writeStringDirect(value string) error {
+	if sw, ok := b.w.(io.StringWriter); ok {
+		_, err := sw.WriteString(value)
+		return err
+	}
+	for len(value) > 0 {
+		chunk := value
+		if len(chunk) > flushThreshold {
+			chunk = chunk[:flushThreshold]
+		}
+		b.scratch = append(b.scratch[:0], chunk...)
+		if _, err := b.w.Write(b.scratch); err != nil {
+			return err
+		}
+		value = value[len(chunk):]
+	}
+	return nil
 }
 
 // Rawf writes unescaped formatted HTML. The caller must ensure the result is safe.
@@ -290,54 +450,26 @@ func (b *B) Rawf(format string, args ...any) {
 // '_', '.', ':', or '-'; tag names must never come from untrusted input.
 func (b *B) El(name string, args ...any) {
 	validateTagName(name)
-	b.element(name, args...)
+	b.element("<"+name, "</"+name+">", args...)
 }
 
 // VoidEl writes an arbitrary self-closing element.
 // Panics if name is not a valid element name (see El).
 func (b *B) VoidEl(name string, args ...any) {
 	validateTagName(name)
-	b.voidElement(name, args...)
+	b.voidElement("<"+name, args...)
 }
 
-// copied from text/template.HTMLEscape so escaping errors can be returned
-var (
-	htmlQuot = []byte("&#34;")
-	htmlApos = []byte("&#39;")
-	htmlAmp  = []byte("&amp;")
-	htmlLt   = []byte("&lt;")
-	htmlGt   = []byte("&gt;")
-	htmlNull = []byte("\uFFFD")
-)
+// ElE writes an arbitrary container element. It is the non-boxing fast path of
+// El. Panics if name is not a valid element name (see El).
+func (b *B) ElE(name string, attrs Attributes, body Body) {
+	validateTagName(name)
+	b.elementTyped("<"+name, "</"+name+">", attrs, body)
+}
 
-func writeHTMLEscape(w io.Writer, value []byte) error {
-	last := 0
-	for i, char := range value {
-		var escaped []byte
-		switch char {
-		case '\000':
-			escaped = htmlNull
-		case '"':
-			escaped = htmlQuot
-		case '\'':
-			escaped = htmlApos
-		case '&':
-			escaped = htmlAmp
-		case '<':
-			escaped = htmlLt
-		case '>':
-			escaped = htmlGt
-		default:
-			continue
-		}
-		if _, err := w.Write(value[last:i]); err != nil {
-			return err
-		}
-		if _, err := w.Write(escaped); err != nil {
-			return err
-		}
-		last = i + 1
-	}
-	_, err := w.Write(value[last:])
-	return err
+// VoidElE writes an arbitrary self-closing element. It is the non-boxing fast
+// path of VoidEl. Panics if name is not a valid element name (see El).
+func (b *B) VoidElE(name string, attrs Attributes) {
+	validateTagName(name)
+	b.voidElementTyped("<"+name, attrs)
 }

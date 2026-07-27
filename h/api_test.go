@@ -272,7 +272,7 @@ func TestStickyErrorStopsOutput(t *testing.T) {
 	sawError := false
 	err := Render(writer, func(b *B) {
 		b.Div(func(b *B) {
-			b.Text("abcdefghijk")
+			b.Text(strings.Repeat("a", flushThreshold))
 			sawError = errors.Is(b.Err(), errWrite)
 			b.Raw("not-written")
 			b.Span(func(b *B) { b.Text("also-not-written") })
@@ -283,10 +283,214 @@ func TestStickyErrorStopsOutput(t *testing.T) {
 		t.Fatalf("Render error = %v, want %v", err, errWrite)
 	}
 	if !sawError {
-		t.Fatal("B.Err did not expose the sticky error")
+		t.Fatal("B.Err did not expose the sticky error after the failed flush")
 	}
 	if strings.Contains(writer.output.String(), "not-written") {
 		t.Fatalf("output continued after error: %q", writer.output.String())
+	}
+}
+
+func TestStickyErrorSurfacesFromFinalFlush(t *testing.T) {
+	writer := &failAfterWriter{remain: 3}
+	err := Render(writer, func(b *B) {
+		b.Div(func(b *B) { b.Text("hello") })
+	})
+	if !errors.Is(err, errWrite) {
+		t.Fatalf("Render error = %v, want %v", err, errWrite)
+	}
+	if got := writer.output.String(); got != "<di" {
+		t.Fatalf("output = %q, want %q", got, "<di")
+	}
+}
+
+func TestFlushDeliversBufferedOutput(t *testing.T) {
+	var output bytes.Buffer
+	err := Render(&output, func(b *B) {
+		b.Div(func(b *B) {
+			b.Text("first")
+			if flushErr := b.Flush(); flushErr != nil {
+				t.Error(flushErr)
+			}
+			if got := output.String(); got != "<div>first" {
+				t.Errorf("after Flush output = %q, want %q", got, "<div>first")
+			}
+			b.Text("second")
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := output.String(); got != "<div>firstsecond</div>" {
+		t.Fatalf("output = %q", got)
+	}
+}
+
+func TestLargeRawBypassesBuffer(t *testing.T) {
+	value := strings.Repeat("x", flushThreshold*2)
+	got := RenderString(func(b *B) {
+		b.Div(func(b *B) {
+			b.Text("a")
+			b.Raw(value)
+			b.Text("b")
+		})
+	})
+	want := "<div>a" + value + "b</div>"
+	if got != want {
+		t.Fatalf("large Raw output length = %d, want %d", len(got), len(want))
+	}
+}
+
+// byteOnlyWriter hides bytes.Buffer's WriteString so writes exercise the
+// chunked non-StringWriter path.
+type byteOnlyWriter struct {
+	buf bytes.Buffer
+}
+
+func (w *byteOnlyWriter) Write(p []byte) (int, error) {
+	return w.buf.Write(p)
+}
+
+func TestLargeRawToNonStringWriter(t *testing.T) {
+	value := strings.Repeat("x", flushThreshold*2+7)
+	var w byteOnlyWriter
+	err := Render(&w, func(b *B) {
+		b.Div(func(b *B) {
+			b.Text("a")
+			b.Raw(value)
+			b.Text("b")
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "<div>a" + value + "b</div>"
+	if w.buf.String() != want {
+		t.Fatalf("output length = %d, want %d", w.buf.Len(), len(want))
+	}
+}
+
+func TestOutputSpanningManyFlushes(t *testing.T) {
+	const rows = 500
+	var want strings.Builder
+	got := RenderString(func(b *B) {
+		for i := 0; i < rows; i++ {
+			b.LiE(Attrs("class", "row"), func(b *B) { b.Text("a&b") })
+			want.WriteString(`<li class="row">a&amp;b</li>`)
+		}
+	})
+	if got != want.String() {
+		t.Fatalf("output length = %d, want %d", len(got), want.Len())
+	}
+}
+
+func TestIndentedOutputSpanningManyFlushes(t *testing.T) {
+	var output strings.Builder
+	var want strings.Builder
+	err := RenderIndent(&output, "  ", func(b *B) {
+		for i := 0; i < 500; i++ {
+			b.PE(nil, func(b *B) { b.Text("x") })
+			want.WriteString("<p>\n  x\n</p>\n")
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output.String() != want.String() {
+		t.Fatalf("indented output length = %d, want %d", output.Len(), want.Len())
+	}
+}
+
+func TestLargeEscapedValuesDoNotGrowBuffer(t *testing.T) {
+	const size = 1 << 20
+	text := strings.Repeat(`"`, size)
+	attrValue := strings.Repeat("&", size)
+
+	peak := 0
+	observe := func(b *B) {
+		if cap(b.buf) > peak {
+			peak = cap(b.buf)
+		}
+	}
+
+	var output bytes.Buffer
+	err := Render(&output, func(b *B) {
+		b.DivE(Attrs("data-big", attrValue), func(b *B) {
+			observe(b)
+			b.Text("before")
+			b.Text(text)
+			observe(b)
+			b.Text("after")
+			observe(b)
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var want strings.Builder
+	want.WriteString(`<div data-big="`)
+	want.WriteString(strings.Repeat("&amp;", size))
+	want.WriteString(`">before`)
+	want.WriteString(strings.Repeat("&#34;", size))
+	want.WriteString("after</div>")
+	if output.String() != want.String() {
+		t.Fatalf("output length = %d, want %d", output.Len(), want.Len())
+	}
+
+	// Escaping the values through the buffer would have grown it to ~5 MiB;
+	// a sub-threshold value may legitimately expand it to a few flush chunks.
+	if limit := flushThreshold * 6; peak > limit {
+		t.Fatalf("buffer grew to %d bytes, want <= %d", peak, limit)
+	}
+}
+
+func TestTypedElements(t *testing.T) {
+	got := RenderString(func(b *B) {
+		b.DivE(Attrs("class", "card"), func(b *B) {
+			b.H1E(nil, func(b *B) { b.Text("<title>") })
+			b.ImgE(Attrs("src", "a.png"))
+			b.BrE(nil)
+			b.SpanE(nil, nil)
+			b.ElE("user-card", Attrs("name", "Ada"), func(b *B) {
+				b.VoidElE("avatar", nil)
+			})
+		})
+	})
+	want := `<div class="card"><h1>&lt;title&gt;</h1><img src="a.png"/><br/><span></span>` +
+		`<user-card name="Ada"><avatar/></user-card></div>`
+	if got != want {
+		t.Fatalf("typed output = %q, want %q", got, want)
+	}
+}
+
+func TestTypedHtmlDoctypeAndLanguage(t *testing.T) {
+	got := RenderString(func(b *B) {
+		b.HtmlE(nil, func(b *B) { b.BodyE(nil, nil) })
+	})
+	if want := "<!DOCTYPE html>\n<html lang=\"en\"><body></body></html>"; got != want {
+		t.Fatalf("output = %q, want %q", got, want)
+	}
+
+	shared := make(Attributes, 0, 4)
+	shared = append(shared, Attribute{Name: "lang", Value: "fr"})
+	got = RenderString(func(b *B) { b.HtmlE(shared, nil) })
+	if want := "<!DOCTYPE html>\n<html lang=\"fr\"></html>"; got != want {
+		t.Fatalf("output = %q, want %q", got, want)
+	}
+	if len(shared) != 1 {
+		t.Fatalf("caller Attributes grew: %v", shared)
+	}
+}
+
+func TestTypedElementBodyDoesNotAllocate(t *testing.T) {
+	label := "captured"
+	allocs := testing.AllocsPerRun(100, func() {
+		Render(io.Discard, func(b *B) {
+			b.DivE(nil, func(b *B) { b.Text(label) })
+		})
+	})
+	if allocs != 0 {
+		t.Fatalf("DivE with a capturing closure allocated %v times, want 0", allocs)
 	}
 }
 
@@ -302,7 +506,7 @@ func TestRenderEntryPointsAndDefensiveClose(t *testing.T) {
 	}
 
 	got := RenderBytes(func(b *B) {
-		b.openTag("div", nil)
+		b.openTag("<div", "</div>", nil)
 		b.Text("open")
 	})
 	if string(got) != "<div>open</div>" {
@@ -312,15 +516,28 @@ func TestRenderEntryPointsAndDefensiveClose(t *testing.T) {
 
 func TestBuilderPoolReuse(t *testing.T) {
 	first := getBuilder(io.Discard, "")
-	first.openTags = append(first.openTags, "unused")
+	first.openTags = append(first.openTags, "</unused>")
+	first.buf = append(first.buf, "leftover"...)
 	putBuilder(first)
 	second := getBuilder(io.Discard, "")
 	defer putBuilder(second)
 	if first != second {
 		t.Skip("sync.Pool may discard entries")
 	}
-	if len(second.openTags) != 0 || second.Err() != nil {
+	if len(second.openTags) != 0 || len(second.buf) != 0 || second.Err() != nil {
 		t.Fatalf("pooled B was not reset: %#v", second)
+	}
+}
+
+func TestOversizedBufferIsNotPooled(t *testing.T) {
+	b := getBuilder(io.Discard, "")
+	b.buf = make([]byte, 0, maxPooledBuffer+1)
+	putBuilder(b)
+	if cap(b.buf) > maxPooledBuffer {
+		t.Fatalf("oversized buffer retained: cap = %d", cap(b.buf))
+	}
+	if cap(b.buf) != startingBuffer {
+		t.Fatalf("buffer not re-primed: cap = %d, want %d", cap(b.buf), startingBuffer)
 	}
 }
 
