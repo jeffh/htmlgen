@@ -1,6 +1,6 @@
 github.com/hashicorp/golang-lru/v2 v2.0.7 h1:a+bsQ5rvGLjzHuww6tVxozPZFVghXaHOwFs4luLUK2k=
 github.com/hashicorp/golang-lru/v2 v2.0.7/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
-github.com/jeffh/gocheck v0.2.0 h1:NH7217tIoRnqRnb6FossweQFkyI374CM8oeeBZQoOao=
-github.com/jeffh/gocheck v0.2.0/go.mod h1:dDmlxzSUPZiHsHWeC52SHKuYAocF6+vJ77iABbS6eiA=
-golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329 h1:9kj3STMvgqy3YA4VQXBrN7925ICMxD5wzMRcgA30588=
-golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329/go.mod h1:qj5a5QZpwLU2NLQudwIN5koi3beDhSAlJwa67PuM98c=
+github.com/jeffh/gocheck v0.4.1 h1:CwS7mSIGb6C3tYDg7qEYlmTw8iOo92erh7FsCAu8Xhk=
+github.com/jeffh/gocheck v0.4.1/go.mod h1:adX5pG6X9YUdp0ZwmaAWatAjxf11x60xIxRsjtAD9SE=
+golang.org/x/exp v0.0.0-20260824195058-e88cd73687aa h1:QSyA8ishJCyT21kER9KwNt0b7BM3iRK4x9QXhjN5Fdk=
+golang.org/x/exp v0.0.0-20260824195058-e88cd73687aa/go.mod h1:zeBbvyFKDaLwa7CH/zI8KXt7gTl14SF7sO08Pl5jBCM=
