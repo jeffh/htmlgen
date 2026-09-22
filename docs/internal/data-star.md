@@ -14,6 +14,7 @@ This guide covers [Datastar](https://data-star.dev/), a lightweight hypermedia f
 - [SSE Events](#sse-events)
 - [Go SDK (datastar-go)](#go-sdk)
 - [htmlgen/ds Package](#htmlgends-package)
+- [Rocket](#rocket)
 - [Philosophy (The Tao of Datastar)](#philosophy)
 
 ## Installation
@@ -21,7 +22,7 @@ This guide covers [Datastar](https://data-star.dev/), a lightweight hypermedia f
 Include via CDN:
 
 ```html
-<script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.2/bundles/datastar.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar.js"></script>
 ```
 
 Or install via package manager and self-host the bundle.
@@ -253,6 +254,9 @@ Bind element text content.
 
 ### Pro Attributes (Commercial License)
 
+As of Datastar v1.0.4, Rocket (see [Rocket](#rocket)) is no longer part of Pro
+— it is a free, separate bundle. The attributes below remain Pro-only.
+
 #### `data-animate`
 Animate element attributes reactively.
 
@@ -365,6 +369,9 @@ Example:
 ```
 
 ### Pro Actions (Commercial License)
+
+As of Datastar v1.0.4, Rocket (see [Rocket](#rocket)) is no longer part of Pro
+— it is a free, separate bundle. The actions below remain Pro-only.
 
 #### `@clipboard(text, isBase64?)`
 Copy text to clipboard.
@@ -602,6 +609,10 @@ ds.ToggleAll(ds.FilterOptions{IncludeReg: ptr("checkbox")})
 
 ### Pro Features (Commercial License)
 
+As of Datastar v1.0.4, Rocket is no longer a Pro feature — it moved to its own
+free `datastar-rocket.js` bundle and is supported by the `ds/rkt` package (see
+[Rocket](#rocket)), not by anything in this Pro section.
+
 ```go
 // Attributes
 ds.CustomValidity(ds.Raw("$pw === $confirm ? '' : 'Must match'"))
@@ -667,6 +678,128 @@ func SearchForm(b *h.B) {
     )
 }
 ```
+
+## Rocket
+
+[Rocket](https://data-star.dev/) is a **beta** JavaScript web-component API
+layered on top of Datastar. It defines custom elements whose props, private
+signals, and local actions are wired into Datastar's reactivity:
+
+```js
+rocket('my-tag', {
+  props: { step: 1 },
+  setup({ action }) {
+    action('increment', ({ signals }) => { signals.count++ })
+  },
+  render({ signals, html }) {
+    return html`<button data-on:click="@increment()">${signals.count}</button>`
+  },
+})
+```
+
+Rocket's syntax may still change — it is upstream beta, not a stable release.
+
+### Installation
+
+Rocket requires loading `datastar-rocket.js` instead of `datastar.js`. It is a
+superset of the base bundle, so no separate `datastar.js` script tag is
+needed. A CSP-safe build, `datastar-rocket-aliased.js`, is also published.
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar-rocket.js"></script>
+```
+
+As of Datastar v1.0.4, Rocket is free — it is no longer bundled with Datastar
+Pro. No other Pro feature changed license in this release.
+
+### Template Conventions
+
+- `$$foo` — a component's **private**, per-instance local signal, as opposed
+  to the global `$foo` signal.
+- `@foo(...)` inside a component's own template calls a local action
+  registered via `setup({ action })`; Rocket rewrites it to
+  `@dispatchRocket("foo", ...)` before Datastar evaluates it.
+- `<template data-for="item, index in $$items">` iterates a local signal.
+- `<template data-if="...">` / `data-else-if="..."` / `data-else` on adjacent
+  sibling `<template>` elements branch on a condition.
+- `data-ref:name__case.camel|kebab|snake|pascal` — the `__case` modifier
+  controls the casing of the generated signal/ref name.
+- The `__root` modifier on `data-signals`, `data-bind`, `data-computed`, and
+  `data-indicator` escapes the element's private scope, writing to the
+  global signal root instead of a `$$`-scoped local signal.
+- Host elements receive props as kebab-case HTML attributes with codec
+  encodings: booleans as `true`/`false`, numbers and strings verbatim, dates
+  as ISO 8601, structured values as JSON, and binary data as base64.
+
+### `ds/rkt` Package
+
+`github.com/jeffh/htmlgen/ds/rkt` provides Go helpers for building the HTML
+and expressions that use a Rocket component. It does not generate the
+`rocket(...)` JavaScript definition itself — that JavaScript is still
+hand-written (or produced by other tooling); `rkt` only helps emit the
+template markup, expressions, and host elements that reference it.
+
+**Private signals** — `Sig` is `ds.Sig`'s counterpart for `$$`-scoped signals,
+with the same method set:
+
+```go
+rkt.Sig("count").Value()   // $$count
+rkt.Sig("count").Toggle()  // ($$count = !$$count)
+// Also: Name, Ref, Not, Set, SetExpr, Clear, Eq, NotEq, Sub
+rkt.SignalRef("count")     // $$count, as a bare expression
+```
+
+**Local actions**:
+
+```go
+rkt.Action("increment")           // @increment()
+rkt.Action("setStep", js.Int(2))  // @setStep(2)
+rkt.Dispatch("increment")         // @dispatchRocket("increment")
+```
+
+**Template control flow**:
+
+```go
+rkt.For("item", "index", rkt.Sig("items").Value()) // data-for="item, index in $$items"
+rkt.ForRaw("item in $$items")                       // data-for="item in $$items"
+rkt.If(rkt.Sig("open").Value())                     // data-if="$$open"
+rkt.ElseIf(cond)                                    // data-else-if="..."
+rkt.Else()                                          // data-else
+rkt.Ref("input").Case(ds.KebabCase)                 // data-ref:input__case.kebab
+rkt.Root(ds.Signal("count", 0))                     // appends __root to the attribute name
+```
+
+**Bundle helpers**:
+
+```go
+rkt.Version          // "1.0.4"
+rkt.BundleURL         // datastar-rocket.js CDN URL
+rkt.AliasedBundleURL  // datastar-rocket-aliased.js CDN URL
+rkt.ScriptAttrs()     // h.Attributes for a <script type="module" src="...">
+rkt.Script(b)         // writes the <script> tag directly
+rkt.AliasedScript(b)  // writes the CSP-safe aliased <script> tag
+```
+
+**Host-element props and components**:
+
+```go
+rkt.Prop("step", 2)                 // step="2"
+rkt.BoolProp("disabled", true)      // disabled="true"
+rkt.NumberProp("max", 10)
+rkt.DateProp("due", t)              // ISO 8601
+rkt.JSONProp("config", cfg)         // JSON-encoded attribute
+rkt.BinProp("blob", data)           // base64-encoded attribute
+rkt.Props(map[string]any{"step": 2, "label": "Count"}) // sorted, kebab-cased
+
+rkt.Component(b, "counter-widget", h.AttrsOf(
+    rkt.Prop("step", 2),
+), func(b *h.B) {
+    // fallback/light-DOM content
+})
+```
+
+`Component` validates the tag name: it must be lowercase and contain a
+hyphen, matching the custom-element name rules the browser enforces.
 
 ## Philosophy
 

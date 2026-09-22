@@ -287,7 +287,7 @@ func main() {
         b.Html(nil, func(b *h.B) {
             b.Head(nil, func(b *h.B) {
                 b.Title(nil, func(b *h.B) { b.Text("Counter") })
-                b.Script(h.Attrs("type", "module", "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.2/bundles/datastar.js"), nil)
+                b.Script(h.Attrs("type", "module", "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar.js"), nil)
             })
             b.Body(nil, func(b *h.B) {
                 b.Div(
@@ -320,6 +320,48 @@ The `ds` package also includes helpers for [Datastar Pro](https://data-star.dev/
 - Scrolling: `ScrollIntoView`
 - Transitions: `ViewTransitionName`
 - Utility actions: `Clipboard`, `Fit`, `FitClamped`
+
+As of Datastar v1.0.4, Rocket is no longer a Pro feature — it moved to its own
+free bundle and is supported by the [`ds/rkt`](#rocket-dsrkt) package below.
+
+### Rocket (`ds/rkt`)
+
+[Rocket](https://data-star.dev/) is a beta, upstream JavaScript web-component
+API (`rocket('my-tag', {props, setup, render})`) layered on Datastar: custom
+elements whose props, private signals, and local actions wire into Datastar.
+It ships in its own bundle, `datastar-rocket.js`, instead of `datastar.js`.
+`github.com/jeffh/htmlgen/ds/rkt` does not generate the `rocket(...)`
+JavaScript definition itself — it helps build the template markup,
+expressions, and host elements that use a Rocket component:
+
+```go
+import "github.com/jeffh/htmlgen/ds/rkt"
+
+rkt.Script(b) // <script type="module" src=".../datastar-rocket.js">
+
+rkt.Component(b, "counter-widget", h.AttrsOf(
+    rkt.Prop("step", 2),
+    rkt.Prop("label", "Count"),
+), nil)
+```
+
+Inside a component's own template, `rkt.Sig` produces private `$$name`
+signals and `rkt.Action`/`rkt.Dispatch` produce local `@name(...)` action
+calls:
+
+```go
+count := rkt.Sig("count")
+b.Button(h.AttrsOf(ds.OnClick(rkt.Action("increment"))), func(b *h.B) {
+    b.Span(h.AttrsOf(ds.Text(count.Value())), nil)
+})
+b.Template(h.AttrsOf(rkt.For("item", "i", rkt.Sig("items").Value())), func(b *h.B) {
+    // ...
+})
+```
+
+See [docs/internal/data-star.md](docs/internal/data-star.md#rocket) for the
+full template conventions (`data-if`/`data-else-if`/`data-else`, `__case`,
+`__root`) and Go API.
 
 ## Benchmarks
 

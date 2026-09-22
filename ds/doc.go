@@ -68,4 +68,12 @@
 //	ds.OnClick(ds.Get("/api/data", ds.OnSuccess(ds.Raw("$loaded = true"))))
 //
 // RequestOptions is a fluent builder for *WithOptions calls.
+//
+// # Rocket
+//
+// Rocket, Datastar's beta web-component API, is no longer part of Pro as of
+// v1.0.4 — it now ships in its own free datastar-rocket.js bundle. Helpers
+// for building Rocket component markup (private $$ signals, local actions,
+// data-for/data-if templating, host-element props) live in the ds/rkt
+// subpackage, not in this package.
 package ds
