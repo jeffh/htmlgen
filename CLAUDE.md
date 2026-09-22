@@ -47,6 +47,20 @@ Provides helpers for building [Datastar](https://data-star.dev/) reactive attrib
 
 The `ds` package composes attributes with fluent builders: `OnClick()`/`On()`/`Bind()`/`Signals()` and friends return builder structs whose modifier methods (`.Outside()`, `.PreventDefault()`, `.Debounce()`, ...) append to the attribute name and whose `Attribute()` method produces the final `h.Attribute`.
 
+As of Datastar v1.0.4, Rocket moved out of Datastar Pro into its own free
+bundle; it is supported by the `ds/rkt` subpackage below, not by `ds/pro.go`.
+
+### Package `ds/rkt` - Datastar Rocket Helpers
+
+`github.com/jeffh/htmlgen/ds/rkt` provides Go helpers for [Rocket](https://data-star.dev/), Datastar's beta web-component API (`rocket('my-tag', {props, setup, render})`). Rocket layers custom elements — with props, private signals, and local actions wired into Datastar — on top of the core library; it ships in its own bundle, `datastar-rocket.js`, loaded in place of `datastar.js`. This package does not generate the `rocket(...)` JavaScript definition itself; it helps build the template markup, expressions, and host elements that use a Rocket component. See `docs/internal/data-star.md` for the full template conventions.
+
+- **Private signals**: `Sig("name")` - like `ds.Sig` but for the component-private `$$name` signal, with the same methods: `Name()`, `Ref()`, `Value()`, `Not()`, `Set()`, `SetExpr()`, `Toggle()`, `Clear()`, `Eq()`, `NotEq()`, `Sub()`; `SignalRef(name)` for a bare `$$name` expression
+- **Local actions**: `Action(name, args...)` - emits `@name(...)`, a call to an action registered in the component's `setup({action})`; `Dispatch(name, args...)` - emits `@dispatchRocket("name", ...)`
+- **Template control flow**: `For(item, index, source)`, `ForRaw(expr)` - `data-for` loops over `$$`-scoped sources; `If(cond)`, `ElseIf(cond)`, `Else()` - `data-if`/`data-else-if`/`data-else` on sibling `<template>` elements; `Ref(name).Case(...)` - `data-ref:name` with `__case` casing; `Root(attrBuilder)` - appends `__root` to escape the component's private scope on `data-signals`/`data-bind`/`data-computed`/`data-indicator`
+- **Bundle**: `Version`, `BundleURL`, `AliasedBundleURL` (CSP-safe build), `ScriptAttrs()`, `Script(b)`, `AliasedScript(b)` - load `datastar-rocket.js` (a superset of `datastar.js`) instead of the base bundle
+- **Host element props**: `Prop(name, value)`, `JSONProp()`, `DateProp()`, `BinProp()`, `BoolProp()`, `NumberProp()`, `Props(map)` - kebab-case attribute names with codec encodings (bool, number, string, ISO date, JSON, base64 binary), sorted for `Props`
+- **Components**: `Component(b, tag, attrs, body)` - writes a custom element, validating that `tag` is lowercase and contains a hyphen
+
 ### Package `js` - Type-Safe JavaScript Generation
 
 Provides a type-safe builder API for generating JavaScript code strings for HTML event handler attributes (`onclick`, `onsubmit`, etc.). Integrates with the `h` package.

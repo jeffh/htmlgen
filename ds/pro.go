@@ -1,5 +1,9 @@
 // Pro Datastar attributes require a commercial license from https://data-star.dev/.
 // These attributes provide additional functionality beyond the free tier.
+//
+// As of Datastar v1.0.4, Rocket is no longer a Pro feature: it moved to its
+// own free bundle (datastar-rocket.js) and is supported by the ds/rkt
+// subpackage rather than by anything in this file.
 package ds
 
 import (
