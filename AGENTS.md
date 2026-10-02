@@ -1,6 +1,10 @@
 # AGENTS.md
 
-This file provides guidance for AI coding agents working in the htmlgen Go library repository.
+Guidance for AI coding agents working in `github.com/jeffh/htmlgen`.
+
+**Source of truth for the HTML API:** [API_DESIGN.md](API_DESIGN.md).
+Package-level detail lives in [CLAUDE.md](CLAUDE.md). Prefer those files over
+duplicating long prose here.
 
 ## Commands
 
@@ -13,9 +17,11 @@ go test ./...
 go test ./h
 go test ./js
 go test ./ds
+go test ./ds/rkt
+go test ./hx
 
 # Run a specific test
-go test -run TestHtmlWriting ./h
+go test -run TestStreamingElementsAndEscaping ./h
 go test -run TestString ./js
 go test -run TestRaw ./ds
 
@@ -42,170 +48,133 @@ go mod verify
 ```
 
 ### Linting
-No specific linter is configured. Code should compile without errors.
+No specific linter is configured. Keep `go build ./... && go vet ./... && go test ./...` green.
 
-## Architecture Overview
+## Architecture
 
-This is a Go library (`github.com/jeffh/htmlgen`) with three main packages:
+Streaming HTML library. Package `h` has no tree of nodes: `Render` takes
+`func(*B)` and streams immediately.
 
-- **`h`** - Core HTML generation with streaming Writer API and declarative Builder API
-- **`js`** - Type-safe JavaScript code generation for event handlers
-- **`ds`** - Datastar reactive attribute helpers
-- **`hx`** - HTMX attribute helpers (not documented in CLAUDE.md but present)
+- **`h`** — `Render(w, func(*B))` creates a per-render `*h.B` bound to an
+  `io.Writer`. Elements are methods on `*B`: containers are
+  `Xxx(attrs Attributes, body Body)`, void elements are `Xxx(attrs Attributes)`.
+  `nil` attrs and a `nil` body are valid. Control flow is native Go `if`/`for`.
+- **`js`** — type-safe JavaScript expressions and statements for event handlers.
+- **`ds`** — fluent Datastar attribute helpers (`OnClick()`, `Bind()`,
+  `Signals()`, …).
+- **`ds/rkt`** — Datastar Rocket helpers (private `$$` signals, template
+  `For`/`If`, host props). Added in #63.
+- **`hx`** — fluent HTMX attribute helpers.
 
-## Code Style Guidelines
+`Attribute` and the fluent helpers in `ds`, `hx`, and `js` implement
+`AttrBuilder`. Collect them with `h.AttrsOf(...)` or `Attributes.With(...)`.
+Later same-name values override without changing position; zero attributes and
+`nil` helpers are skipped; neither call mutates its inputs.
 
-### Go Version
-- Requires Go 1.25.5 or later (uses `iter.Seq` from standard library)
+`B` buffers output (~4 KiB chunks), records a sticky first write error (later
+output is a no-op; `Render` returns it), and is pooled via `builderPool`.
+`Err()` is only current as of the last flush. Escaping uses a custom
+`escapeTable` appended into the render buffer. `Text`/`Textf` escape;
+`Raw`/`Rawf` write caller-sanitized content unchanged.
+
+Do not invent APIs or refactor the HTML tag surface. See [API_DESIGN.md](API_DESIGN.md).
+
+## Code style
+
+### Go version
+Requires Go 1.26.0 or later (`go.mod`).
 
 ### Imports
-- Standard library imports first (separated by blank line)
-- Third-party imports second
-- Local package imports last
-- Sort alphabetically within each group
-- Example:
-  ```go
-  import (
-      "io"
-      "strings"
-      
-      "github.com/hashicorp/golang-lru/v2"
-      
-      "github.com/jeffh/htmlgen/h"
-  )
-  ```
+Standard library first, then third-party, then local. Alphabetical within each
+group.
 
-### Naming Conventions
-- **Exported types/functions**: PascalCase (e.g., `Render`, `Html`, `AttrBuilder`)
-- **Unexported types/functions**: camelCase (e.g., `validName`, `writeAttrs`)
-- **Interfaces**: Typically use nouns (e.g., `AttrBuilder`, `Callable`) or descriptive names
-- **Element methods on `*h.B`**: Match HTML element names (e.g., `Div`, `Span`, `A`)
-- **Attribute helpers**: Descriptive names (e.g., `Attrs`, `AttrsMap`, `Attr`)
-- **Test functions**: Start with `Test` (e.g., `TestHtmlWriting`, `TestString`)
-- **Benchmark functions**: Start with `Benchmark` (e.g., `BenchmarkRender`)
+```go
+import (
+	"io"
+	"strings"
 
-### Type Definitions
-- Element methods take concrete parameters, never `...any`: `Xxx(attrs Attributes, body Body)` for containers, `Xxx(attrs Attributes)` for void elements; `nil` is valid for either
-- Prefer struct types over type aliases for builders (`h.Body` is the one alias: `func(*h.B)`)
-- Use interfaces to define behavior (e.g., `AttrBuilder`, `Stmt`, `Expr`, `Callable`)
+	"github.com/jeffh/htmlgen/ds"
+	"github.com/jeffh/htmlgen/h"
+)
+```
 
-### Error Handling
-- Return `error` as the last return value
-- Use sentinel errors for known error conditions: `var ErrUnknownTagToClose = errors.New(...)`
-- Return early on errors using `if err != nil { return err }`
-- Check `nil` builders before rendering: `if b == nil { return nil }`
-- Wrap errors with context using `fmt.Errorf("%w: %s", ErrSentinel, name)`
-- In `defer` with `recover()`, re-panic with context: `panic(fmt.Sprintf("attr %q: %s", name, r))`
+The only direct module dependency is `github.com/jeffh/gocheck` (tests).
 
-### Nil Handling
-- Nil builders are explicitly allowed and skipped during rendering
-- Check for nil before processing: `if child != nil { ... }`
-- Return nil from helpers when appropriate (e.g., `When()`, `First()`)
+### Naming
+- **Exported**: PascalCase (`Render`, `AttrsOf`, `AttrBuilder`)
+- **Unexported**: camelCase (`validName`, `writeAttrs`, `builderPool`)
+- **Element methods on `*h.B`**: match HTML names (`Div`, `Span`, `A`)
+- **Tests**: `Test...` / `Benchmark...`
 
-### Comments and Documentation
-- **Package comments**: Start with "Package <name>" and describe purpose (in doc.go or first file)
-- **Exported functions**: Start with function name, describe what it does
-- **Include examples** in comments using correct formatting
-- Document **important implementation details** (e.g., escaping, pooling)
-- Mark deprecated items: `// Deprecated: Use XYZ instead.`
-- Example:
-  ```go
-  // Render writes the HTML representation of the given Builder to w.
-  // Returns nil if b is nil.
-  func Render(w io.Writer, b Builder) error
-  ```
+### Types
+- Element methods take concrete parameters, never `...any`
+- `h.Body` is `func(*B)`
+- Use interfaces for behavior (`AttrBuilder`, `Stmt`, `Expr`, `Callable`)
 
-### Function Structure
-- **Variadic parameters**: Use a typed variadic (`...AttrBuilder` in `AttrsOf`, `...Stmt` in `js`) rather than `...any`
-- **Options pattern**: Use interfaces like `AttrMutator` with `Modify()` method
-- **Builder pattern**: Chain method calls where appropriate
-- **Function order**: Exported functions first, then unexported helpers
-- Keep functions focused and single-purpose
+### Errors
+- Return `error` last; return early on `if err != nil`
+- `*h.B` uses a sticky write error — do not add per-call error returns on
+  element methods
+- Panic only for invalid attribute/tag names (written unescaped, so validated)
+- In `defer` with `recover()`, re-panic with context
 
-### Performance Patterns
-- **Object pooling**: Use `sync.Pool` for frequently allocated objects (e.g., `Writer`, `strings.Builder`)
-- **Pre-allocate slices**: Use `make([]T, 0, capacity)` when size is known
-- **String building**: Use `strings.Builder` for concatenation, call `Grow()` when size is known
-- **Minimize allocations**: Reuse buffers, avoid unnecessary copying
-- Example pooling pattern:
-  ```go
-  var writerPool = sync.Pool{
-      New: func() any { return &Writer{openTags: make([]string, 0, 32)} },
-  }
-  ```
+### Docs
+Package comments start with `Package <name>`. Exported funcs start with the
+function name. Document escaping, pooling, and other non-obvious behavior.
+Mark deprecated items with `// Deprecated: Use XYZ instead.`
 
-### Testing Conventions
-- **Table-driven tests**: Use slice of structs with `Desc/name`, `Expected`, and inputs
-- **Helper functions**: Create test helpers like `exprString()`, `stmtString()` for common operations
-- **Subtests**: Use `t.Run()` for multiple test cases
-- **Error messages**: Include input, got, and want values
-- Example:
-  ```go
-  tests := []struct {
-      name     string
-      input    string
-      expected string
-  }{
-      {"simple string", "hello", `"hello"`},
-  }
-  for _, tt := range tests {
-      t.Run(tt.name, func(t *testing.T) {
-          got := exprString(String(tt.input))
-          if got != tt.expected {
-              t.Errorf("String(%q) = %q, want %q", tt.input, got, tt.expected)
-          }
-      })
-  }
-  ```
+```go
+// Render runs fn against a fresh *B writing to w and returns the first write
+// error.
+func Render(w io.Writer, fn func(*B)) error
+```
 
-### Code Organization
-- **One type per file** for major types (e.g., `writer.go`, `builder.go`, `attrs.go`)
-- **Group related functionality**: `tags.go` for all HTML element functions
-- **Separate tests**: `*_test.go` files in the same package
-- **Package documentation**: Use `doc.go` for package-level documentation
-- **Internal helpers**: Keep unexported in the same file as related exported functions
+### Functions
+- Typed variadics (`...AttrBuilder` in `AttrsOf`, `...Stmt` in `js`), not `...any`
+- Chain fluent methods where the existing helpers already do
+- Exported functions first, then unexported helpers
+- Keep functions focused
 
-### Special Patterns
+### Performance
+- `sync.Pool` for hot objects (`builderPool`)
+- Pre-allocate slices when the size is known
+- `strings.Builder` with `Grow` when concatenating
+- Minimize allocations; reuse buffers
 
-#### Escaping and Security
-- **HTML escaping**: Always escape attribute values and text content via `(*B).writeEscaped()`, which appends through `appendEscaped()` into the render buffer
-- **Raw content**: Only expose via explicit `Raw()` functions with security warnings
-- **Name validation**: Attribute and custom tag names are written verbatim (never escaped), so they are validated with panic against `[A-Za-z][A-Za-z0-9_.:-]*` at construction — `Attr`, `AttrIf`, `Attrs`, `AttrsMap`, `Set`, `SetDefault` for attributes; `El`, `VoidEl` for tags. Constant-name tag methods (`Div`, `Span`, ...) bypass validation, so the common path has no runtime cost. `Attribute` struct literals and `AttrBuilder` outputs are trusted; never derive their names from untrusted input
-- **JavaScript escaping**: Use `json.Marshal()` or manual escaping for JS strings
-- Document security implications in function comments
+### Tests
+Table-driven (`name`/`Desc`, inputs, `expected`), `t.Run` subtests, helpers
+such as `exprString()` / `stmtString()`. Error messages should include input,
+got, and want.
 
-#### Builder Interface
-- All builders implement: `Build(w *Writer) error`
-- Fluent attribute builders implement `AttrBuilder` (`Attribute() h.Attribute`), as does `h.Attribute` itself; `h.AttrsOf` and `h.Attributes.With` collect them into the `Attributes` an element method takes
-- Support nil builders by checking before calling `Build()`
+### Layout
+- `h/writer.go` (`*B` write/escape/indent), `h/render.go` (entry points + pool),
+  `h/tags.go` (elements), `h/attrs.go`, `h/builder.go` (`Body` alias only)
+- Tests alongside source (`*_test.go`); `doc.go` for package docs
+- Unexported helpers stay in the same file as the related exported API
 
-#### Attributes API
-- Attributes are `[]Attribute` with helper methods
-- Merge later values over earlier (e.g., in `Merge()`, last value wins)
-- Sort map keys for deterministic output
-- Support both `Attrs("k", "v", ...)` and `AttrsMap(map[string]string)`
+### Security
+- Escape text and attribute values via `(*B).writeEscaped` / `appendEscaped`
+  / `escapeTable`
+- Expose unescaped output only through `Raw`/`Rawf`, with security warnings
+- Attribute and custom tag names are written verbatim — `Attr`, `Attrs`,
+  `AttrsMap`, `AttrIf`, `Set`, `SetDefault`, `El`, and `VoidEl` panic unless
+  the name matches `[A-Za-z][A-Za-z0-9_.:-]*`. Constant-name tag methods skip
+  the check. `Attribute` literals and `AttrBuilder` outputs are trusted; never
+  derive their names from untrusted input
+- JavaScript strings: `json.Marshal` or manual escaping
 
-### Common Gotchas
-- **Panic on invalid names**: `Attr()`, `Attrs()`, `AttrsMap()`, `AttrIf()`, `Set()`, `SetDefault()`, `El()`, and `VoidEl()` panic if a name doesn't match `[A-Za-z][A-Za-z0-9_.:-]*` (empty names included)
-- **Indentation tracking**: Writer tracks `atLineStart` to properly indent content
-- **Tag stack**: Writer maintains `openTags` slice for proper closing
-- **Line wrapping**: Writer can wrap attributes based on `maxLineLen` setting
-- **Iterator consumption**: `ForEach()` builders consume iterators during `Build()`, not creation
+### Gotchas
+- Invalid (including empty) names panic
+- `B` tracks `atLineStart`, `openTags`, and optional `maxLineLen` wrapping
+  when indenting
+- Do not retain a `*B` after `Render` returns — it goes back to the pool
+- Call `Flush()` when bytes must reach the client mid-render (SSE, long streams)
 
-### Dependencies
-- Minimal external dependencies (only `github.com/jeffh/gocheck` for testing)
-- Use standard library where possible (`html/template` for escaping, `encoding/json` for JSON)
-- No linter or formatter dependencies (use `gofmt` by default)
+## Practices
 
-## Best Practices
-
-1. **Always run tests** before committing changes
-2. **Add tests for new functionality** using table-driven approach
-3. **Document exported functions** with clear godoc comments
-4. **Preserve backward compatibility** when modifying exported APIs
-5. **Use type safety** - leverage interfaces and marker types
-6. **Handle errors properly** - return early, provide context
-7. **Consider performance** - use pooling for hot paths
-8. **Security first** - escape by default, document raw/unsafe functions
-9. **Keep it simple** - favor clarity over cleverness
-10. **Follow Go conventions** - run `gofmt`, use standard patterns
+1. Run tests before committing
+2. Add table-driven tests for new behavior
+3. Document exported APIs with godoc
+4. Preserve backward compatibility
+5. Escape by default; document raw/unsafe helpers
+6. Prefer clarity over cleverness; run `gofmt`
