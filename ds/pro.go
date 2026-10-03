@@ -184,37 +184,37 @@ func ViewTransitionName(expression Value) h.Attribute {
 // Clipboard copies text to the clipboard via @clipboard(text).
 // Requires Datastar Pro.
 func Clipboard(text Value) Value {
-	return V(ActionClipboard(text.expr))
+	return V(DatastarAction("clipboard", text.expr))
 }
 
 // ClipboardBase64 copies Base64-decoded text to the clipboard.
 // Requires Datastar Pro.
 func ClipboardBase64(text Value) Value {
-	return V(ActionClipboardBase64(text.expr))
+	return V(DatastarAction("clipboard", text.expr, js.Bool(true)))
 }
 
 // Fit linearly interpolates a value from one range to another.
 // Requires Datastar Pro.
 func Fit(v, oldMin, oldMax, newMin, newMax Value) Value {
-	return V(ActionFit(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
+	return V(DatastarAction("fit", v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
 }
 
 // FitClamped is like Fit but clamps the result to the target range.
 // Requires Datastar Pro.
 func FitClamped(v, oldMin, oldMax, newMin, newMax Value) Value {
-	return V(ActionFitClamped(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
+	return V(DatastarAction("fit", v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr, js.Bool(true)))
 }
 
 // FitRounded is like Fit but rounds the result to the nearest integer.
 // Requires Datastar Pro.
 func FitRounded(v, oldMin, oldMax, newMin, newMax Value) Value {
-	return V(ActionFitRounded(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
+	return V(DatastarAction("fit", v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr, js.Bool(false), js.Bool(true)))
 }
 
 // FitClampedRounded is like Fit with both clamping and rounding.
 // Requires Datastar Pro.
 func FitClampedRounded(v, oldMin, oldMax, newMin, newMax Value) Value {
-	return V(ActionFitClampedRounded(v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr))
+	return V(DatastarAction("fit", v.expr, oldMin.expr, oldMax.expr, newMin.expr, newMax.expr, js.Bool(true), js.Bool(true)))
 }
 
 // Intl formats a value using the Intl API via @intl(type, value, options?, locale?).
