@@ -66,15 +66,6 @@ func OnClick(actions ...Value) *EventBuilder {
 	return newEventBuilder("data-on:click", actions)
 }
 
-// OnLoad creates a data-init attribute that runs when the element is loaded
-// into the DOM.
-//
-// Deprecated: Datastar v1 removed the synthetic "load" event in favor of
-// data-init. Use Init instead.
-func OnLoad(actions ...Value) *InitBuilder {
-	return Init(actions...)
-}
-
 // On creates a custom data-on:<eventName> event handler.
 func On(eventName string, actions ...Value) *EventBuilder {
 	return newEventBuilder("data-on:"+eventName, actions)
@@ -233,7 +224,7 @@ func Init(values ...Value) *InitBuilder {
 
 // Peek wraps a Value in @peek(() => expr) for debugging.
 func Peek(action Value) Value {
-	return V(ActionPeek(action.expr))
+	return V(actionPeek(action.expr))
 }
 
 // Computed creates a read-only signal computed from an expression.
@@ -380,10 +371,10 @@ func (o *FilterOptions) appendJS(sb *strings.Builder) {
 
 // SetAll creates a @setAll(value, filter) Datastar action.
 func SetAll(value Value, options *FilterOptions) Value {
-	return V(ActionSetAll(value.expr, options))
+	return V(actionSetAll(value.expr, options))
 }
 
 // ToggleAll creates a @toggleAll(filter) Datastar action.
 func ToggleAll(options *FilterOptions) Value {
-	return V(ActionToggleAll(options))
+	return V(actionToggleAll(options))
 }

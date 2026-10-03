@@ -43,7 +43,7 @@ Provides helpers for building [Datastar](https://data-star.dev/) reactive attrib
 - **Values**: `Raw()`, `JsonValue()`, `Str()` - value builders for expressions
 - **Composition**: `Do(stmts...)` bridges typed `js.Stmt`s into a Value (statement positions only: `data-on:*`, `data-init`, `data-effect`); Value methods `Not()`, `And()`, `Or()`, `Ternary()` combine expressions; `Confirm(msg, then...)` guards actions behind a `confirm()` dialog
 - **Expression-valued maps**: `ClassesExpr()`, `StylesExpr()`, `AttrsExpr()` emit `data-class`/`data-style`/`data-attr` object literals with expression values and sorted keys. Prefer these over `Classes()`/`Styles()`/`Attrs()`, which JSON-encode values into always-truthy string literals
-- **Scope identifiers**: `Evt`, `El`, `EvtTarget`, `EvtValue`, `EvtKey` - Datastar expressions expose `evt`/`el`, not the `event` of legacy inline handlers (`js.Event` and the deprecated `Event`/`EventTarget`/`EventValue` re-exports)
+- **Scope identifiers**: `Evt`, `El`, `EvtTarget`, `EvtValue`, `EvtKey` - Datastar expressions expose `evt`/`el`, not the `event` of legacy inline handlers (`js.Event`)
 
 The `ds` package composes attributes with fluent builders: `OnClick()`/`On()`/`Bind()`/`Signals()` and friends return builder structs whose modifier methods (`.Outside()`, `.PreventDefault()`, `.Debounce()`, ...) append to the attribute name and whose `Attribute()` method produces the final `h.Attribute`.
 
