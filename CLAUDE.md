@@ -1,35 +1,27 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Commands
+This file provides package-level detail for Claude Code (claude.ai/code).
+Commands, code style, and the streaming HTML API live in [AGENTS.md](AGENTS.md)
+and [API_DESIGN.md](API_DESIGN.md). Do not invent APIs or refactor the HTML tag
+surface.
 
 ```bash
-# Run all tests
 go test ./...
-
-# Run a specific test
-go test -run TestName ./...
-
-# Build/check compilation
 go build ./...
+go vet ./...
 ```
 
 ## Architecture
 
-This is a Go library (`github.com/jeffh/htmlgen`) for programmatic HTML generation with three packages:
+`github.com/jeffh/htmlgen` is a streaming HTML library with five packages:
+`h`, `ds`, `hx`, `js`, and `ds/rkt`.
 
 ### Package `h` - Core HTML Generation
 
-**Streaming API** (`h/writer.go`, `h/tags.go`, `h/render.go`): `Render` creates a per-render `*h.B` bound to an `io.Writer`. All standard HTML5 elements are methods on `B` (for example, `b.Div`, `b.Span`, and `b.A`). Every method takes concrete parameters, never `...any`: container elements are `Xxx(attrs Attributes, body Body)`, where the body runs immediately and streams its children; void elements are `Xxx(attrs Attributes)` and write self-closing tags. `nil` attrs and a `nil` body are valid. Nothing is boxed into an interface, so a capturing body closure stays stack-allocated. `Text`/`Textf` escape content, while `Raw`/`Rawf` write caller-sanitized content unchanged. `El(name, attrs, body)` and `VoidEl(name, attrs)` support custom tags; they panic unless the tag name matches `[A-Za-z][A-Za-z0-9_.:-]*` (attribute names are validated the same way in `Attr`/`Attrs`/`AttrsMap`/`AttrIf`/`Set`/`SetDefault`, since names are written unescaped; `Attribute` struct literals bypass validation and are trusted).
-
-`B` buffers output internally and writes to the `io.Writer` in ~4 KiB chunks. `Render`/`RenderIndent` flush before returning; call `Flush()` explicitly when bytes must reach the client mid-render (server-sent events, long streaming responses). A `Raw` value at or above the flush threshold bypasses the buffer.
-
-`B` keeps the first write error as a sticky error; later output calls become no-ops, and `Render` returns that error. Because output is buffered, `Err()` reflects only errors observed as of the last flush. `RenderIndent` enables pretty-printing. `RenderString` and `RenderBytes` are in-memory convenience entry points. Each render owns its `B`, so callers use native Go `if` and `for` statements safely without ambient package state.
-
-**Attributes** (`h/attrs.go`): `Attributes` is a `[]Attribute` slice with `Get()`, `Set()`, `SetDefault()`, `Delete()` methods. Create via `Attrs("key", "value", ...)` or `AttrsMap(map[string]string{...})`.
-
-`Attribute` and the fluent builders from `ds`, `hx`, and `js` implement `AttrBuilder`; `AttrsOf(items ...AttrBuilder)` collects them into an `Attributes`, and `Attributes.With(items ...AttrBuilder)` returns a copy with them merged in. Later values override earlier values of the same name without changing their position; zero attributes and `nil` builders are skipped, and neither call modifies its inputs.
+See [API_DESIGN.md](API_DESIGN.md). `Render` creates a per-render `*h.B`.
+Containers are `Xxx(attrs Attributes, body Body)`; void elements are
+`Xxx(attrs Attributes)`. `nil` attrs and a `nil` body are valid. Collect
+`AttrBuilder`s with `AttrsOf` / `Attributes.With`.
 
 ### Package `ds` - Datastar Attribute Helpers
 
@@ -39,11 +31,11 @@ Provides helpers for building [Datastar](https://data-star.dev/) reactive attrib
 - **Typed signals**: `Sig("name")` - a signal name with methods `Ref()`, `Value()`, `Not()`, `Set()`, `SetExpr()`, `Toggle()`, `Clear()`, `Eq()`, `NotEq()`, `Sub()` (derived `name_suffix` signals)
 - **Events**: `OnClick()`, `OnSubmit()`, `OnInput()`, `OnChange()`, `On()` - event handlers; `Init()` - run on element load (data-init)
 - **Actions**: `Get()`, `Post()`, `Put()`, `Delete()` - HTTP request helpers
-- **Modifiers**: `PreventDefault()`, `Debounce()`, `Throttle()`, `Delay()`, `Once()`, `ViewTransition()` - event modifiers
+- **Modifiers**: `PreventDefault()`, `Debounce()`, `Throttle()`, `Delay()`, `Once()`, `ViewTransition()` - chain on event builders
 - **Values**: `Raw()`, `JsonValue()`, `Str()` - value builders for expressions
 - **Composition**: `Do(stmts...)` bridges typed `js.Stmt`s into a Value (statement positions only: `data-on:*`, `data-init`, `data-effect`); Value methods `Not()`, `And()`, `Or()`, `Ternary()` combine expressions; `Confirm(msg, then...)` guards actions behind a `confirm()` dialog
 - **Expression-valued maps**: `ClassesExpr()`, `StylesExpr()`, `AttrsExpr()` emit `data-class`/`data-style`/`data-attr` object literals with expression values and sorted keys. Prefer these over `Classes()`/`Styles()`/`Attrs()`, which JSON-encode values into always-truthy string literals
-- **Scope identifiers**: `Evt`, `El`, `EvtTarget`, `EvtValue`, `EvtKey` - Datastar expressions expose `evt`/`el`, not the `event` of legacy inline handlers (`js.Event` and the deprecated `Event`/`EventTarget`/`EventValue` re-exports)
+- **Scope identifiers**: `Evt`, `El`, `EvtTarget`, `EvtValue`, `EvtKey` - Datastar expressions expose `evt`/`el`, not the `event` of legacy inline handlers
 
 The `ds` package composes attributes with fluent builders: `OnClick()`/`On()`/`Bind()`/`Signals()` and friends return builder structs whose modifier methods (`.Outside()`, `.PreventDefault()`, `.Debounce()`, ...) append to the attribute name and whose `Attribute()` method produces the final `h.Attribute`.
 
@@ -60,6 +52,11 @@ bundle; it is supported by the `ds/rkt` subpackage below, not by `ds/pro.go`.
 - **Bundle**: `Version`, `BundleURL`, `AliasedBundleURL` (CSP-safe build), `ScriptAttrs()`, `Script(b)`, `AliasedScript(b)` - load `datastar-rocket.js` (a superset of `datastar.js`) instead of the base bundle
 - **Host element props**: `Prop(name, value)`, `JSONProp()`, `DateProp()`, `BinProp()`, `BoolProp()`, `NumberProp()`, `Props(map)` - kebab-case attribute names with codec encodings (bool, number, string, ISO date, JSON, base64 binary), sorted for `Props`
 - **Components**: `Component(b, tag, attrs, body)` - writes a custom element, validating that `tag` is lowercase and contains a hyphen
+
+### Package `hx` - HTMX Attribute Helpers
+
+Fluent HTMX attribute helpers (`Get()`, `Target()`, `Swap()`, `Trigger()`, …).
+See `hx/doc.go`.
 
 ### Package `js` - Type-Safe JavaScript Generation
 
