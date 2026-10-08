@@ -138,12 +138,33 @@ func TestVals(t *testing.T) {
 }
 
 func TestValsJS(t *testing.T) {
-	attr := ValsJS(map[string]string{"count": "getCount()"})
-	if attr.Name != "hx-vals" {
-		t.Errorf("Name = %q, want %q", attr.Name, "hx-vals")
+	tests := []struct {
+		name     string
+		values   map[string]string
+		expected string
+	}{
+		{
+			name:     "single expression",
+			values:   map[string]string{"count": "getCount()"},
+			expected: `js:{"count": getCount()}`,
+		},
+		{
+			name:     "quote in key and stable order",
+			values:   map[string]string{"z": "3", `foo"bar`: "1", "a": "2"},
+			expected: `js:{"a": 2, "foo\"bar": 1, "z": 3}`,
+		},
 	}
-	if attr.Value[:3] != "js:" {
-		t.Errorf("Value should start with 'js:', got %q", attr.Value)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attr := ValsJS(tt.values)
+			if attr.Name != "hx-vals" {
+				t.Errorf("Name = %q, want %q", attr.Name, "hx-vals")
+			}
+			if attr.Value != tt.expected {
+				t.Errorf("Value = %q, want %q", attr.Value, tt.expected)
+			}
+		})
 	}
 }
 
@@ -705,9 +726,27 @@ func TestOn(t *testing.T) {
 }
 
 func TestOnHTMX(t *testing.T) {
-	attr := OnHTMX("beforeRequest", "console.log('request')")
-	if attr.Name != "hx-on::beforeRequest" {
-		t.Errorf("Name = %q, want %q", attr.Name, "hx-on::beforeRequest")
+	tests := []struct {
+		name     string
+		event    string
+		expected string
+	}{
+		{"camelCase", "beforeRequest", "hx-on::before-request"},
+		{"already kebab", "before-request", "hx-on::before-request"},
+		{"afterSwap", "afterSwap", "hx-on::after-swap"},
+		{"after-swap", "after-swap", "hx-on::after-swap"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attr := OnHTMX(tt.event, "console.log('request')")
+			if attr.Name != tt.expected {
+				t.Errorf("OnHTMX(%q).Name = %q, want %q", tt.event, attr.Name, tt.expected)
+			}
+			if attr.Value != "console.log('request')" {
+				t.Errorf("OnHTMX(%q).Value = %q, want %q", tt.event, attr.Value, "console.log('request')")
+			}
+		})
 	}
 }
 
