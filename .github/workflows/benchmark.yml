@@ -39,7 +39,7 @@ jobs:
         run: |
           echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Comparing htmlgen declarative API vs Go's html/template package." >> $GITHUB_STEP_SUMMARY
+          echo "Comparing the streaming htmlgen API against Go's html/template package." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Raw Output" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -127,12 +127,12 @@ jobs:
             echo "| Escaping | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          # DeepNesting (template is faster here)
-          htmlgen=$(grep "BenchmarkDeepNesting_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
-          template=$(grep "BenchmarkDeepNesting_Template" benchmark_output.txt | head -1 | awk '{print $3}')
+          # DeepNesting10 (BenchmarkDeepNesting50_HtmlGen has no template pair)
+          htmlgen=$(grep "BenchmarkDeepNesting10_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
+          template=$(grep "BenchmarkDeepNesting10_Template" benchmark_output.txt | head -1 | awk '{print $3}')
           if [ -n "$htmlgen" ] && [ -n "$template" ]; then
-            ratio=$(echo "scale=2; $htmlgen / $template" | bc)
-            echo "| Deep Nesting (static) | ${htmlgen} ns/op | ${template} ns/op | template ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
+            ratio=$(echo "scale=2; $template / $htmlgen" | bc)
+            echo "| Deep Nesting (10 levels) | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
           fi
 
           # Form
@@ -143,21 +143,8 @@ jobs:
             echo "| Form | ${htmlgen} ns/op | ${template} ns/op | htmlgen ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          # PrebuiltTree (template is faster here)
-          htmlgen=$(grep "BenchmarkPrebuiltTree_HtmlGen" benchmark_output.txt | head -1 | awk '{print $3}')
-          template=$(grep "BenchmarkPrebuiltTree_Template" benchmark_output.txt | head -1 | awk '{print $3}')
-          if [ -n "$htmlgen" ] && [ -n "$template" ]; then
-            ratio=$(echo "scale=2; $htmlgen / $template" | bc)
-            echo "| Pre-built Tree (static) | ${htmlgen} ns/op | ${template} ns/op | template ${ratio}x faster |" >> $GITHUB_STEP_SUMMARY
-          fi
-
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Key Insights" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **htmlgen is faster** for dynamic content generation with variable data structures" >> $GITHUB_STEP_SUMMARY
-          echo "- **html/template is faster** for static content with no runtime data substitution" >> $GITHUB_STEP_SUMMARY
-          echo "- htmlgen excels at list/table generation where it can be 2-3x faster" >> $GITHUB_STEP_SUMMARY
-          echo "- For attribute-heavy elements, htmlgen can be up to 3x faster" >> $GITHUB_STEP_SUMMARY
+          echo "Ratios are computed from the first sample of this run. See the README Benchmarks section for published figures." >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Benchmark Results
         uses: actions/upload-artifact@v7
