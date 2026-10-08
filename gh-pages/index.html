@@ -216,7 +216,7 @@
                             class="tab-btn active"
                             role="tab"
                             aria-selected="true"
-                            data-tab="builder"
+                            data-tab="streaming"
                         >
                             Streaming API
                         </button>
@@ -247,7 +247,7 @@
                     </div>
 
                     <!-- Tab: Streaming API -->
-                    <div class="tab-panel active" id="tab-builder">
+                    <div class="tab-panel active" id="tab-streaming">
                         <div class="code-block">
                             <pre><code class="language-go">// Elements stream straight to the io.Writer.
 // Containers take (attrs, body); void elements take (attrs).
@@ -312,7 +312,7 @@ h.Render(w, func(b *h.B) {
     b.Html(nil, func(b *h.B) {
         b.Head(nil, func(b *h.B) {
             b.Script(h.Attrs("type", "module",
-                "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.2/bundles/datastar.js"), nil)
+                "src", "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar.js"), nil)
         })
         b.Body(nil, func(b *h.B) {
             // AttrsOf and .With() collect ds/hx builders into h.Attributes.

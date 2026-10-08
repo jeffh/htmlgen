@@ -125,7 +125,7 @@ func Signal(name string, defaultJsValue any) *NamedBuilder {
 }
 
 // Signals declares multiple signals using object syntax.
-// Modifiers (Case, IfMissing, Terse) may be chained.
+// Modifiers (Case, IfMissing) may be chained.
 func Signals(signals map[string]any) *SignalsBuilder {
 	b := &SignalsBuilder{attrBase: newAttr("data-signals")}
 	b.addStmt(js.ToJS(js.JSON(signals)))

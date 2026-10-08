@@ -252,9 +252,12 @@ ds.Class("active", ds.Raw("$isActive"))          // data-class:active="$isActive
 ds.Style("color", ds.Raw("$textColor"))          // data-style:color="$textColor"
 ds.Attribute("disabled", ds.Raw("$isDisabled"))  // data-attr:disabled="$isDisabled"
 
-// Multiple classes/styles/attrs at once
-ds.Classes(map[string]string{"hidden": "$foo", "bold": "$bar"})
-ds.Styles(map[string]string{"color": "$red ? 'red' : 'blue'"})
+// Multiple classes/styles/attrs at once — *Expr keeps values as JS expressions
+ds.ClassesExpr(map[string]ds.Value{"hidden": ds.Raw("$foo"), "bold": ds.Raw("$bar")})
+ds.StylesExpr(map[string]ds.Value{"color": ds.Raw("$red ? 'red' : 'blue'")})
+ds.AttrsExpr(map[string]ds.Value{"title": ds.Raw("$tooltip")})
+
+// Classes/Styles/Attrs JSON-encode values into always-truthy string literals; use them for plain strings.
 ```
 
 ### Event Modifiers
