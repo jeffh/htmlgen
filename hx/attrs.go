@@ -2,6 +2,9 @@ package hx
 
 import (
 	"encoding/json"
+	"maps"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/jeffh/htmlgen/h"
@@ -86,10 +89,11 @@ func Vals(values map[string]any) h.Attribute {
 
 // ValsJS creates an hx-vals attribute with JavaScript expressions.
 // The values are prefixed with "js:" to indicate they are JavaScript expressions.
+// Keys are quoted and sorted alphabetically for deterministic, well-formed output.
 func ValsJS(values map[string]string) h.Attribute {
 	parts := make([]string, 0, len(values))
-	for k, v := range values {
-		parts = append(parts, `"`+k+`": `+v)
+	for _, k := range slices.Sorted(maps.Keys(values)) {
+		parts = append(parts, strconv.Quote(k)+": "+values[k])
 	}
 	return h.Attr("hx-vals", "js:{"+strings.Join(parts, ", ")+"}")
 }
@@ -116,13 +120,6 @@ func HeadersJS(jsExpr string) h.Attribute {
 // ParamsFilter specifies how parameters should be filtered.
 type ParamsFilter string
 
-const (
-	// ParamsAll includes all parameters (default).
-	ParamsAll ParamsFilter = "*"
-	// ParamsNone excludes all parameters.
-	ParamsNone ParamsFilter = "none"
-)
-
 // Params creates an hx-params attribute that filters request parameters.
 //
 // Values:
@@ -138,8 +135,6 @@ func Params(filter string) h.Attribute {
 type EncodingType string
 
 const (
-	// EncodingForm uses application/x-www-form-urlencoded encoding.
-	EncodingForm EncodingType = "application/x-www-form-urlencoded"
 	// EncodingMultipart uses multipart/form-data encoding.
 	EncodingMultipart EncodingType = "multipart/form-data"
 )
@@ -168,9 +163,4 @@ func Request(config map[string]any) h.Attribute {
 		panic("hx.Request: " + err.Error())
 	}
 	return h.Attr("hx-request", string(data))
-}
-
-// RequestJS creates an hx-request attribute with a JavaScript expression.
-func RequestJS(jsExpr string) h.Attribute {
-	return h.Attr("hx-request", "js:"+jsExpr)
 }

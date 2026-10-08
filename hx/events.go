@@ -1,6 +1,8 @@
 package hx
 
 import (
+	"strings"
+
 	"github.com/jeffh/htmlgen/h"
 )
 
@@ -16,14 +18,16 @@ func On(event string, script string) h.Attribute {
 }
 
 // OnHTMX creates an hx-on attribute for handling HTMX-specific events.
-// The "htmx:" prefix is added automatically.
+// The "htmx:" prefix is added automatically. CamelCase event names are
+// converted to kebab-case so they match the typed helpers (OnBeforeRequest
+// and friends); names that are already kebab-case are unchanged.
 //
 // Example:
 //
-//	hx.OnHTMX("beforeRequest", "console.log('request starting')")
-//	hx.OnHTMX("afterSwap", "initializeComponents()")
+//	hx.OnHTMX("beforeRequest", "console.log('request starting')") // hx-on::before-request
+//	hx.OnHTMX("after-swap", "initializeComponents()")            // hx-on::after-swap
 func OnHTMX(event string, script string) h.Attribute {
-	return h.Attr("hx-on::"+event, script)
+	return h.Attr("hx-on::"+kebab(event), script)
 }
 
 // Standard DOM event handlers
@@ -183,7 +187,7 @@ func OnReplacedInHistory(script string) h.Attribute {
 
 // DOM processing events
 
-// OnLoad creates an hx-on::load attribute (HTMX load event).
+// OnHTMXLoad creates an hx-on::load attribute (HTMX load event).
 // Fires when new content is loaded into the DOM.
 // Note: This is different from the standard DOM load event.
 func OnHTMXLoad(script string) h.Attribute {
@@ -254,4 +258,32 @@ func OnSSEError(script string) h.Attribute {
 // Fires when no SSE source is found.
 func OnNoSSESourceError(script string) h.Attribute {
 	return h.Attr("hx-on::no-sse-source-error", script)
+}
+
+// kebab converts a camelCase or PascalCase HTMX event name to kebab-case.
+// A name that is already kebab-case (or a single lowercase word) is returned
+// unchanged.
+//
+//	kebab("beforeRequest") => "before-request"
+//	kebab("after-swap")    => "after-swap"
+func kebab(name string) string {
+	var sb strings.Builder
+	sb.Grow(len(name) + 4)
+	bs := []byte(name)
+	for i := 0; i < len(bs); i++ {
+		c := bs[i]
+		if c < 'A' || c > 'Z' {
+			sb.WriteByte(c)
+			continue
+		}
+		if i > 0 && bs[i-1] != '-' {
+			prevLower := bs[i-1] >= 'a' && bs[i-1] <= 'z' || bs[i-1] >= '0' && bs[i-1] <= '9'
+			nextLower := i+1 < len(bs) && bs[i+1] >= 'a' && bs[i+1] <= 'z'
+			if prevLower || nextLower {
+				sb.WriteByte('-')
+			}
+		}
+		sb.WriteByte(c - 'A' + 'a')
+	}
+	return sb.String()
 }
