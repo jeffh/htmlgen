@@ -466,7 +466,6 @@ func TestDatastarScopeIdentifiers(t *testing.T) {
 		{"EvtKey", EvtKey, "evt.key"},
 		{"El method call", El.Method("focus"), "el.focus()"},
 		{"El property", El.Prop("dataset").Prop("id"), "el.dataset.id"},
-		{"legacy Event still emits event", Event, "event"},
 	}
 
 	for _, tt := range tests {

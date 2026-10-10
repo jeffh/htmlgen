@@ -531,13 +531,6 @@ func TestOnClick(t *testing.T) {
 	}
 }
 
-func TestOnLoad(t *testing.T) {
-	attr := OnLoad(Raw("$init()")).Attribute()
-	if attr.Name != "data-init" {
-		t.Errorf("OnLoad().Name = %q, want %q", attr.Name, "data-init")
-	}
-}
-
 func TestOn(t *testing.T) {
 	attr := On("keydown", Raw("$handleKey(event)")).Attribute()
 	if attr.Name != "data-on:keydown" {

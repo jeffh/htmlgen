@@ -11,10 +11,6 @@ import (
 	"github.com/jeffh/htmlgen/js"
 )
 
-type Stringer interface {
-	String() string
-}
-
 // Get performs a GET request.
 // Returns a Value that can be used with event handlers.
 func Get(path string, chains ...PromiseChain) Value {
@@ -78,16 +74,16 @@ func PatchDynamic(path Value, chains ...PromiseChain) Value {
 func requestValue(method string, path js.Expr, chains ...PromiseChain) Value {
 	action := DatastarAction(method, path)
 	if len(chains) > 0 {
-		return Value{expr: WithChains(action, chains...)}
+		return Value{expr: withChains(action, chains...)}
 	}
 	return Value{expr: action}
 }
 
 // OnSuccess creates a .then() chain for successful request handling.
-func OnSuccess(expr Value) PromiseChain { return ThenChain(expr.expr) }
+func OnSuccess(expr Value) PromiseChain { return thenChain{expr.expr} }
 
 // OnFailure creates a .catch() chain for error handling.
-func OnFailure(expr Value) PromiseChain { return CatchChain(expr.expr) }
+func OnFailure(expr Value) PromiseChain { return catchChain{expr.expr} }
 
 // GetWithOptions performs a GET request with options.
 func GetWithOptions(path string, opts RequestOptionsBuilder, chains ...PromiseChain) Value {
@@ -133,14 +129,14 @@ func requestValueWithOptions(method string, path js.Expr, opts RequestOptionsBui
 	sb.WriteString(")")
 	action := js.Raw(sb.String())
 	if len(chains) > 0 {
-		return Value{expr: WithChains(action, chains...)}
+		return Value{expr: withChains(action, chains...)}
 	}
 	return Value{expr: action}
 }
 
 // RequestOptionsBuilder collects request options.
 type RequestOptionsBuilder struct {
-	options []RequestOption
+	options []requestOption
 }
 
 // RequestOptions creates a builder for HTTP request options.
@@ -285,8 +281,7 @@ func (b RequestOptionsBuilder) Payload(data any) RequestOptionsBuilder {
 	return b
 }
 
-// RequestOption is an option for HTTP request actions.
-type RequestOption interface {
+type requestOption interface {
 	appendOption(*strings.Builder)
 }
 
