@@ -157,7 +157,11 @@ func (b RequestOptionsBuilder) ContentType(ct string) RequestOptionsBuilder {
 }
 
 // FilterSignals filters which signals are sent with the request.
+// A nil filter is omitted, matching Persist/QueryString/SetAll/ToggleAll.
 func (b RequestOptionsBuilder) FilterSignals(filter *FilterOptions) RequestOptionsBuilder {
+	if filter == nil {
+		return b
+	}
 	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("filterSignals: ")
 		filter.appendJS(sb)

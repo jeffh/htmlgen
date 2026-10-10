@@ -358,7 +358,7 @@ func (o *FilterOptions) appendJS(sb *strings.Builder) {
 	needComma := false
 	if o.IncludeReg != nil {
 		sb.WriteString("include: /")
-		sb.WriteString(*o.IncludeReg)
+		sb.WriteString(escapeRegexSlashes(*o.IncludeReg))
 		sb.WriteString("/")
 		needComma = true
 	}
@@ -367,10 +367,36 @@ func (o *FilterOptions) appendJS(sb *strings.Builder) {
 			sb.WriteString(", ")
 		}
 		sb.WriteString("exclude: /")
-		sb.WriteString(*o.ExcludeReg)
+		sb.WriteString(escapeRegexSlashes(*o.ExcludeReg))
 		sb.WriteString("/")
 	}
 	sb.WriteString("}")
+}
+
+// escapeRegexSlashes escapes unescaped '/' in a JS regex literal body so
+// patterns like "foo/bar" emit /foo\/bar/ instead of the invalid /foo/bar/.
+// Already-escaped slashes (`\/`) are left unchanged.
+func escapeRegexSlashes(pattern string) string {
+	if !strings.Contains(pattern, "/") {
+		return pattern
+	}
+	var b strings.Builder
+	b.Grow(len(pattern) + 2)
+	escaped := false
+	for i := 0; i < len(pattern); i++ {
+		c := pattern[i]
+		if c == '\\' && !escaped {
+			escaped = true
+			b.WriteByte(c)
+			continue
+		}
+		if c == '/' && !escaped {
+			b.WriteByte('\\')
+		}
+		b.WriteByte(c)
+		escaped = false
+	}
+	return b.String()
 }
 
 // SetAll creates a @setAll(value, filter) Datastar action.
