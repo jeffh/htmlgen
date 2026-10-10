@@ -117,9 +117,6 @@ func HeadersJS(jsExpr string) h.Attribute {
 	return h.Attr("hx-headers", "js:"+jsExpr)
 }
 
-// ParamsFilter specifies how parameters should be filtered.
-type ParamsFilter string
-
 // Params creates an hx-params attribute that filters request parameters.
 //
 // Values:

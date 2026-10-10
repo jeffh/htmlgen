@@ -3,7 +3,6 @@ package h
 import (
 	"maps"
 	"slices"
-	"sort"
 	"strconv"
 )
 
@@ -121,8 +120,7 @@ func Attrs(kv ...string) Attributes {
 // Panics if any key is not a valid attribute name (see Attr).
 func AttrsMap(m map[string]string) Attributes {
 	result := make(Attributes, 0, len(m))
-	keys := slices.Collect(maps.Keys(m))
-	sort.Strings(keys)
+	keys := slices.Sorted(maps.Keys(m))
 	for _, k := range keys {
 		validateAttrName(k)
 		result = append(result, Attribute{k, m[k]})

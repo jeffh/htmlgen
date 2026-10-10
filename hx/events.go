@@ -87,25 +87,25 @@ func OnMouseout(script string) h.Attribute {
 
 // Request lifecycle events
 
-// OnBeforeRequest creates an hx-on::beforeRequest attribute.
+// OnBeforeRequest creates an hx-on::before-request attribute.
 // Fires before an AJAX request is issued.
 func OnBeforeRequest(script string) h.Attribute {
 	return h.Attr("hx-on::before-request", script)
 }
 
-// OnBeforeSend creates an hx-on::beforeSend attribute.
+// OnBeforeSend creates an hx-on::before-send attribute.
 // Fires just before the request is sent.
 func OnBeforeSend(script string) h.Attribute {
 	return h.Attr("hx-on::before-send", script)
 }
 
-// OnAfterRequest creates an hx-on::afterRequest attribute.
+// OnAfterRequest creates an hx-on::after-request attribute.
 // Fires after the request completes (success or failure).
 func OnAfterRequest(script string) h.Attribute {
 	return h.Attr("hx-on::after-request", script)
 }
 
-// OnAfterOnLoad creates an hx-on::afterOnLoad attribute.
+// OnAfterOnLoad creates an hx-on::after-on-load attribute.
 // Fires after the response has been processed.
 func OnAfterOnLoad(script string) h.Attribute {
 	return h.Attr("hx-on::after-on-load", script)
@@ -113,19 +113,19 @@ func OnAfterOnLoad(script string) h.Attribute {
 
 // Swap lifecycle events
 
-// OnBeforeSwap creates an hx-on::beforeSwap attribute.
+// OnBeforeSwap creates an hx-on::before-swap attribute.
 // Fires before the swap is performed.
 func OnBeforeSwap(script string) h.Attribute {
 	return h.Attr("hx-on::before-swap", script)
 }
 
-// OnAfterSwap creates an hx-on::afterSwap attribute.
+// OnAfterSwap creates an hx-on::after-swap attribute.
 // Fires after the swap completes.
 func OnAfterSwap(script string) h.Attribute {
 	return h.Attr("hx-on::after-swap", script)
 }
 
-// OnAfterSettle creates an hx-on::afterSettle attribute.
+// OnAfterSettle creates an hx-on::after-settle attribute.
 // Fires after the DOM has settled.
 func OnAfterSettle(script string) h.Attribute {
 	return h.Attr("hx-on::after-settle", script)
@@ -133,13 +133,13 @@ func OnAfterSettle(script string) h.Attribute {
 
 // Error events
 
-// OnResponseError creates an hx-on::responseError attribute.
+// OnResponseError creates an hx-on::response-error attribute.
 // Fires when a response error occurs (non-2xx status).
 func OnResponseError(script string) h.Attribute {
 	return h.Attr("hx-on::response-error", script)
 }
 
-// OnSendError creates an hx-on::sendError attribute.
+// OnSendError creates an hx-on::send-error attribute.
 // Fires when a network error prevents the request.
 func OnSendError(script string) h.Attribute {
 	return h.Attr("hx-on::send-error", script)
@@ -151,7 +151,7 @@ func OnTimeout(script string) h.Attribute {
 	return h.Attr("hx-on::timeout", script)
 }
 
-// OnSwapError creates an hx-on::swapError attribute.
+// OnSwapError creates an hx-on::swap-error attribute.
 // Fires when an error occurs during swap.
 func OnSwapError(script string) h.Attribute {
 	return h.Attr("hx-on::swap-error", script)
@@ -159,7 +159,7 @@ func OnSwapError(script string) h.Attribute {
 
 // Configuration events
 
-// OnConfigRequest creates an hx-on::configRequest attribute.
+// OnConfigRequest creates an hx-on::config-request attribute.
 // Fires before the request is configured, allowing modification.
 func OnConfigRequest(script string) h.Attribute {
 	return h.Attr("hx-on::config-request", script)
@@ -167,19 +167,19 @@ func OnConfigRequest(script string) h.Attribute {
 
 // History events
 
-// OnHistoryRestore creates an hx-on::historyRestore attribute.
+// OnHistoryRestore creates an hx-on::history-restore attribute.
 // Fires when history is restored.
 func OnHistoryRestore(script string) h.Attribute {
 	return h.Attr("hx-on::history-restore", script)
 }
 
-// OnPushedIntoHistory creates an hx-on::pushedIntoHistory attribute.
+// OnPushedIntoHistory creates an hx-on::pushed-into-history attribute.
 // Fires when a URL is pushed to history.
 func OnPushedIntoHistory(script string) h.Attribute {
 	return h.Attr("hx-on::pushed-into-history", script)
 }
 
-// OnReplacedInHistory creates an hx-on::replacedInHistory attribute.
+// OnReplacedInHistory creates an hx-on::replaced-in-history attribute.
 // Fires when a URL is replaced in history.
 func OnReplacedInHistory(script string) h.Attribute {
 	return h.Attr("hx-on::replaced-in-history", script)
@@ -194,13 +194,13 @@ func OnHTMXLoad(script string) h.Attribute {
 	return h.Attr("hx-on::load", script)
 }
 
-// OnBeforeProcessNode creates an hx-on::beforeProcessNode attribute.
+// OnBeforeProcessNode creates an hx-on::before-process-node attribute.
 // Fires before HTMX processes a node.
 func OnBeforeProcessNode(script string) h.Attribute {
 	return h.Attr("hx-on::before-process-node", script)
 }
 
-// OnAfterProcessNode creates an hx-on::afterProcessNode attribute.
+// OnAfterProcessNode creates an hx-on::after-process-node attribute.
 // Fires after HTMX processes a node.
 func OnAfterProcessNode(script string) h.Attribute {
 	return h.Attr("hx-on::after-process-node", script)
@@ -208,19 +208,19 @@ func OnAfterProcessNode(script string) h.Attribute {
 
 // Out-of-band events
 
-// OnOOBBeforeSwap creates an hx-on::oobBeforeSwap attribute.
+// OnOOBBeforeSwap creates an hx-on::oob-before-swap attribute.
 // Fires before an out-of-band swap.
 func OnOOBBeforeSwap(script string) h.Attribute {
 	return h.Attr("hx-on::oob-before-swap", script)
 }
 
-// OnOOBAfterSwap creates an hx-on::oobAfterSwap attribute.
+// OnOOBAfterSwap creates an hx-on::oob-after-swap attribute.
 // Fires after an out-of-band swap.
 func OnOOBAfterSwap(script string) h.Attribute {
 	return h.Attr("hx-on::oob-after-swap", script)
 }
 
-// OnOOBErrorNoTarget creates an hx-on::oobErrorNoTarget attribute.
+// OnOOBErrorNoTarget creates an hx-on::oob-error-no-target attribute.
 // Fires when an OOB swap target is not found.
 func OnOOBErrorNoTarget(script string) h.Attribute {
 	return h.Attr("hx-on::oob-error-no-target", script)
@@ -242,19 +242,19 @@ func OnValidationHalted(script string) h.Attribute {
 
 // SSE/WebSocket events
 
-// OnSSEOpen creates an hx-on::sseOpen attribute.
+// OnSSEOpen creates an hx-on::sse-open attribute.
 // Fires when an SSE connection is opened.
 func OnSSEOpen(script string) h.Attribute {
 	return h.Attr("hx-on::sse-open", script)
 }
 
-// OnSSEError creates an hx-on::sseError attribute.
+// OnSSEError creates an hx-on::sse-error attribute.
 // Fires when an SSE connection error occurs.
 func OnSSEError(script string) h.Attribute {
 	return h.Attr("hx-on::sse-error", script)
 }
 
-// OnNoSSESourceError creates an hx-on::noSSESourceError attribute.
+// OnNoSSESourceError creates an hx-on::no-sse-source-error attribute.
 // Fires when no SSE source is found.
 func OnNoSSESourceError(script string) h.Attribute {
 	return h.Attr("hx-on::no-sse-source-error", script)
