@@ -23,7 +23,7 @@
 //
 //   - EventBuilder — returned by OnClick, OnSubmit, OnInput, OnChange, On, OnRAF, OnResize.
 //     Methods: PreventDefault, StopPropagation, Once, Passive, Capture, Outside, Window,
-//     Document, ViewTransition, Case, Delay, Debounce, Throttle, Then.
+//     Document, ViewTransition, Case, Delay, Debounce, Throttle.
 //   - IntersectBuilder — returned by OnIntersect. Methods: Once, Half, Full, Exit,
 //     Threshold, Delay, Debounce, Throttle, ViewTransition.
 //   - IntervalBuilder — returned by OnInterval. Methods: Duration, ViewTransition.

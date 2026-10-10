@@ -12,8 +12,7 @@ import (
 // Modifier methods append to it; Attribute produces the finished attribute,
 // whose name is validated by h.Attr.
 type attrName struct {
-	name  strings.Builder
-	value string
+	name strings.Builder
 }
 
 func newAttrName(name string) *attrName {
@@ -24,7 +23,7 @@ func newAttrName(name string) *attrName {
 
 // Attribute returns the finished h.Attribute.
 func (a *attrName) Attribute() h.Attribute {
-	return h.Attr(a.name.String(), a.value)
+	return h.Attr(a.name.String(), "")
 }
 
 // For renders a template once per item of source: data-for="item, index in

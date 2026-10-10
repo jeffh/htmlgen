@@ -30,10 +30,6 @@ var (
 	Date = Ident("Date")
 	// Promise is the Promise constructor.
 	Promise = Ident("Promise")
-	// Object_ is the Object constructor.
-	Object_ = Ident("Object")
-	// Array_ is the Array constructor.
-	Array_ = Ident("Array")
 )
 
 // Console methods
