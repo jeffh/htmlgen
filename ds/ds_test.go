@@ -889,6 +889,8 @@ func TestIgnoreSelf(t *testing.T) {
 func TestFilterOptions(t *testing.T) {
 	include := "^user"
 	exclude := "password$"
+	slash := "a/b"
+	escapedSlash := `a\/b`
 
 	tests := []struct {
 		name     string
@@ -899,6 +901,8 @@ func TestFilterOptions(t *testing.T) {
 		{"exclude only", &FilterOptions{ExcludeReg: &exclude}, "{exclude: /password$/}"},
 		{"both", &FilterOptions{IncludeReg: &include, ExcludeReg: &exclude}, "{include: /^user/, exclude: /password$/}"},
 		{"neither", &FilterOptions{}, "{}"},
+		{"slash in include", &FilterOptions{IncludeReg: &slash}, `{include: /a\/b/}`},
+		{"already escaped slash", &FilterOptions{IncludeReg: &escapedSlash}, `{include: /a\/b/}`},
 	}
 
 	for _, tt := range tests {
@@ -1101,6 +1105,15 @@ func TestFilterSignals(t *testing.T) {
 	got := ToJS(v.expr)
 	if !strings.Contains(got, "filterSignals:") {
 		t.Errorf("FilterSignals() = %q, should contain filterSignals:", got)
+	}
+}
+
+func TestFilterSignalsNil(t *testing.T) {
+	v := GetWithOptions("/api", RequestOptions().FilterSignals(nil))
+	got := ToJS(v.expr)
+	want := `@get("/api")`
+	if got != want {
+		t.Errorf("FilterSignals(nil) = %q, want %q", got, want)
 	}
 }
 
