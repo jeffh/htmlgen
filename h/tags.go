@@ -39,14 +39,14 @@ func (b *B) Title(attrs Attributes, body Body) { b.element("<title", "</title>",
 // Carries document metadata that no other tag expresses: the character encoding
 // (charset="utf-8"), the mobile viewport (name="viewport"), the search-result
 // description (name="description"), and social preview cards (property="og:*").
-func (b *B) Meta(attrs Attributes) { b.voidElement("<meta", attrs) }
+func (b *B) Meta(attrs Attributes) { b.voidTag("<meta", attrs) }
 
 // Link writes a self-closing <link> element.
 //
 // Relates the document to an external resource. Most commonly a stylesheet
 // (rel="stylesheet" href="..."), but also favicons (rel="icon"), canonical URLs
 // (rel="canonical"), preloads, and RSS feeds.
-func (b *B) Link(attrs Attributes) { b.voidElement("<link", attrs) }
+func (b *B) Link(attrs Attributes) { b.voidTag("<link", attrs) }
 
 // Style writes a <style> element.
 //
@@ -78,7 +78,7 @@ func (b *B) Noscript(attrs Attributes, body Body) { b.element("<noscript", "</no
 // Sets the base URL that every relative link and resource in the document
 // resolves against, and/or a default target for links. At most one per
 // document, and it must appear before any relative URL is used.
-func (b *B) Base(attrs Attributes) { b.voidElement("<base", attrs) }
+func (b *B) Base(attrs Attributes) { b.voidTag("<base", attrs) }
 
 // Body writes a <body> element.
 //
@@ -248,7 +248,7 @@ func (b *B) Figure(attrs Attributes, body Body) { b.element("<figure", "</figure
 // A thematic break between paragraph-level content, such as a scene change or a
 // shift in topic. It is semantic, not decorative — for a plain dividing line,
 // use a CSS border instead.
-func (b *B) Hr(attrs Attributes) { b.voidElement("<hr", attrs) }
+func (b *B) Hr(attrs Attributes) { b.voidTag("<hr", attrs) }
 
 // Li writes an <li> element.
 //
@@ -328,7 +328,7 @@ func (b *B) Bdo(attrs Attributes, body Body) { b.element("<bdo", "</bdo>", attrs
 // A line break inside a block of text where the break is part of the content:
 // poetry, song lyrics, a postal address. Do not use it to space out paragraphs
 // — use separate <p> elements or CSS margins.
-func (b *B) Br(attrs Attributes) { b.voidElement("<br", attrs) }
+func (b *B) Br(attrs Attributes) { b.voidTag("<br", attrs) }
 
 // Cite writes a <cite> element.
 //
@@ -479,13 +479,13 @@ func (b *B) Var(attrs Attributes, body Body) { b.element("<var", "</var>", attrs
 // An optional word-break opportunity: the browser may wrap here if the line
 // needs it, but will not add a hyphen. Useful inside long URLs and identifiers
 // that would otherwise overflow.
-func (b *B) Wbr(attrs Attributes) { b.voidElement("<wbr", attrs) }
+func (b *B) Wbr(attrs Attributes) { b.voidTag("<wbr", attrs) }
 
 // Area writes a self-closing <area> element.
 //
 // A clickable hotspot within an image <map>, defined by shape and coords. Give
 // each one alt text, as you would an image link.
-func (b *B) Area(attrs Attributes) { b.voidElement("<area", attrs) }
+func (b *B) Area(attrs Attributes) { b.voidTag("<area", attrs) }
 
 // Audio writes an <audio> element.
 //
@@ -500,7 +500,7 @@ func (b *B) Audio(attrs Attributes, body Body) { b.element("<audio", "</audio>",
 // Embeds an image. Always set alt — descriptive text for meaningful images, or
 // alt="" for purely decorative ones. Setting width and height reserves space
 // and prevents layout shift; loading="lazy" defers offscreen images.
-func (b *B) Img(attrs Attributes) { b.voidElement("<img", attrs) }
+func (b *B) Img(attrs Attributes) { b.voidTag("<img", attrs) }
 
 // Map writes a <map> element.
 //
@@ -514,7 +514,7 @@ func (b *B) Map(attrs Attributes, body Body) { b.element("<map", "</map>", attrs
 // Supplies a timed text track for <audio> or <video>: captions, subtitles,
 // descriptions, or chapters, as a WebVTT file. Set kind, srclang, and label,
 // and default on the track to enable initially.
-func (b *B) Track(attrs Attributes) { b.voidElement("<track", attrs) }
+func (b *B) Track(attrs Attributes) { b.voidTag("<track", attrs) }
 
 // Video writes a <video> element.
 //
@@ -527,7 +527,7 @@ func (b *B) Video(attrs Attributes, body Body) { b.element("<video", "</video>",
 //
 // Embeds external content handled by a plugin or the browser's own viewer, such
 // as a PDF. Largely legacy — prefer <iframe>, <video>, <audio>, or <img>.
-func (b *B) Embed(attrs Attributes) { b.voidElement("<embed", attrs) }
+func (b *B) Embed(attrs Attributes) { b.voidTag("<embed", attrs) }
 
 // Iframe writes an <iframe> element.
 //
@@ -562,7 +562,7 @@ func (b *B) Portal(attrs Attributes, body Body) { b.element("<portal", "</portal
 // One media or image candidate inside <picture>, <audio>, or <video>. The
 // browser picks the first it can use, selecting on type, media, or srcset. List
 // candidates from most to least preferred.
-func (b *B) Source(attrs Attributes) { b.voidElement("<source", attrs) }
+func (b *B) Source(attrs Attributes) { b.voidTag("<source", attrs) }
 
 // Svg writes an <svg> element.
 //
@@ -623,7 +623,7 @@ func (b *B) Caption(attrs Attributes, body Body) { b.element("<caption", "</capt
 //
 // Describes one column (or span columns) inside a <colgroup>, so a class or
 // style can be applied to a whole column without touching every cell.
-func (b *B) Col(attrs Attributes) { b.voidElement("<col", attrs) }
+func (b *B) Col(attrs Attributes) { b.voidTag("<col", attrs) }
 
 // Colgroup writes a <colgroup> element.
 //
@@ -709,7 +709,7 @@ func (b *B) Form(attrs Attributes, body Body) { b.element("<form", "</form>", at
 // text, email, password, number, date, checkbox, radio, file, range, color,
 // hidden, and more. Choosing the right type gives mobile users the right
 // keyboard and enables built-in validation. Pair each one with a <label>.
-func (b *B) Input(attrs Attributes) { b.voidElement("<input", attrs) }
+func (b *B) Input(attrs Attributes) { b.voidTag("<input", attrs) }
 
 // Label writes a <label> element.
 //

@@ -340,13 +340,6 @@ func (b *B) element(open, close string, attrs Attributes, body Body) {
 	b.closeOneTag()
 }
 
-func (b *B) voidElement(open string, attrs Attributes) {
-	if b.err != nil {
-		return
-	}
-	b.voidTag(open, attrs)
-}
-
 // Doctype writes the HTML5 doctype declaration.
 func (b *B) Doctype() {
 	b.writeString("<!DOCTYPE html>\n")
@@ -435,5 +428,5 @@ func (b *B) El(name string, attrs Attributes, body Body) {
 // Panics if name is not a valid element name (see El).
 func (b *B) VoidEl(name string, attrs Attributes) {
 	validateTagName(name)
-	b.voidElement("<"+name, attrs)
+	b.voidTag("<"+name, attrs)
 }

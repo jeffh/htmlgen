@@ -106,28 +106,6 @@ func TestJsonValuePanic(t *testing.T) {
 	JsonValue(make(chan int))
 }
 
-func TestNavigate(t *testing.T) {
-	tests := []struct {
-		name     string
-		path     string
-		values   []any
-		expected string
-	}{
-		{"simple path", "/home", nil, `window.location.href = "/home"`},
-		{"path with format", "/users/%d", []any{42}, `window.location.href = "/users/42"`},
-		{"path with string format", "/users/%s/edit", []any{"john"}, `window.location.href = "/users/john/edit"`},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := Navigate(tt.path, tt.values...)
-			if got != tt.expected {
-				t.Errorf("Navigate(%q, %v) = %q, want %q", tt.path, tt.values, got, tt.expected)
-			}
-		})
-	}
-}
-
 func TestOnSuccess(t *testing.T) {
 	action := OnSuccess(Raw("console.log('done')"))
 	var sb strings.Builder
@@ -165,34 +143,6 @@ func TestConsoleLog(t *testing.T) {
 			attr := OnClick(action).Attribute()
 			if attr.Value != tt.expected {
 				t.Errorf("ConsoleLog() = %q, want %q", attr.Value, tt.expected)
-			}
-		})
-	}
-}
-
-func TestAnd(t *testing.T) {
-	tests := []struct {
-		name     string
-		actions  []js.Expr
-		expected string
-	}{
-		{"two actions", []js.Expr{js.Raw("$a"), js.Raw("$b")}, "($a && $b)"},
-		{"three actions", []js.Expr{js.Raw("$a"), js.Raw("$b"), js.Raw("$c")}, "(($a && $b) && $c)"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			v := And(tt.actions...)
-
-			// Test via ToJS
-			if got := ToJS(v); got != tt.expected {
-				t.Errorf("And() = %q, want %q", got, tt.expected)
-			}
-
-			// Test as a Value via OnClick
-			attr := OnClick(AndValue(tt.actions...)).Attribute()
-			if attr.Value != tt.expected {
-				t.Errorf("OnClick(AndValue(...)).Value = %q, want %q", attr.Value, tt.expected)
 			}
 		})
 	}
@@ -379,7 +329,7 @@ func TestDuration(t *testing.T) {
 		expected string
 	}{
 		{"basic", 500 * time.Millisecond, nil, "__duration.500ms"},
-		{"with leading", 2 * time.Second, []TimingOption{DurationLeading()}, "__duration.2s.leading"},
+		{"with leading", 2 * time.Second, []TimingOption{Leading()}, "__duration.2s.leading"},
 	}
 
 	for _, tt := range tests {

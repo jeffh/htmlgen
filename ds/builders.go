@@ -73,11 +73,6 @@ func Trailing() TimingOption {
 	return func(sb *strings.Builder) { sb.WriteString(".trailing") }
 }
 
-// DurationLeading causes the first interval to fire immediately (for Duration).
-func DurationLeading() TimingOption {
-	return func(sb *strings.Builder) { sb.WriteString(".leading") }
-}
-
 func writeTiming(sb *strings.Builder, segment string, d time.Duration, opts []TimingOption) {
 	sb.WriteString(segment)
 	sb.WriteString(d.String())
@@ -94,15 +89,6 @@ type EventBuilder struct {
 
 func newEventBuilder(name string, actions []Value) *EventBuilder {
 	b := &EventBuilder{attrBase: newAttr(name)}
-	for _, a := range actions {
-		b.addValue(a)
-	}
-	return b
-}
-
-// Then appends additional JavaScript actions to be executed in order with the
-// initial actions.
-func (b *EventBuilder) Then(actions ...Value) *EventBuilder {
 	for _, a := range actions {
 		b.addValue(a)
 	}
@@ -271,7 +257,7 @@ func newIntervalBuilder(actions []Value) *IntervalBuilder {
 	return b
 }
 
-// Duration appends "__duration.<duration>" plus optional DurationLeading.
+// Duration appends "__duration.<duration>" plus optional Leading.
 func (b *IntervalBuilder) Duration(d time.Duration, opts ...TimingOption) *IntervalBuilder {
 	writeTiming(&b.name, "__duration.", d, opts)
 	return b
