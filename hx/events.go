@@ -83,7 +83,6 @@ func OnMouseout(script string) h.Attribute {
 }
 
 // HTMX-specific event handlers
-// These handle events in the htmx: namespace
 
 // Request lifecycle events
 

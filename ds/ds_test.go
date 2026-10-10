@@ -148,8 +148,6 @@ func TestConsoleLog(t *testing.T) {
 	}
 }
 
-// ============ modifiers.go tests ============
-
 func TestPreventDefault(t *testing.T) {
 	attr := OnClick().PreventDefault().Attribute()
 	if !strings.Contains(attr.Name, "__prevent") {

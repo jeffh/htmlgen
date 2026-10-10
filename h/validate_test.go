@@ -76,7 +76,6 @@ func TestInvalidAttrNamesPanic(t *testing.T) {
 }
 
 func TestAttrIfFalseSkipsValidation(t *testing.T) {
-	// A false condition returns a zero Attribute without validating the name.
 	if got := AttrIf(false, "not a valid name", "v"); got != (Attribute{}) {
 		t.Fatalf("AttrIf(false) = %#v", got)
 	}
