@@ -3,7 +3,7 @@
 // This package includes:
 //   - HTTP methods: Get, Post, Put, Patch, Delete
 //   - Targeting: Target, Select, SelectOOB, SwapOOB
-//   - Swap strategies: Swap with modifiers (Transition, SwapDelay, SettleDelay, etc.)
+//   - Swap strategies: Swap with modifiers (Transition, Delay, SettleDelay, etc.)
 //   - Triggers: Trigger with modifiers (Once, Changed, Delay, Throttle, From, etc.)
 //   - Request config: Include, Vals, ValsJS, Headers, Params, Encoding, Ext
 //   - Behavior: Boost, PushURL, ReplaceURL, Confirm, Prompt, Indicator, Sync, etc.
