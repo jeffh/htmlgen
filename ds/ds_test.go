@@ -1084,6 +1084,24 @@ func TestRequestOptionsBuilder(t *testing.T) {
 			}
 		})
 	}
+
+	opts := RequestOptions().ContentType("form")
+	for _, tt := range []struct {
+		name string
+		fn   func(string, RequestOptionsBuilder, ...PromiseChain) Value
+		want string
+	}{
+		{"put", PutWithOptions, `@put("/api", {contentType: "form"})`},
+		{"delete", DeleteWithOptions, `@delete("/api", {contentType: "form"})`},
+		{"patch", PatchWithOptions, `@patch("/api", {contentType: "form"})`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ToJS(tt.fn("/api", opts).expr)
+			if got != tt.want {
+				t.Errorf("%s = %q, want %q", tt.name, got, tt.want)
+			}
+		})
+	}
 }
 
 func TestHeaders(t *testing.T) {
