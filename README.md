@@ -16,10 +16,11 @@ go get github.com/jeffh/htmlgen
 
 ## Overview
 
-htmlgen provides four packages:
+htmlgen provides five packages:
 
 - **`h`** - Streaming HTML generation
 - **`ds`** - Datastar attribute helpers for building reactive web applications
+- **`ds/rkt`** - Datastar Rocket helpers for private signals, templates, and host props
 - **`hx`** - HTMX attribute helpers
 - **`js`** - Type-safe JavaScript generation for event handler attributes
 

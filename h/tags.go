@@ -538,9 +538,8 @@ func (b *B) Iframe(attrs Attributes, body Body) { b.element("<iframe", "</iframe
 
 // Object writes an <object> element.
 //
-// Embeds an external resource — a PDF, an SVG, another document — with nested
-// <param> elements or fallback content inside. Mostly superseded by the
-// dedicated media elements and <iframe>.
+// Embeds an external resource — a PDF, an SVG, another document. Mostly
+// superseded by the dedicated media elements and <iframe>.
 func (b *B) Object(attrs Attributes, body Body) { b.element("<object", "</object>", attrs, body) }
 
 // Picture writes a <picture> element.
