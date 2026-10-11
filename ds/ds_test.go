@@ -204,6 +204,37 @@ func TestDelay(t *testing.T) {
 	}
 }
 
+func TestTimingDurationFormat(t *testing.T) {
+	tests := []struct {
+		name string
+		d    time.Duration
+		want string
+	}{
+		{"100ms", 100 * time.Millisecond, "100ms"},
+		{"1s", time.Second, "1s"},
+		{"minute", time.Minute, "60s"},
+		{"90s", 90 * time.Second, "90s"},
+		{"2h", 2 * time.Hour, "7200s"},
+		{"1500ms", 1500 * time.Millisecond, "1500ms"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := OnClick(Raw("$x++")).Delay(tt.d).Attribute().Name; !strings.Contains(got, "__delay."+tt.want) {
+				t.Errorf("OnClick.Delay(%v) = %q, want __delay.%s", tt.d, got, tt.want)
+			}
+			if got := OnInput().Debounce(tt.d).Attribute().Name; !strings.Contains(got, "__debounce."+tt.want) {
+				t.Errorf("OnInput.Debounce(%v) = %q, want __debounce.%s", tt.d, got, tt.want)
+			}
+			if got := On("scroll").Throttle(tt.d).Attribute().Name; !strings.Contains(got, "__throttle."+tt.want) {
+				t.Errorf("On.Throttle(%v) = %q, want __throttle.%s", tt.d, got, tt.want)
+			}
+			if got := OnInterval().Duration(tt.d).Attribute().Name; !strings.Contains(got, "__duration."+tt.want) {
+				t.Errorf("OnInterval.Duration(%v) = %q, want __duration.%s", tt.d, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestDebounce(t *testing.T) {
 	tests := []struct {
 		name     string
