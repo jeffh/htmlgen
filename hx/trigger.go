@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jeffh/htmlgen/h"
+	"github.com/jeffh/htmlgen/internal"
 )
 
 type triggerSpec struct {
@@ -93,14 +94,14 @@ func (t *TriggerBuilder) Changed() *TriggerBuilder {
 // If another event occurs during the delay, the timer resets.
 func (t *TriggerBuilder) Delay(d time.Duration) *TriggerBuilder {
 	s := t.last()
-	s.modifiers = append(s.modifiers, "delay:"+formatDuration(d))
+	s.modifiers = append(s.modifiers, "delay:"+internal.FormatDuration(d))
 	return t
 }
 
 // Throttle limits how often the most recently added trigger can fire.
 func (t *TriggerBuilder) Throttle(d time.Duration) *TriggerBuilder {
 	s := t.last()
-	s.modifiers = append(s.modifiers, "throttle:"+formatDuration(d))
+	s.modifiers = append(s.modifiers, "throttle:"+internal.FormatDuration(d))
 	return t
 }
 
@@ -290,7 +291,7 @@ func (b *IntervalTriggerBuilder) Attribute() h.Attribute {
 //	hx.TriggerEvery(1*time.Second).Filter("document.visibilityState == 'visible'")
 func TriggerEvery(interval time.Duration) *IntervalTriggerBuilder {
 	return &IntervalTriggerBuilder{
-		spec: triggerSpec{event: "every " + formatDuration(interval)},
+		spec: triggerSpec{event: "every " + internal.FormatDuration(interval)},
 	}
 }
 
@@ -308,7 +309,7 @@ func (b *IntervalTriggerBuilder) Once() *IntervalTriggerBuilder {
 
 // Throttle limits how often the polling trigger can fire.
 func (b *IntervalTriggerBuilder) Throttle(d time.Duration) *IntervalTriggerBuilder {
-	b.spec.modifiers = append(b.spec.modifiers, "throttle:"+formatDuration(d))
+	b.spec.modifiers = append(b.spec.modifiers, "throttle:"+internal.FormatDuration(d))
 	return b
 }
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jeffh/htmlgen/h"
+	"github.com/jeffh/htmlgen/internal"
 	"github.com/jeffh/htmlgen/js"
 )
 
@@ -75,7 +76,7 @@ func Trailing() TimingOption {
 
 func writeTiming(sb *strings.Builder, segment string, d time.Duration, opts []TimingOption) {
 	sb.WriteString(segment)
-	sb.WriteString(d.String())
+	sb.WriteString(internal.FormatDuration(d))
 	for _, opt := range opts {
 		opt(sb)
 	}

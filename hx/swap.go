@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/jeffh/htmlgen/h"
+	"github.com/jeffh/htmlgen/internal"
 )
 
 // SwapStrategy represents an HTMX swap strategy.
@@ -88,13 +89,13 @@ func (s *SwapBuilder) Transition() *SwapBuilder {
 
 // Delay adds a delay before the swap is performed.
 func (s *SwapBuilder) Delay(d time.Duration) *SwapBuilder {
-	s.modifiers = append(s.modifiers, "swap:"+formatDuration(d))
+	s.modifiers = append(s.modifiers, "swap:"+internal.FormatDuration(d))
 	return s
 }
 
 // SettleDelay adds a delay after the swap before the settle phase.
 func (s *SwapBuilder) SettleDelay(d time.Duration) *SwapBuilder {
-	s.modifiers = append(s.modifiers, "settle:"+formatDuration(d))
+	s.modifiers = append(s.modifiers, "settle:"+internal.FormatDuration(d))
 	return s
 }
 
@@ -148,9 +149,4 @@ func (s *SwapBuilder) FocusScroll(enabled bool) *SwapBuilder {
 		s.modifiers = append(s.modifiers, "focus-scroll:false")
 	}
 	return s
-}
-
-// formatDuration formats a duration for HTMX (e.g., "500ms", "1s").
-func formatDuration(d time.Duration) string {
-	return d.String()
 }
