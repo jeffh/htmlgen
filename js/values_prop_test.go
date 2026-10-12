@@ -14,12 +14,10 @@ func TestWriteJSONString_MatchesJSONMarshal(t *testing.T) {
 	str := gen.OneOf(gen.StringASCII, gen.StringPrintable, gen.StringAny)
 
 	check.Spec(t, cfg, gen.ForAll(str, func(s string) check.B {
-		// Get writeJSONString output
 		var sb strings.Builder
 		writeJSONString(&sb, s)
 		got := sb.String()
 
-		// Get json.Marshal output
 		want, err := json.Marshal(s)
 		if err != nil {
 			return check.Fail(func() string {

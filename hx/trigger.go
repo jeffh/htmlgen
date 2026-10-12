@@ -109,11 +109,7 @@ func (t *TriggerBuilder) Throttle(d time.Duration) *TriggerBuilder {
 // Supports extended CSS selectors: document, window, closest <sel>, find <sel>, next, previous.
 func (t *TriggerBuilder) From(selector string) *TriggerBuilder {
 	s := t.last()
-	if strings.Contains(selector, " ") && !strings.HasPrefix(selector, "(") {
-		s.modifiers = append(s.modifiers, "from:("+selector+")")
-	} else {
-		s.modifiers = append(s.modifiers, "from:"+selector)
-	}
+	s.modifiers = append(s.modifiers, fromModifier(selector))
 	return t
 }
 
@@ -315,11 +311,7 @@ func (b *IntervalTriggerBuilder) Throttle(d time.Duration) *IntervalTriggerBuild
 
 // From specifies the element on which the polling event is observed.
 func (b *IntervalTriggerBuilder) From(selector string) *IntervalTriggerBuilder {
-	if strings.Contains(selector, " ") && !strings.HasPrefix(selector, "(") {
-		b.spec.modifiers = append(b.spec.modifiers, "from:("+selector+")")
-	} else {
-		b.spec.modifiers = append(b.spec.modifiers, "from:"+selector)
-	}
+	b.spec.modifiers = append(b.spec.modifiers, fromModifier(selector))
 	return b
 }
 
@@ -337,11 +329,16 @@ func (b *IntervalTriggerBuilder) FromWindow() *IntervalTriggerBuilder {
 
 // formatFloat formats a float for HTMX attributes.
 func formatFloat(f float64) string {
-	// For integers, use integer format
 	if f == float64(int64(f)) {
 		return strconv.FormatInt(int64(f), 10)
 	}
-	// For decimals, use compact representation
 	s := strconv.FormatFloat(f, 'f', -1, 64)
 	return s
+}
+
+func fromModifier(selector string) string {
+	if strings.Contains(selector, " ") && !strings.HasPrefix(selector, "(") {
+		return "from:(" + selector + ")"
+	}
+	return "from:" + selector
 }
