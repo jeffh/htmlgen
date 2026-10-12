@@ -1,6 +1,7 @@
 package hx
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -300,7 +301,7 @@ func TestSwapWithModifiers(t *testing.T) {
 			if tt.attr.Name != "hx-swap" {
 				t.Errorf("Name = %q, want %q", tt.attr.Name, "hx-swap")
 			}
-			if !containsString(tt.attr.Value, tt.contains) {
+			if !strings.Contains(tt.attr.Value, tt.contains) {
 				t.Errorf("Value = %q, should contain %q", tt.attr.Value, tt.contains)
 			}
 		})
@@ -312,13 +313,13 @@ func TestSwapMultipleModifiers(t *testing.T) {
 	if attr.Name != "hx-swap" {
 		t.Errorf("Name = %q, want %q", attr.Name, "hx-swap")
 	}
-	if !containsString(attr.Value, "outerHTML") {
+	if !strings.Contains(attr.Value, "outerHTML") {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "outerHTML")
 	}
-	if !containsString(attr.Value, "transition:true") {
+	if !strings.Contains(attr.Value, "transition:true") {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "transition:true")
 	}
-	if !containsString(attr.Value, "swap:100ms") {
+	if !strings.Contains(attr.Value, "swap:100ms") {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "swap:100ms")
 	}
 }
@@ -372,7 +373,7 @@ func TestTriggerWithModifiers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if !containsString(tt.attr.Value, tt.contains) {
+			if !strings.Contains(tt.attr.Value, tt.contains) {
 				t.Errorf("Value = %q, should contain %q", tt.attr.Value, tt.contains)
 			}
 		})
@@ -416,10 +417,10 @@ func TestTriggerRevealed(t *testing.T) {
 
 func TestTriggerIntersect(t *testing.T) {
 	attr := TriggerIntersect().Threshold(0.5).Attribute()
-	if !containsString(attr.Value, "intersect") {
+	if !strings.Contains(attr.Value, "intersect") {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "intersect")
 	}
-	if !containsString(attr.Value, "threshold:0.5") {
+	if !strings.Contains(attr.Value, "threshold:0.5") {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "threshold:0.5")
 	}
 }
@@ -431,19 +432,56 @@ func TestTriggerEvery(t *testing.T) {
 	}
 }
 
+func TestDurationFormat(t *testing.T) {
+	tests := []struct {
+		name string
+		d    time.Duration
+		want string
+	}{
+		{"100ms", 100 * time.Millisecond, "100ms"},
+		{"1s", time.Second, "1s"},
+		{"minute", time.Minute, "60s"},
+		{"90s", 90 * time.Second, "90s"},
+		{"2h", 2 * time.Hour, "7200s"},
+		{"1500ms", 1500 * time.Millisecond, "1500ms"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := TriggerEvery(tt.d).Attribute().Value; got != "every "+tt.want {
+				t.Errorf("TriggerEvery(%v) = %q, want %q", tt.d, got, "every "+tt.want)
+			}
+			if got := Trigger("click").Delay(tt.d).Attribute().Value; got != "click delay:"+tt.want {
+				t.Errorf("Trigger.Delay(%v) = %q, want %q", tt.d, got, "click delay:"+tt.want)
+			}
+			if got := Trigger("scroll").Throttle(tt.d).Attribute().Value; got != "scroll throttle:"+tt.want {
+				t.Errorf("Trigger.Throttle(%v) = %q, want %q", tt.d, got, "scroll throttle:"+tt.want)
+			}
+			if got := TriggerEvery(time.Second).Throttle(tt.d).Attribute().Value; got != "every 1s throttle:"+tt.want {
+				t.Errorf("TriggerEvery.Throttle(%v) = %q, want %q", tt.d, got, "every 1s throttle:"+tt.want)
+			}
+			if got := Swap(InnerHTML).Delay(tt.d).Attribute().Value; got != "innerHTML swap:"+tt.want {
+				t.Errorf("Swap.Delay(%v) = %q, want %q", tt.d, got, "innerHTML swap:"+tt.want)
+			}
+			if got := Swap(InnerHTML).SettleDelay(tt.d).Attribute().Value; got != "innerHTML settle:"+tt.want {
+				t.Errorf("Swap.SettleDelay(%v) = %q, want %q", tt.d, got, "innerHTML settle:"+tt.want)
+			}
+		})
+	}
+}
+
 func TestTriggerEveryWithFilter(t *testing.T) {
 	attr := TriggerEvery(1 * time.Second).Filter("document.visibilityState == 'visible'").Attribute()
-	if !containsString(attr.Value, "every 1s") {
+	if !strings.Contains(attr.Value, "every 1s") {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "every 1s")
 	}
-	if !containsString(attr.Value, "[document.visibilityState == 'visible']") {
+	if !strings.Contains(attr.Value, "[document.visibilityState == 'visible']") {
 		t.Errorf("Value = %q, should contain filter", attr.Value)
 	}
 }
 
 func TestFromWithSpaces(t *testing.T) {
 	attr := Trigger("click").From("form input").Attribute()
-	if !containsString(attr.Value, "from:(form input)") {
+	if !strings.Contains(attr.Value, "from:(form input)") {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "from:(form input)")
 	}
 }
@@ -809,20 +847,4 @@ func TestHTMXEventHandlers(t *testing.T) {
 			}
 		})
 	}
-}
-
-// ============ Helper functions ============
-
-func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && searchString(s, substr)))
-}
-
-func searchString(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
