@@ -58,7 +58,7 @@ func (s Sig) Not() ds.Value { return ds.V(s.Ref().Not()) }
 
 // Set returns a ds.Value that assigns the private signal. The value is
 // interpreted like ds.SetSignal: a js.Expr or ds.Value is emitted as-is,
-// anything else is JSON encoded.
+// anything else is JSON encoded. It panics on an empty signal name, like Ref.
 //
 // Passing a js.Stmt panics: statements are not values, and JSON-encoding one
 // would silently emit "{}". Use SetExpr with an expression, or ds.Do to
@@ -68,21 +68,16 @@ func (s Sig) Not() ds.Value { return ds.V(s.Ref().Not()) }
 //	rkt.Sig("count").Set(0)               =>  ($$count = 0)
 //	rkt.Sig("n").Set(rkt.Sig("m").Ref())  =>  ($$n = $$m)
 func (s Sig) Set(value any) ds.Value {
-	switch v := value.(type) {
-	case js.Stmt:
-		panic(fmt.Sprintf("rkt: Sig(%q).Set called with a js.Stmt (%q); statements are not values — use SetExpr with a js.Expr, or ds.Do to sequence statements", string(s), js.ToJSStmt(v)))
-	case js.Expr:
-		return s.SetExpr(v)
-	case ds.Value:
-		return s.SetExpr(v.Expr())
-	default:
-		return s.SetExpr(js.JSON(value))
+	if stmt, ok := value.(js.Stmt); ok {
+		panic(fmt.Sprintf("rkt: Sig(%q).Set called with a js.Stmt (%q); statements are not values — use SetExpr with a js.Expr, or ds.Do to sequence statements", string(s), js.ToJSStmt(stmt)))
 	}
+	return ds.SetSignal("$$"+s.Name(), value)
 }
 
 // SetExpr returns a ds.Value that assigns the private signal to a JavaScript
 // expression. The assignment is parenthesized, like ds.SetSignalExpr, so it
-// stays a valid expression when composed with And, Or or Ternary.
+// stays a valid expression when composed with And, Or or Ternary. It panics
+// on an empty signal name, like Ref.
 //
 //	rkt.Sig("n").SetExpr(js.Int(1))  =>  ($$n = 1)
 func (s Sig) SetExpr(e js.Expr) ds.Value {

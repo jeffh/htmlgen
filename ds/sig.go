@@ -51,7 +51,7 @@ func (s Sig) Not() Value { return Value{expr: s.Ref().Not()} }
 
 // Set returns a Value that assigns the signal. The value is interpreted like
 // SetSignal: a js.Expr or Value is emitted as-is, anything else is JSON
-// encoded.
+// encoded. It panics on an empty signal name, like Ref.
 //
 // Passing a js.Stmt panics: statements are not values, and JSON-encoding one
 // would silently emit "{}". Use SetExpr with an expression, or Do to sequence
@@ -68,6 +68,7 @@ func (s Sig) Set(value any) Value {
 }
 
 // SetExpr returns a Value that assigns the signal to a JavaScript expression.
+// It panics on an empty signal name, like Ref.
 //
 //	ds.Sig("n").SetExpr(js.Int(1))  =>  ($n = 1)
 func (s Sig) SetExpr(e js.Expr) Value { return SetSignalExpr(s.Name(), e) }
