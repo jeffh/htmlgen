@@ -476,6 +476,27 @@ func TestSetSignal(t *testing.T) {
 	}
 }
 
+func TestSetSignalEmptyNamePanics(t *testing.T) {
+	for _, name := range []string{"", "$"} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("SetSignal(%q, 1) did not panic", name)
+				}
+			}()
+			SetSignal(name, 1)
+		}()
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("SetSignalExpr(%q, js.Int(1)) did not panic", name)
+				}
+			}()
+			SetSignalExpr(name, js.Int(1))
+		}()
+	}
+}
+
 func TestOnSubmit(t *testing.T) {
 	attr := OnSubmit(Raw("$submit()")).Attribute()
 	if attr.Name != "data-on:submit" {
