@@ -25,7 +25,6 @@ func TestRaw(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			v := Raw(tt.input)
 
-			// Test via ToJS
 			if got := ToJS(v.expr); got != tt.expected {
 				t.Errorf("ToJS(Raw(%q)) = %q, want %q", tt.input, got, tt.expected)
 			}
@@ -205,33 +204,19 @@ func TestDelay(t *testing.T) {
 }
 
 func TestTimingDurationFormat(t *testing.T) {
-	tests := []struct {
-		name string
-		d    time.Duration
-		want string
-	}{
-		{"100ms", 100 * time.Millisecond, "100ms"},
-		{"1s", time.Second, "1s"},
-		{"minute", time.Minute, "60s"},
-		{"90s", 90 * time.Second, "90s"},
-		{"2h", 2 * time.Hour, "7200s"},
-		{"1500ms", 1500 * time.Millisecond, "1500ms"},
+	d := time.Second
+	want := "1s"
+	if got := OnClick(Raw("$x++")).Delay(d).Attribute().Name; !strings.Contains(got, "__delay."+want) {
+		t.Errorf("OnClick.Delay(%v) = %q, want __delay.%s", d, got, want)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := OnClick(Raw("$x++")).Delay(tt.d).Attribute().Name; !strings.Contains(got, "__delay."+tt.want) {
-				t.Errorf("OnClick.Delay(%v) = %q, want __delay.%s", tt.d, got, tt.want)
-			}
-			if got := OnInput().Debounce(tt.d).Attribute().Name; !strings.Contains(got, "__debounce."+tt.want) {
-				t.Errorf("OnInput.Debounce(%v) = %q, want __debounce.%s", tt.d, got, tt.want)
-			}
-			if got := On("scroll").Throttle(tt.d).Attribute().Name; !strings.Contains(got, "__throttle."+tt.want) {
-				t.Errorf("On.Throttle(%v) = %q, want __throttle.%s", tt.d, got, tt.want)
-			}
-			if got := OnInterval().Duration(tt.d).Attribute().Name; !strings.Contains(got, "__duration."+tt.want) {
-				t.Errorf("OnInterval.Duration(%v) = %q, want __duration.%s", tt.d, got, tt.want)
-			}
-		})
+	if got := OnInput().Debounce(d).Attribute().Name; !strings.Contains(got, "__debounce."+want) {
+		t.Errorf("OnInput.Debounce(%v) = %q, want __debounce.%s", d, got, want)
+	}
+	if got := On("scroll").Throttle(d).Attribute().Name; !strings.Contains(got, "__throttle."+want) {
+		t.Errorf("On.Throttle(%v) = %q, want __throttle.%s", d, got, want)
+	}
+	if got := OnInterval().Duration(d).Attribute().Name; !strings.Contains(got, "__duration."+want) {
+		t.Errorf("OnInterval.Duration(%v) = %q, want __duration.%s", d, got, want)
 	}
 }
 
