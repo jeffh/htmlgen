@@ -517,30 +517,47 @@ func TestHeadersEmpty(t *testing.T) {
 }
 
 func TestSigEmptyNamePanics(t *testing.T) {
-	for _, name := range []string{"", "$"} {
+	for _, name := range []string{"", "$", "$$", "$$$"} {
+		for _, tc := range []struct {
+			desc string
+			fn   func()
+		}{
+			{"Ref", func() { Sig(name).Ref() }},
+			{"Value", func() { _ = Sig(name).Value() }},
+			{"Not", func() { _ = Sig(name).Not() }},
+			{"Eq", func() { _ = Sig(name).Eq(js.String("x")) }},
+			{"NotEq", func() { _ = Sig(name).NotEq(js.String("x")) }},
+			{"SignalRef", func() { _ = SignalRef(name) }},
+			{"Set", func() { Sig(name).Set(1) }},
+			{"SetExpr", func() { Sig(name).SetExpr(js.Int(1)) }},
+		} {
+			func() {
+				defer func() {
+					if recover() == nil {
+						t.Errorf("%s(%q) did not panic", tc.desc, name)
+					}
+				}()
+				tc.fn()
+			}()
+		}
+	}
+}
+
+func TestSigSubRejectsEmptyName(t *testing.T) {
+	for _, name := range []string{"", "$", "$$"} {
 		func() {
 			defer func() {
-				if recover() == nil {
-					t.Errorf("Sig(%q).Ref() did not panic", name)
+				r := recover()
+				if r == nil {
+					t.Errorf("Sig(%q).Sub(%q) did not panic", name, "open")
+					return
+				}
+				msg, ok := r.(string)
+				if !ok || !strings.Contains(msg, "ds: empty signal name") {
+					t.Errorf("Sig(%q).Sub(%q) panic = %#v, want %q", name, "open", r, "ds: empty signal name")
 				}
 			}()
-			Sig(name).Ref()
-		}()
-		func() {
-			defer func() {
-				if recover() == nil {
-					t.Errorf("Sig(%q).Set(1) did not panic", name)
-				}
-			}()
-			Sig(name).Set(1)
-		}()
-		func() {
-			defer func() {
-				if recover() == nil {
-					t.Errorf("Sig(%q).SetExpr(js.Int(1)) did not panic", name)
-				}
-			}()
-			Sig(name).SetExpr(js.Int(1))
+			_ = Sig(name).Sub("open")
 		}()
 	}
 }

@@ -93,6 +93,15 @@ func TestConditionalTemplates(t *testing.T) {
 	}
 }
 
+func TestRefRejectsEmptyName(t *testing.T) {
+	for _, name := range []string{"", "$", "$$"} {
+		t.Run("name="+name, func(t *testing.T) {
+			defer expectPanicContaining(t, "rkt: empty signal name")
+			_ = Ref(name).Attribute()
+		})
+	}
+}
+
 func TestRef(t *testing.T) {
 	tests := []struct {
 		name     string

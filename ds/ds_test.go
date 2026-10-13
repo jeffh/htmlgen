@@ -482,6 +482,39 @@ func TestSetSignalEmptyNamePanics(t *testing.T) {
 	}
 }
 
+func TestSignalKeyHelpersRejectEmptyName(t *testing.T) {
+	for _, name := range []string{"", "$", "$$"} {
+		for _, tc := range []struct {
+			desc string
+			fn   func()
+		}{
+			{"Signal", func() { _ = Signal(name, 0).Attribute() }},
+			{"SignalExpr", func() { _ = SignalExpr(name, Raw("0")).Attribute() }},
+			{"Bind", func() { _ = Bind(name).Attribute() }},
+			{"BindKey", func() { _ = BindKey(name).Attribute() }},
+			{"Computed", func() { _ = Computed(name, Raw("1")).Attribute() }},
+			{"Ref", func() { _ = Ref(name).Attribute() }},
+			{"Indicator", func() { _ = Indicator(name) }},
+			{"IndicatorKey", func() { _ = IndicatorKey(name).Attribute() }},
+			{"MatchMedia", func() { _ = MatchMedia(name, Str("(min-width: 1px)")).Attribute() }},
+		} {
+			t.Run(tc.desc+"/name="+name, func(t *testing.T) {
+				defer func() {
+					r := recover()
+					if r == nil {
+						t.Fatalf("%s(%q) did not panic", tc.desc, name)
+					}
+					msg, ok := r.(string)
+					if !ok || !strings.Contains(msg, "ds: empty signal name") {
+						t.Fatalf("%s(%q) panic = %#v, want %q", tc.desc, name, r, "ds: empty signal name")
+					}
+				}()
+				tc.fn()
+			})
+		}
+	}
+}
+
 func TestOnSubmit(t *testing.T) {
 	attr := OnSubmit(Raw("$submit()")).Attribute()
 	if attr.Name != "data-on:submit" {
