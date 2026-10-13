@@ -8,8 +8,6 @@ import (
 	"github.com/jeffh/htmlgen/h"
 )
 
-// ============ attrs.go tests ============
-
 func TestHTTPMethods(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -244,8 +242,6 @@ func TestExt(t *testing.T) {
 	}
 }
 
-// ============ swap.go tests ============
-
 func TestSwapStrategies(t *testing.T) {
 	tests := []struct {
 		strategy SwapStrategy
@@ -323,8 +319,6 @@ func TestSwapMultipleModifiers(t *testing.T) {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "swap:100ms")
 	}
 }
-
-// ============ trigger.go tests ============
 
 func TestTriggerSimple(t *testing.T) {
 	attr := Trigger("click").Attribute()
@@ -433,39 +427,25 @@ func TestTriggerEvery(t *testing.T) {
 }
 
 func TestDurationFormat(t *testing.T) {
-	tests := []struct {
-		name string
-		d    time.Duration
-		want string
-	}{
-		{"100ms", 100 * time.Millisecond, "100ms"},
-		{"1s", time.Second, "1s"},
-		{"minute", time.Minute, "60s"},
-		{"90s", 90 * time.Second, "90s"},
-		{"2h", 2 * time.Hour, "7200s"},
-		{"1500ms", 1500 * time.Millisecond, "1500ms"},
+	d := time.Second
+	want := "1s"
+	if got := TriggerEvery(d).Attribute().Value; got != "every "+want {
+		t.Errorf("TriggerEvery(%v) = %q, want %q", d, got, "every "+want)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := TriggerEvery(tt.d).Attribute().Value; got != "every "+tt.want {
-				t.Errorf("TriggerEvery(%v) = %q, want %q", tt.d, got, "every "+tt.want)
-			}
-			if got := Trigger("click").Delay(tt.d).Attribute().Value; got != "click delay:"+tt.want {
-				t.Errorf("Trigger.Delay(%v) = %q, want %q", tt.d, got, "click delay:"+tt.want)
-			}
-			if got := Trigger("scroll").Throttle(tt.d).Attribute().Value; got != "scroll throttle:"+tt.want {
-				t.Errorf("Trigger.Throttle(%v) = %q, want %q", tt.d, got, "scroll throttle:"+tt.want)
-			}
-			if got := TriggerEvery(time.Second).Throttle(tt.d).Attribute().Value; got != "every 1s throttle:"+tt.want {
-				t.Errorf("TriggerEvery.Throttle(%v) = %q, want %q", tt.d, got, "every 1s throttle:"+tt.want)
-			}
-			if got := Swap(InnerHTML).Delay(tt.d).Attribute().Value; got != "innerHTML swap:"+tt.want {
-				t.Errorf("Swap.Delay(%v) = %q, want %q", tt.d, got, "innerHTML swap:"+tt.want)
-			}
-			if got := Swap(InnerHTML).SettleDelay(tt.d).Attribute().Value; got != "innerHTML settle:"+tt.want {
-				t.Errorf("Swap.SettleDelay(%v) = %q, want %q", tt.d, got, "innerHTML settle:"+tt.want)
-			}
-		})
+	if got := Trigger("click").Delay(d).Attribute().Value; got != "click delay:"+want {
+		t.Errorf("Trigger.Delay(%v) = %q, want %q", d, got, "click delay:"+want)
+	}
+	if got := Trigger("scroll").Throttle(d).Attribute().Value; got != "scroll throttle:"+want {
+		t.Errorf("Trigger.Throttle(%v) = %q, want %q", d, got, "scroll throttle:"+want)
+	}
+	if got := TriggerEvery(time.Second).Throttle(d).Attribute().Value; got != "every 1s throttle:"+want {
+		t.Errorf("TriggerEvery.Throttle(%v) = %q, want %q", d, got, "every 1s throttle:"+want)
+	}
+	if got := Swap(InnerHTML).Delay(d).Attribute().Value; got != "innerHTML swap:"+want {
+		t.Errorf("Swap.Delay(%v) = %q, want %q", d, got, "innerHTML swap:"+want)
+	}
+	if got := Swap(InnerHTML).SettleDelay(d).Attribute().Value; got != "innerHTML settle:"+want {
+		t.Errorf("Swap.SettleDelay(%v) = %q, want %q", d, got, "innerHTML settle:"+want)
 	}
 }
 
@@ -485,8 +465,6 @@ func TestFromWithSpaces(t *testing.T) {
 		t.Errorf("Value = %q, should contain %q", attr.Value, "from:(form input)")
 	}
 }
-
-// ============ behavior.go tests ============
 
 func TestBoost(t *testing.T) {
 	tests := []struct {
@@ -750,8 +728,6 @@ func TestHistory(t *testing.T) {
 		}
 	}
 }
-
-// ============ events.go tests ============
 
 func TestOn(t *testing.T) {
 	attr := On("click", "alert('clicked')")

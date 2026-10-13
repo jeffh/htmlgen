@@ -181,9 +181,9 @@ Attach event listeners.
 - `__capture` - Capture phase
 - `__prevent` - preventDefault()
 - `__stop` - stopPropagation()
-- `__debounce.Nms` - Debounce timing
-- `__throttle.Nms` - Throttle timing
-- `__delay.Nms` - Delay execution
+- `__debounce` (.500ms/.1s) - Debounce timing
+- `__throttle` (.500ms/.1s) - Throttle timing
+- `__delay` (.500ms/.1s) - Delay execution
 - `__window` - Attach to window
 - `__outside` - Trigger on outside events
 - `__viewtransition` - Wrap in View Transition API
@@ -202,7 +202,7 @@ Run expressions at regular intervals (default: 1s).
 <div data-on-interval="$seconds++"></div>
 <div data-on-interval__duration.500ms="$tick++"></div>
 ```
-**Modifiers:** `__duration.Nms` (.leading for immediate first fire)
+**Modifiers:** `__duration` (.500ms/.1s, .leading for immediate first fire)
 
 #### `data-on-signal-patch`
 Trigger when signals change.
