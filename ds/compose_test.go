@@ -526,5 +526,21 @@ func TestSigEmptyNamePanics(t *testing.T) {
 			}()
 			Sig(name).Ref()
 		}()
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("Sig(%q).Set(1) did not panic", name)
+				}
+			}()
+			Sig(name).Set(1)
+		}()
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("Sig(%q).SetExpr(js.Int(1)) did not panic", name)
+				}
+			}()
+			Sig(name).SetExpr(js.Int(1))
+		}()
 	}
 }

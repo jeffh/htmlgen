@@ -15,8 +15,14 @@ import (
 // Ternary or Confirm — an unparenthesized "a && $x = 1" is a JavaScript
 // SyntaxError (invalid assignment target).
 //
+// It panics on an empty signal name ("" or a "$"-only name), which would
+// otherwise silently emit "($ = ...)" or "($$ = ...)".
+//
 //	ds.SetSignalExpr("n", js.Int(1))  =>  ($n = 1)
 func SetSignalExpr(signalName string, expression js.Expr) Value {
+	if strings.TrimLeft(signalName, "$") == "" {
+		panic("ds: empty signal name")
+	}
 	var sb strings.Builder
 	sb.Grow(len(signalName) + 12)
 	sb.WriteString("(")
@@ -34,7 +40,8 @@ func SetSignalExpr(signalName string, expression js.Expr) Value {
 
 // SetSignal returns a Value that assigns a signal to a value.
 // Use SetSignalExpr if you need to set the signal to a complex expression.
-// The signal name is automatically prefixed with "$".
+// The signal name is automatically prefixed with "$". It panics on an empty
+// signal name, like SetSignalExpr.
 func SetSignal(signalName string, jsValue any) Value {
 	switch v := jsValue.(type) {
 	case js.Expr:
