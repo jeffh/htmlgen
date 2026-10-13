@@ -9,6 +9,13 @@ import (
 	"github.com/jeffh/htmlgen/js"
 )
 
+// requireSignalName panics when name is empty or consists only of "$" characters.
+func requireSignalName(name string) {
+	if strings.TrimLeft(name, "$") == "" {
+		panic("ds: empty signal name")
+	}
+}
+
 // SetSignalExpr returns a Value that assigns a signal to a JavaScript expression.
 // The signal name is automatically prefixed with "$". The assignment is emitted
 // parenthesized so it stays a valid expression when composed with And, Or,
@@ -20,9 +27,7 @@ import (
 //
 //	ds.SetSignalExpr("n", js.Int(1))  =>  ($n = 1)
 func SetSignalExpr(signalName string, expression js.Expr) Value {
-	if strings.TrimLeft(signalName, "$") == "" {
-		panic("ds: empty signal name")
-	}
+	requireSignalName(signalName)
 	var sb strings.Builder
 	sb.Grow(len(signalName) + 12)
 	sb.WriteString("(")
@@ -108,7 +113,9 @@ func OnSignalPatchFilter(options *FilterOptions) h.Attribute {
 
 // SignalExpr declares a signal initialized from an expression.
 // The signal name is appended to "data-signals:". Modifiers (Case) may be chained.
+// It panics on an empty or "$"-only signal name.
 func SignalExpr(name string, defaultExpression Value) *NamedBuilder {
+	requireSignalName(name)
 	b := &NamedBuilder{attrBase: newAttr("data-signals:" + name)}
 	b.addStmt(js.ToJS(defaultExpression.expr))
 	return b
@@ -116,7 +123,9 @@ func SignalExpr(name string, defaultExpression Value) *NamedBuilder {
 
 // Signal declares a signal with a JSON-encoded default value.
 // The signal name is appended to "data-signals:". Modifiers (Case) may be chained.
+// It panics on an empty or "$"-only signal name.
 func Signal(name string, defaultJsValue any) *NamedBuilder {
+	requireSignalName(name)
 	b := &NamedBuilder{attrBase: newAttr("data-signals:" + name)}
 	b.addStmt(js.ToJS(js.JSON(defaultJsValue)))
 	return b
@@ -132,7 +141,9 @@ func Signals(signals map[string]any) *SignalsBuilder {
 
 // Bind creates a two-way data binding for the named signal as the value form.
 // Modifiers (Case, Prop, Event) may be chained.
+// It panics on an empty or "$"-only signal name.
 func Bind(signalName string) *BindBuilder {
+	requireSignalName(signalName)
 	b := &BindBuilder{attrBase: newAttr("data-bind")}
 	b.addStmt(signalName)
 	return b
@@ -140,7 +151,9 @@ func Bind(signalName string) *BindBuilder {
 
 // BindKey creates a two-way data binding using key syntax (signal in attribute name).
 // Modifiers (Case, Prop, Event) may be chained.
+// It panics on an empty or "$"-only signal name.
 func BindKey(signalName string) *BindBuilder {
+	requireSignalName(signalName)
 	return &BindBuilder{attrBase: newAttr("data-bind:" + signalName)}
 }
 
@@ -178,13 +191,17 @@ func Attribute(name string, value Value) h.Attribute {
 }
 
 // Indicator declares a fetch-indicator signal.
+// It panics on an empty or "$"-only signal name.
 func Indicator(signalName string) h.Attribute {
+	requireSignalName(signalName)
 	signalName = strings.TrimLeft(signalName, "$")
 	return h.Attr("data-indicator", signalName)
 }
 
 // IndicatorKey creates a fetch-indicator signal using key syntax.
+// It panics on an empty or "$"-only signal name.
 func IndicatorKey(signalName string) *NamedBuilder {
+	requireSignalName(signalName)
 	signalName = strings.TrimLeft(signalName, "$")
 	return &NamedBuilder{attrBase: newAttr("data-indicator:" + signalName)}
 }
@@ -239,19 +256,23 @@ func Peek(action Value) Value {
 }
 
 // Computed creates a read-only signal computed from an expression.
+// It panics on an empty or "$"-only signal name.
 //
 //	ds.Computed("total", ds.Raw("$price * $quantity"))
 //	=> data-computed:total="$price * $quantity"
 func Computed(name string, expression Value) *NamedBuilder {
+	requireSignalName(name)
 	b := &NamedBuilder{attrBase: newAttr("data-computed:" + name)}
 	b.addStmt(js.ToJS(expression.expr))
 	return b
 }
 
 // Ref creates a signal referencing a DOM element.
+// It panics on an empty or "$"-only signal name.
 //
 //	ds.Ref("myElement")  =>  data-ref:myElement
 func Ref(signalName string) *NamedBuilder {
+	requireSignalName(signalName)
 	return &NamedBuilder{attrBase: newAttr("data-ref:" + signalName)}
 }
 

@@ -53,11 +53,11 @@
 // # Signals and composition
 //
 // Sig is a typed signal name: Sig("open").Toggle(), Sig("q").Clear(),
-// Sig("plan").Sub("open") (derived "plan_open"). Value has Not, And, Or and
-// Ternary combinators, Do bridges js statements into a Value for statement
-// positions, and Confirm guards actions behind a confirm() dialog. Datastar
-// expressions see evt and el — use Evt, El, EvtTarget, EvtValue and EvtKey,
-// not the event-based js package helpers.
+// Sig("plan").Sub("open") (derived "plan_open"). Empty or $-only signal names
+// panic. Value has Not, And, Or and Ternary combinators, Do bridges js
+// statements into a Value for statement positions, and Confirm guards actions
+// behind a confirm() dialog. Datastar expressions see evt and el — use Evt,
+// El, EvtTarget, EvtValue and EvtKey, not the event-based js package helpers.
 //
 // # HTTP actions
 //

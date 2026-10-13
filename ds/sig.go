@@ -25,16 +25,14 @@ type Sig string
 //	ds.Sig("$open").Name()  =>  "open"
 func (s Sig) Name() string { return strings.TrimPrefix(string(s), "$") }
 
-// Ref returns the signal reference expression. It panics on an empty signal
-// name, which would otherwise silently emit a bare "$". Names are trusted
-// developer constants and are not otherwise validated.
+// Ref returns the signal reference expression. It panics on an empty or
+// "$"-only signal name, which would otherwise silently emit a bare "$" or
+// "$$". Names are trusted developer constants and are not otherwise validated.
 //
 //	ds.Sig("open").Ref()  =>  $open
 func (s Sig) Ref() js.Expr {
 	name := s.Name()
-	if name == "" {
-		panic("ds: empty signal name")
-	}
+	requireSignalName(name)
 	return js.Raw("$" + name)
 }
 
@@ -97,10 +95,13 @@ func (s Sig) NotEq(e js.Expr) Value { return Value{expr: s.Ref().NotEq(e)} }
 // Sub returns a derived signal named "<name>_<suffix>". It is intended for
 // widgets that keep a family of related signals (a combobox with query, open,
 // active and above sub-signals, for example). A leading "_" on suffix is
-// ignored so both Sub("open") and Sub("_open") produce the same name.
+// ignored so both Sub("open") and Sub("_open") produce the same name. It
+// panics when the parent name is empty or "$"-only.
 //
 //	ds.Sig("plan").Sub("open")   =>  ds.Sig("plan_open")
 //	ds.Sig("plan").Sub("_open")  =>  ds.Sig("plan_open")
 func (s Sig) Sub(suffix string) Sig {
-	return Sig(s.Name() + "_" + strings.TrimPrefix(suffix, "_"))
+	name := s.Name()
+	requireSignalName(name)
+	return Sig(name + "_" + strings.TrimPrefix(suffix, "_"))
 }

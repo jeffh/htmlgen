@@ -106,11 +106,20 @@ func (b *RefBuilder) Case(c ds.SignalCasing) *RefBuilder {
 	return b
 }
 
+// requireSignalName panics when name is empty or consists only of "$" characters.
+func requireSignalName(name string) {
+	if strings.TrimLeft(name, "$") == "" {
+		panic("rkt: empty signal name")
+	}
+}
+
 // Ref stores a reference to the element in the named signal, using Rocket's
 // key syntax: data-ref:<name>. Modifiers (Case) may be chained.
+// It panics on an empty or "$"-only signal name.
 //
 //	rkt.Ref("input")  =>  data-ref:input
 func Ref(name string) *RefBuilder {
+	requireSignalName(name)
 	return &RefBuilder{attrName: newAttrName("data-ref:" + name)}
 }
 
