@@ -38,6 +38,28 @@ func TestString(t *testing.T) {
 	}
 }
 
+func TestString_EscapesU2028U2029(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"U+2028", "\u2028", `"\u2028"`},
+		{"U+2029", "\u2029", `"\u2029"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := exprString(String(tt.input))
+			if got != tt.expected {
+				t.Errorf("String(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+			if jsonGot := exprString(JSON(tt.input)); jsonGot != tt.expected {
+				t.Errorf("JSON(%q) = %q, want %q", tt.input, jsonGot, tt.expected)
+			}
+		})
+	}
+}
+
 func TestInt(t *testing.T) {
 	tests := []struct {
 		input    int
