@@ -90,11 +90,11 @@ var (
 	EvtTarget = Evt.Prop("target")
 	// EvtValue is evt.target.value.
 	//
-	//	ds.Sig("q").SetExpr(ds.EvtValue)  =>  $q = evt.target.value
+	//	ds.Sig("q").SetExpr(ds.EvtValue)  =>  ($q = evt.target.value)
 	EvtValue = Evt.Prop("target").Prop("value")
 	// EvtKey is evt.key.
 	//
-	//	ds.Sig("k").SetExpr(ds.EvtKey)  =>  $k = evt.key
+	//	ds.Sig("k").SetExpr(ds.EvtKey)  =>  ($k = evt.key)
 	EvtKey = Evt.Prop("key")
 )
 
