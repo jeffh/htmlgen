@@ -517,47 +517,95 @@ func TestHeadersEmpty(t *testing.T) {
 }
 
 func TestSigEmptyNamePanics(t *testing.T) {
-	for _, name := range []string{"", "$", "$$", "$$$"} {
-		for _, tc := range []struct {
-			desc string
-			fn   func()
-		}{
-			{"Ref", func() { Sig(name).Ref() }},
-			{"Value", func() { _ = Sig(name).Value() }},
-			{"Not", func() { _ = Sig(name).Not() }},
-			{"Eq", func() { _ = Sig(name).Eq(js.String("x")) }},
-			{"NotEq", func() { _ = Sig(name).NotEq(js.String("x")) }},
-			{"SignalRef", func() { _ = SignalRef(name) }},
-			{"Set", func() { Sig(name).Set(1) }},
-			{"SetExpr", func() { Sig(name).SetExpr(js.Int(1)) }},
-		} {
-			func() {
-				defer func() {
-					if recover() == nil {
-						t.Errorf("%s(%q) did not panic", tc.desc, name)
-					}
-				}()
-				tc.fn()
+	for _, name := range []string{"", "$"} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("Sig(%q).Ref() did not panic", name)
+				}
 			}()
-		}
+			Sig(name).Ref()
+		}()
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("Sig(%q).Set(1) did not panic", name)
+				}
+			}()
+			Sig(name).Set(1)
+		}()
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("Sig(%q).SetExpr(js.Int(1)) did not panic", name)
+				}
+			}()
+			Sig(name).SetExpr(js.Int(1))
+		}()
 	}
 }
 
-func TestSigSubRejectsEmptyName(t *testing.T) {
-	for _, name := range []string{"", "$", "$$"} {
-		func() {
+func TestSigEmptyNameMatchesMain(t *testing.T) {
+	const emptyPanic = "ds: empty signal name"
+	tests := []struct {
+		desc, name, want, wantPanic string
+		fn                          func(string) string
+	}{
+		{"Ref", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Ref()) }},
+		{"Ref", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Ref()) }},
+		{"Ref", "$$", "$$", "", func(name string) string { return ToJS(Sig(name).Ref()) }},
+		{"Ref", "$$$", "$$$", "", func(name string) string { return ToJS(Sig(name).Ref()) }},
+		{"Value", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Value().expr) }},
+		{"Value", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Value().expr) }},
+		{"Value", "$$", "$$", "", func(name string) string { return ToJS(Sig(name).Value().expr) }},
+		{"Value", "$$$", "$$$", "", func(name string) string { return ToJS(Sig(name).Value().expr) }},
+		{"Not", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Not().expr) }},
+		{"Not", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Not().expr) }},
+		{"Not", "$$", "!$$", "", func(name string) string { return ToJS(Sig(name).Not().expr) }},
+		{"Not", "$$$", "!$$$", "", func(name string) string { return ToJS(Sig(name).Not().expr) }},
+		{"Eq", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Eq(js.String("x")).expr) }},
+		{"Eq", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Eq(js.String("x")).expr) }},
+		{"Eq", "$$", `($$ === "x")`, "", func(name string) string { return ToJS(Sig(name).Eq(js.String("x")).expr) }},
+		{"Eq", "$$$", `($$$ === "x")`, "", func(name string) string { return ToJS(Sig(name).Eq(js.String("x")).expr) }},
+		{"NotEq", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).NotEq(js.String("x")).expr) }},
+		{"NotEq", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).NotEq(js.String("x")).expr) }},
+		{"NotEq", "$$", `($$ !== "x")`, "", func(name string) string { return ToJS(Sig(name).NotEq(js.String("x")).expr) }},
+		{"NotEq", "$$$", `($$$ !== "x")`, "", func(name string) string { return ToJS(Sig(name).NotEq(js.String("x")).expr) }},
+		{"SignalRef", "", "", emptyPanic, func(name string) string { return ToJS(SignalRef(name).expr) }},
+		{"SignalRef", "$", "", emptyPanic, func(name string) string { return ToJS(SignalRef(name).expr) }},
+		{"SignalRef", "$$", "$$", "", func(name string) string { return ToJS(SignalRef(name).expr) }},
+		{"SignalRef", "$$$", "$$$", "", func(name string) string { return ToJS(SignalRef(name).expr) }},
+		{"Set", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Set(1).expr) }},
+		{"Set", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Set(1).expr) }},
+		{"Set", "$$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Set(1).expr) }},
+		{"SetExpr", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).SetExpr(js.Int(1)).expr) }},
+		{"SetExpr", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).SetExpr(js.Int(1)).expr) }},
+		{"SetExpr", "$$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).SetExpr(js.Int(1)).expr) }},
+		{"Sub", "", "_open", "", func(name string) string { return string(Sig(name).Sub("open")) }},
+		{"Sub", "$", "_open", "", func(name string) string { return string(Sig(name).Sub("open")) }},
+		{"Sub", "$$", "$_open", "", func(name string) string { return string(Sig(name).Sub("open")) }},
+		{"Sub", "$$$", "$$_open", "", func(name string) string { return string(Sig(name).Sub("open")) }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc+"/name="+tt.name, func(t *testing.T) {
+			var got string
 			defer func() {
 				r := recover()
-				if r == nil {
-					t.Errorf("Sig(%q).Sub(%q) did not panic", name, "open")
+				if tt.wantPanic != "" {
+					msg, ok := r.(string)
+					if r == nil || !ok || msg != tt.wantPanic {
+						t.Fatalf("%s(%q) panic = %#v, want %q", tt.desc, tt.name, r, tt.wantPanic)
+					}
 					return
 				}
-				msg, ok := r.(string)
-				if !ok || !strings.Contains(msg, "ds: empty signal name") {
-					t.Errorf("Sig(%q).Sub(%q) panic = %#v, want %q", name, "open", r, "ds: empty signal name")
+				if r != nil {
+					t.Fatalf("%s(%q) unexpected panic: %#v", tt.desc, tt.name, r)
+				}
+				if got != tt.want {
+					t.Fatalf("%s(%q) = %q, want %q", tt.desc, tt.name, got, tt.want)
 				}
 			}()
-			_ = Sig(name).Sub("open")
-		}()
+			got = tt.fn(tt.name)
+		})
 	}
 }

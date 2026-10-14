@@ -93,11 +93,34 @@ func TestConditionalTemplates(t *testing.T) {
 	}
 }
 
-func TestRefRejectsEmptyName(t *testing.T) {
-	for _, name := range []string{"", "$", "$$"} {
-		t.Run("name="+name, func(t *testing.T) {
-			defer expectPanicContaining(t, "rkt: empty signal name")
-			_ = Ref(name).Attribute()
+func TestRefEmptyNameMatchesMain(t *testing.T) {
+	tests := []struct {
+		name, wantName, wantValue, wantPanic string
+	}{
+		{"", "data-ref:", "", ""},
+		{"$", "", "", `htmlgen: invalid attribute name "data-ref:$"`},
+		{"$$", "", "", `htmlgen: invalid attribute name "data-ref:$$"`},
+	}
+	for _, tt := range tests {
+		t.Run("name="+tt.name, func(t *testing.T) {
+			var got h.Attribute
+			defer func() {
+				r := recover()
+				if tt.wantPanic != "" {
+					msg, ok := r.(string)
+					if r == nil || !ok || msg != tt.wantPanic {
+						t.Fatalf("rkt.Ref(%q) panic = %#v, want %q", tt.name, r, tt.wantPanic)
+					}
+					return
+				}
+				if r != nil {
+					t.Fatalf("rkt.Ref(%q) unexpected panic: %#v", tt.name, r)
+				}
+				if got.Name != tt.wantName || got.Value != tt.wantValue {
+					t.Fatalf("rkt.Ref(%q) = {%q, %q}, want {%q, %q}", tt.name, got.Name, got.Value, tt.wantName, tt.wantValue)
+				}
+			}()
+			got = Ref(tt.name).Attribute()
 		})
 	}
 }

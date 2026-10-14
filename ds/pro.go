@@ -48,12 +48,10 @@ func OnResize(actions ...Value) *EventBuilder {
 // MatchMedia syncs a signal with whether a media query currently matches.
 // Modifiers (Case) may be chained.
 // Requires Datastar Pro.
-// It panics on an empty or "$"-only signal name.
 //
 //	ds.MatchMedia("isDark", ds.Str("prefers-color-scheme: dark"))
 //	=> data-match-media:isDark="\"prefers-color-scheme: dark\""
 func MatchMedia(signalName string, query Value) *NamedBuilder {
-	requireSignalName(signalName)
 	b := &NamedBuilder{attrBase: newAttr("data-match-media:" + signalName)}
 	b.addValue(query)
 	return b
