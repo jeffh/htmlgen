@@ -99,23 +99,17 @@ func (e Expr) In(obj Expr) Expr { return e.binary("in", obj) }
 // Unary operators
 
 type unaryOp struct {
-	op     string
-	expr   Expr
-	prefix bool
+	op   string
+	expr Expr
 }
 
 func (u unaryOp) js(sb *strings.Builder) {
-	if u.prefix {
-		sb.WriteString(u.op)
-		u.expr.js(sb)
-	} else {
-		u.expr.js(sb)
-		sb.WriteString(u.op)
-	}
+	sb.WriteString(u.op)
+	u.expr.js(sb)
 }
 
 func unary(op string, e Expr) Expr {
-	return Expr{node: unaryOp{op: op, expr: e, prefix: true}}
+	return Expr{node: unaryOp{op: op, expr: e}}
 }
 
 // Not returns !e.

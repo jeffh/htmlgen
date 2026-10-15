@@ -36,6 +36,10 @@ func writeJSONString(sb *strings.Builder, s string) {
 			sb.WriteString("\\u003e")
 		case '&':
 			sb.WriteString("\\u0026")
+		case '\u2028':
+			sb.WriteString("\\u2028")
+		case '\u2029':
+			sb.WriteString("\\u2029")
 		default:
 			if r < 0x20 {
 				sb.WriteString(`\u00`)
