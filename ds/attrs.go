@@ -9,6 +9,16 @@ import (
 	"github.com/jeffh/htmlgen/js"
 )
 
+// ValidSignalName reports whether name is a usable Datastar signal name:
+// after stripping leading "$" characters, something remains.
+//
+// Empty and "$"-only names produce invalid Datastar. Most helpers emit them
+// anyway, or later panic from h.Attr when "$" appears in an attribute name.
+// SetSignalExpr panics on an invalid name.
+func ValidSignalName(name string) bool {
+	return strings.TrimLeft(name, "$") != ""
+}
+
 // SetSignalExpr returns a Value that assigns a signal to a JavaScript expression.
 // The signal name is automatically prefixed with "$". The assignment is emitted
 // parenthesized so it stays a valid expression when composed with And, Or,
@@ -20,7 +30,7 @@ import (
 //
 //	ds.SetSignalExpr("n", js.Int(1))  =>  ($n = 1)
 func SetSignalExpr(signalName string, expression js.Expr) Value {
-	if strings.TrimLeft(signalName, "$") == "" {
+	if !ValidSignalName(signalName) {
 		panic("ds: empty signal name")
 	}
 	var sb strings.Builder

@@ -28,7 +28,7 @@ Containers are `Xxx(attrs Attributes, body Body)`; void elements are
 Provides helpers for building [Datastar](https://data-star.dev/) reactive attributes:
 
 - **Signals**: `Signal()`, `Signals()`, `Bind()` - define reactive state
-- **Typed signals**: `Sig("name")` - a signal name with methods `Ref()`, `Value()`, `Not()`, `Set()`, `SetExpr()`, `Toggle()`, `Clear()`, `Eq()`, `NotEq()`, `Sub()` (derived `name_suffix` signals)
+- **Typed signals**: `Sig("name")` - a signal name with methods `Ref()`, `Value()`, `Not()`, `Set()`, `SetExpr()`, `Toggle()`, `Clear()`, `Eq()`, `NotEq()`, `Sub()` (derived `name_suffix` signals). `ValidSignalName` reports empty or `$`-only names; those produce invalid Datastar. `SetSignalExpr` still panics on them.
 - **Events**: `OnClick()`, `OnSubmit()`, `OnInput()`, `OnChange()`, `On()` - event handlers; `Init()` - run on element load (data-init)
 - **Actions**: `Get()`, `Post()`, `Put()`, `Delete()` - HTTP request helpers
 - **Modifiers**: `PreventDefault()`, `Debounce()`, `Throttle()`, `Delay()`, `Once()`, `ViewTransition()` - chain on event builders

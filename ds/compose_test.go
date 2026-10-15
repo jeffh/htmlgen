@@ -544,3 +544,68 @@ func TestSigEmptyNamePanics(t *testing.T) {
 		}()
 	}
 }
+
+func TestSigEmptyNameMatchesMain(t *testing.T) {
+	const emptyPanic = "ds: empty signal name"
+	tests := []struct {
+		desc, name, want, wantPanic string
+		fn                          func(string) string
+	}{
+		{"Ref", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Ref()) }},
+		{"Ref", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Ref()) }},
+		{"Ref", "$$", "$$", "", func(name string) string { return ToJS(Sig(name).Ref()) }},
+		{"Ref", "$$$", "$$$", "", func(name string) string { return ToJS(Sig(name).Ref()) }},
+		{"Value", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Value().expr) }},
+		{"Value", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Value().expr) }},
+		{"Value", "$$", "$$", "", func(name string) string { return ToJS(Sig(name).Value().expr) }},
+		{"Value", "$$$", "$$$", "", func(name string) string { return ToJS(Sig(name).Value().expr) }},
+		{"Not", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Not().expr) }},
+		{"Not", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Not().expr) }},
+		{"Not", "$$", "!$$", "", func(name string) string { return ToJS(Sig(name).Not().expr) }},
+		{"Not", "$$$", "!$$$", "", func(name string) string { return ToJS(Sig(name).Not().expr) }},
+		{"Eq", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Eq(js.String("x")).expr) }},
+		{"Eq", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Eq(js.String("x")).expr) }},
+		{"Eq", "$$", `($$ === "x")`, "", func(name string) string { return ToJS(Sig(name).Eq(js.String("x")).expr) }},
+		{"Eq", "$$$", `($$$ === "x")`, "", func(name string) string { return ToJS(Sig(name).Eq(js.String("x")).expr) }},
+		{"NotEq", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).NotEq(js.String("x")).expr) }},
+		{"NotEq", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).NotEq(js.String("x")).expr) }},
+		{"NotEq", "$$", `($$ !== "x")`, "", func(name string) string { return ToJS(Sig(name).NotEq(js.String("x")).expr) }},
+		{"NotEq", "$$$", `($$$ !== "x")`, "", func(name string) string { return ToJS(Sig(name).NotEq(js.String("x")).expr) }},
+		{"SignalRef", "", "", emptyPanic, func(name string) string { return ToJS(SignalRef(name).expr) }},
+		{"SignalRef", "$", "", emptyPanic, func(name string) string { return ToJS(SignalRef(name).expr) }},
+		{"SignalRef", "$$", "$$", "", func(name string) string { return ToJS(SignalRef(name).expr) }},
+		{"SignalRef", "$$$", "$$$", "", func(name string) string { return ToJS(SignalRef(name).expr) }},
+		{"Set", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Set(1).expr) }},
+		{"Set", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Set(1).expr) }},
+		{"Set", "$$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).Set(1).expr) }},
+		{"SetExpr", "", "", emptyPanic, func(name string) string { return ToJS(Sig(name).SetExpr(js.Int(1)).expr) }},
+		{"SetExpr", "$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).SetExpr(js.Int(1)).expr) }},
+		{"SetExpr", "$$", "", emptyPanic, func(name string) string { return ToJS(Sig(name).SetExpr(js.Int(1)).expr) }},
+		{"Sub", "", "_open", "", func(name string) string { return string(Sig(name).Sub("open")) }},
+		{"Sub", "$", "_open", "", func(name string) string { return string(Sig(name).Sub("open")) }},
+		{"Sub", "$$", "$_open", "", func(name string) string { return string(Sig(name).Sub("open")) }},
+		{"Sub", "$$$", "$$_open", "", func(name string) string { return string(Sig(name).Sub("open")) }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc+"/name="+tt.name, func(t *testing.T) {
+			var got string
+			defer func() {
+				r := recover()
+				if tt.wantPanic != "" {
+					msg, ok := r.(string)
+					if r == nil || !ok || msg != tt.wantPanic {
+						t.Fatalf("%s(%q) panic = %#v, want %q", tt.desc, tt.name, r, tt.wantPanic)
+					}
+					return
+				}
+				if r != nil {
+					t.Fatalf("%s(%q) unexpected panic: %#v", tt.desc, tt.name, r)
+				}
+				if got != tt.want {
+					t.Fatalf("%s(%q) = %q, want %q", tt.desc, tt.name, got, tt.want)
+				}
+			}()
+			got = tt.fn(tt.name)
+		})
+	}
+}

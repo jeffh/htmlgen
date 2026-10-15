@@ -462,7 +462,7 @@ func TestSetSignal(t *testing.T) {
 }
 
 func TestSetSignalEmptyNamePanics(t *testing.T) {
-	for _, name := range []string{"", "$"} {
+	for _, name := range []string{"", "$", "$$", "$$$"} {
 		func() {
 			defer func() {
 				if recover() == nil {
@@ -479,6 +479,164 @@ func TestSetSignalEmptyNamePanics(t *testing.T) {
 			}()
 			SetSignalExpr(name, js.Int(1))
 		}()
+	}
+}
+
+func TestValidSignalName(t *testing.T) {
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{"", false},
+		{"$", false},
+		{"$$", false},
+		{"$$$", false},
+		{"open", true},
+		{"$open", true},
+		{"$$open", true},
+	}
+	for _, tt := range tests {
+		if got := ValidSignalName(tt.name); got != tt.want {
+			t.Errorf("ValidSignalName(%q) = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+func TestSignalKeyHelpersEmptyNameMatchesMain(t *testing.T) {
+	tests := []struct {
+		desc, name, wantName, wantValue, wantPanic string
+		fn                                         func(string) (name, value string)
+	}{
+		{"Signal", "", "data-signals:", "0", "", func(name string) (string, string) {
+			a := Signal(name, 0).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Signal", "$", "", "", `htmlgen: invalid attribute name "data-signals:$"`, func(name string) (string, string) {
+			a := Signal(name, 0).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Signal", "$$", "", "", `htmlgen: invalid attribute name "data-signals:$$"`, func(name string) (string, string) {
+			a := Signal(name, 0).Attribute()
+			return a.Name, a.Value
+		}},
+		{"SignalExpr", "", "data-signals:", "0", "", func(name string) (string, string) {
+			a := SignalExpr(name, Raw("0")).Attribute()
+			return a.Name, a.Value
+		}},
+		{"SignalExpr", "$", "", "", `htmlgen: invalid attribute name "data-signals:$"`, func(name string) (string, string) {
+			a := SignalExpr(name, Raw("0")).Attribute()
+			return a.Name, a.Value
+		}},
+		{"SignalExpr", "$$", "", "", `htmlgen: invalid attribute name "data-signals:$$"`, func(name string) (string, string) {
+			a := SignalExpr(name, Raw("0")).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Bind", "", "data-bind", "", "", func(name string) (string, string) {
+			a := Bind(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Bind", "$", "data-bind", "$", "", func(name string) (string, string) {
+			a := Bind(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Bind", "$$", "data-bind", "$$", "", func(name string) (string, string) {
+			a := Bind(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"BindKey", "", "data-bind:", "", "", func(name string) (string, string) {
+			a := BindKey(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"BindKey", "$", "", "", `htmlgen: invalid attribute name "data-bind:$"`, func(name string) (string, string) {
+			a := BindKey(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"BindKey", "$$", "", "", `htmlgen: invalid attribute name "data-bind:$$"`, func(name string) (string, string) {
+			a := BindKey(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Computed", "", "data-computed:", "1", "", func(name string) (string, string) {
+			a := Computed(name, Raw("1")).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Computed", "$", "", "", `htmlgen: invalid attribute name "data-computed:$"`, func(name string) (string, string) {
+			a := Computed(name, Raw("1")).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Computed", "$$", "", "", `htmlgen: invalid attribute name "data-computed:$$"`, func(name string) (string, string) {
+			a := Computed(name, Raw("1")).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Ref", "", "data-ref:", "", "", func(name string) (string, string) {
+			a := Ref(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Ref", "$", "", "", `htmlgen: invalid attribute name "data-ref:$"`, func(name string) (string, string) {
+			a := Ref(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Ref", "$$", "", "", `htmlgen: invalid attribute name "data-ref:$$"`, func(name string) (string, string) {
+			a := Ref(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"Indicator", "", "data-indicator", "", "", func(name string) (string, string) {
+			a := Indicator(name)
+			return a.Name, a.Value
+		}},
+		{"Indicator", "$", "data-indicator", "", "", func(name string) (string, string) {
+			a := Indicator(name)
+			return a.Name, a.Value
+		}},
+		{"Indicator", "$$", "data-indicator", "", "", func(name string) (string, string) {
+			a := Indicator(name)
+			return a.Name, a.Value
+		}},
+		{"IndicatorKey", "", "data-indicator:", "", "", func(name string) (string, string) {
+			a := IndicatorKey(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"IndicatorKey", "$", "data-indicator:", "", "", func(name string) (string, string) {
+			a := IndicatorKey(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"IndicatorKey", "$$", "data-indicator:", "", "", func(name string) (string, string) {
+			a := IndicatorKey(name).Attribute()
+			return a.Name, a.Value
+		}},
+		{"MatchMedia", "", "data-match-media:", `"(min-width: 1px)"`, "", func(name string) (string, string) {
+			a := MatchMedia(name, Str("(min-width: 1px)")).Attribute()
+			return a.Name, a.Value
+		}},
+		{"MatchMedia", "$", "", "", `htmlgen: invalid attribute name "data-match-media:$"`, func(name string) (string, string) {
+			a := MatchMedia(name, Str("(min-width: 1px)")).Attribute()
+			return a.Name, a.Value
+		}},
+		{"MatchMedia", "$$", "", "", `htmlgen: invalid attribute name "data-match-media:$$"`, func(name string) (string, string) {
+			a := MatchMedia(name, Str("(min-width: 1px)")).Attribute()
+			return a.Name, a.Value
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc+"/name="+tt.name, func(t *testing.T) {
+			var gotName, gotValue string
+			defer func() {
+				r := recover()
+				if tt.wantPanic != "" {
+					msg, ok := r.(string)
+					if r == nil || !ok || msg != tt.wantPanic {
+						t.Fatalf("%s(%q) panic = %#v, want %q", tt.desc, tt.name, r, tt.wantPanic)
+					}
+					return
+				}
+				if r != nil {
+					t.Fatalf("%s(%q) unexpected panic: %#v", tt.desc, tt.name, r)
+				}
+				if gotName != tt.wantName || gotValue != tt.wantValue {
+					t.Fatalf("%s(%q) = {%q, %q}, want {%q, %q}", tt.desc, tt.name, gotName, gotValue, tt.wantName, tt.wantValue)
+				}
+			}()
+			gotName, gotValue = tt.fn(tt.name)
+		})
 	}
 }
 
