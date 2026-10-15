@@ -516,35 +516,6 @@ func TestHeadersEmpty(t *testing.T) {
 	}
 }
 
-func TestSigEmptyNamePanics(t *testing.T) {
-	for _, name := range []string{"", "$"} {
-		func() {
-			defer func() {
-				if recover() == nil {
-					t.Errorf("Sig(%q).Ref() did not panic", name)
-				}
-			}()
-			Sig(name).Ref()
-		}()
-		func() {
-			defer func() {
-				if recover() == nil {
-					t.Errorf("Sig(%q).Set(1) did not panic", name)
-				}
-			}()
-			Sig(name).Set(1)
-		}()
-		func() {
-			defer func() {
-				if recover() == nil {
-					t.Errorf("Sig(%q).SetExpr(js.Int(1)) did not panic", name)
-				}
-			}()
-			Sig(name).SetExpr(js.Int(1))
-		}()
-	}
-}
-
 func TestSigEmptyNameMatchesMain(t *testing.T) {
 	const emptyPanic = "ds: empty signal name"
 	tests := []struct {
