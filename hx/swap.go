@@ -43,9 +43,6 @@ const (
 )
 
 // SwapBuilder builds an hx-swap attribute value.
-//
-// SwapBuilder implements h.AttrBuilder, so it can be passed directly to
-// element methods like B.Div without an explicit terminator method.
 type SwapBuilder struct {
 	strategy  SwapStrategy
 	modifiers []string

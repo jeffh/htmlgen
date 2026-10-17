@@ -159,10 +159,12 @@ func EventKey() Expr { return Event.Prop("key") }
 // EventCode creates event.code.
 func EventCode() Expr { return Event.Prop("code") }
 
-// EventKeyCode creates event.keyCode (deprecated but common).
+// EventKeyCode creates event.keyCode.
+// Deprecated: Use EventKey or EventCode instead.
 func EventKeyCode() Expr { return Event.Prop("keyCode") }
 
-// EventWhich creates event.which (deprecated but common).
+// EventWhich creates event.which.
+// Deprecated: Use EventKey instead.
 func EventWhich() Expr { return Event.Prop("which") }
 
 // EventShiftKey creates event.shiftKey.
