@@ -58,7 +58,7 @@ func (s Sig) Not() ds.Value { return ds.V(s.Ref().Not()) }
 
 // Set returns a ds.Value that assigns the private signal. The value is
 // interpreted like ds.SetSignal: a js.Expr or ds.Value is emitted as-is,
-// anything else is JSON encoded. It panics on an empty signal name, like Ref.
+// anything else is JSON encoded. It panics on an empty signal name.
 //
 // Passing a js.Stmt panics: statements are not values, and JSON-encoding one
 // would silently emit "{}". Use SetExpr with an expression, or ds.Do to
@@ -77,7 +77,7 @@ func (s Sig) Set(value any) ds.Value {
 // SetExpr returns a ds.Value that assigns the private signal to a JavaScript
 // expression. The assignment is parenthesized, like ds.SetSignalExpr, so it
 // stays a valid expression when composed with And, Or or Ternary. It panics
-// on an empty signal name, like Ref.
+// on an empty signal name.
 //
 //	rkt.Sig("n").SetExpr(js.Int(1))  =>  ($$n = 1)
 func (s Sig) SetExpr(e js.Expr) ds.Value {

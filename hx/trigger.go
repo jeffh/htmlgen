@@ -31,9 +31,6 @@ func (s *triggerSpec) String() string {
 }
 
 // TriggerBuilder builds an hx-trigger attribute value.
-//
-// TriggerBuilder implements h.AttrBuilder, so it can be passed directly to
-// element methods like B.Div without calling a terminator method.
 type TriggerBuilder struct {
 	triggers []triggerSpec
 }
@@ -230,9 +227,6 @@ func TriggerRevealed() h.Attribute {
 }
 
 // IntersectTriggerBuilder builds an hx-trigger attribute for the "intersect" event.
-//
-// IntersectTriggerBuilder implements h.AttrBuilder, so it can be passed directly
-// to element methods.
 type IntersectTriggerBuilder struct {
 	spec triggerSpec
 }
@@ -267,9 +261,6 @@ func (b *IntersectTriggerBuilder) Once() *IntersectTriggerBuilder {
 
 // IntervalTriggerBuilder builds an hx-trigger attribute for polling triggers
 // (e.g., "every 2s").
-//
-// IntervalTriggerBuilder implements h.AttrBuilder, so it can be passed directly
-// to element methods.
 type IntervalTriggerBuilder struct {
 	spec triggerSpec
 }
