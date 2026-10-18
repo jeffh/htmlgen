@@ -1,6 +1,9 @@
 package js
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // writeArrowParams writes arrow function parameters in the format:
 //   - Single param: x
@@ -150,6 +153,8 @@ func (t templateLiteral) js(sb *strings.Builder) {
 			sb.WriteString("${")
 			v.js(sb)
 			sb.WriteString("}")
+		default:
+			panic(fmt.Sprintf("js.Template: unsupported part type %T: value=%#v", part, part))
 		}
 	}
 	sb.WriteString("`")
@@ -157,6 +162,7 @@ func (t templateLiteral) js(sb *strings.Builder) {
 
 // Template creates a template literal expression.
 // Alternates between string parts and expression parts.
+// Panics if a part is neither a string nor an Expr.
 //
 //	Template("Hello, ", Ident("name"), "!") => `Hello, ${name}!`
 func Template(parts ...any) Expr {
