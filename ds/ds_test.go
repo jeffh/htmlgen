@@ -461,6 +461,25 @@ func TestSetSignal(t *testing.T) {
 	}
 }
 
+func TestSetSignalRejectsStmt(t *testing.T) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal(`SetSignal("x", js.Stmt) did not panic`)
+		}
+		msg, ok := r.(string)
+		if !ok {
+			t.Fatalf("panic value = %#v, want string", r)
+		}
+		for _, want := range []string{"js.Stmt", "SetSignalExpr", "ds.Do"} {
+			if !strings.Contains(msg, want) {
+				t.Errorf("panic message %q should mention %q", msg, want)
+			}
+		}
+	}()
+	_ = SetSignal("x", js.Ident("n").Incr())
+}
+
 func TestSetSignalEmptyNamePanics(t *testing.T) {
 	for _, name := range []string{"", "$", "$$", "$$$"} {
 		func() {
@@ -895,13 +914,13 @@ func TestComputed(t *testing.T) {
 	}
 }
 
-func TestComputedExpr(t *testing.T) {
+func TestComputedCase(t *testing.T) {
 	attr := Computed("total", Raw("$price * $qty")).Case(CamelCase).Attribute()
 	if !strings.HasPrefix(attr.Name, "data-computed:") {
-		t.Errorf("ComputedExpr().Name should start with data-computed:, got %q", attr.Name)
+		t.Errorf("Computed().Case().Name should start with data-computed:, got %q", attr.Name)
 	}
 	if !strings.Contains(attr.Name, "total") {
-		t.Errorf("ComputedExpr().Name should contain total, got %q", attr.Name)
+		t.Errorf("Computed().Case().Name should contain total, got %q", attr.Name)
 	}
 }
 

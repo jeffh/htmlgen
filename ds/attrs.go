@@ -1,6 +1,7 @@
 package ds
 
 import (
+	"fmt"
 	"maps"
 	"slices"
 	"strings"
@@ -52,7 +53,14 @@ func SetSignalExpr(signalName string, expression js.Expr) Value {
 // Use SetSignalExpr if you need to set the signal to a complex expression.
 // The signal name is automatically prefixed with "$". It panics on an empty
 // signal name, like SetSignalExpr.
+//
+// Passing a js.Stmt panics: statements are not values, and JSON-encoding one
+// would silently emit "{}". Use SetSignalExpr with an expression, or Do to
+// sequence statements.
 func SetSignal(signalName string, jsValue any) Value {
+	if stmt, ok := jsValue.(js.Stmt); ok {
+		panic(fmt.Sprintf("ds: SetSignal(%q) called with a js.Stmt (%q); statements are not values — use SetSignalExpr with a js.Expr, or ds.Do to sequence statements", signalName, js.ToJSStmt(stmt)))
+	}
 	switch v := jsValue.(type) {
 	case js.Expr:
 		return SetSignalExpr(signalName, v)
