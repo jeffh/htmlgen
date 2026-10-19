@@ -1,6 +1,7 @@
 package js
 
 import (
+	"math"
 	"strings"
 	"testing"
 )
@@ -92,6 +93,36 @@ func TestFloat(t *testing.T) {
 		if got != tt.expected {
 			t.Errorf("Float(%v) = %q, want %q", tt.input, got, tt.expected)
 		}
+	}
+}
+
+func TestFloatRejectsNonFinite(t *testing.T) {
+	tests := []struct {
+		name  string
+		value float64
+	}{
+		{"NaN", math.NaN()},
+		{"positive infinity", math.Inf(1)},
+		{"negative infinity", math.Inf(-1)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				r := recover()
+				if r == nil {
+					t.Fatalf("Float(%v) did not panic", tt.value)
+				}
+				msg, ok := r.(string)
+				if !ok {
+					t.Fatalf("Float(%v) panic value = %#v, want string", tt.value, r)
+				}
+				if !strings.Contains(msg, "js.Float") {
+					t.Errorf("Float(%v) panic = %q, want substring %q", tt.value, msg, "js.Float")
+				}
+			}()
+			_ = ToJS(Float(tt.value))
+		})
 	}
 }
 

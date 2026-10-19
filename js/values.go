@@ -3,6 +3,7 @@ package js
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -79,8 +80,13 @@ func Int(n int) Expr { return Expr{node: literal{strconv.Itoa(n)}} }
 // Int64 creates a JavaScript number literal from an int64.
 func Int64(n int64) Expr { return Expr{node: literal{strconv.FormatInt(n, 10)}} }
 
-// Float creates a JavaScript number literal from a float64.
-func Float(f float64) Expr { return Expr{node: literal{strconv.FormatFloat(f, 'f', -1, 64)}} }
+// Float creates a JavaScript number literal from a float64. It panics if f is NaN or Inf.
+func Float(f float64) Expr {
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		panic(fmt.Sprintf("js.Float: %v is not a finite number", f))
+	}
+	return Expr{node: literal{strconv.FormatFloat(f, 'f', -1, 64)}}
+}
 
 // Bool creates a JavaScript boolean literal.
 func Bool(b bool) Expr {
