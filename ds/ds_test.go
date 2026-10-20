@@ -1266,6 +1266,36 @@ func TestRequestOptionsBuilder(t *testing.T) {
 	}
 }
 
+func TestRequestOptionsBuilderBranchDoesNotAlias(t *testing.T) {
+	// Three options grow the backing slice to len=3, cap=4. Branching from
+	// that base used to overwrite the spare slot, so rendering one branch
+	// after creating the other emitted the other branch's last option.
+	base := RequestOptions().ContentType("json").Selector("#a").OpenWhenHidden(true)
+	a := base.Retry("never")
+	gotABefore := ToJS(GetWithOptions("/x", a).expr)
+	b := base.RetryMaxCount(5)
+	gotB := ToJS(GetWithOptions("/x", b).expr)
+	gotAAfter := ToJS(GetWithOptions("/x", a).expr)
+	gotBase := ToJS(GetWithOptions("/x", base).expr)
+
+	wantA := `@get("/x", {contentType: "json", selector: "#a", openWhenHidden: true, retry: "never"})`
+	wantB := `@get("/x", {contentType: "json", selector: "#a", openWhenHidden: true, retryMaxCount: 5})`
+	wantBase := `@get("/x", {contentType: "json", selector: "#a", openWhenHidden: true})`
+
+	if gotABefore != wantA {
+		t.Errorf("a before second branch = %q, want %q", gotABefore, wantA)
+	}
+	if gotB != wantB {
+		t.Errorf("b = %q, want %q", gotB, wantB)
+	}
+	if gotAAfter != wantA {
+		t.Errorf("a after second branch = %q, want %q", gotAAfter, wantA)
+	}
+	if gotBase != wantBase {
+		t.Errorf("base after branching = %q, want %q", gotBase, wantBase)
+	}
+}
+
 func TestHeaders(t *testing.T) {
 	v := GetWithOptions("/api", RequestOptions().Headers(map[string]string{
 		"X-Custom": "value",
