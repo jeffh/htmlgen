@@ -146,14 +146,20 @@ func RequestOptions() RequestOptionsBuilder {
 	return RequestOptionsBuilder{}
 }
 
+// with returns a copy of b with opt appended. The full slice expression keeps
+// append from writing into a caller-owned slice's spare capacity.
+func (b RequestOptionsBuilder) with(opt requestOption) RequestOptionsBuilder {
+	b.options = append(b.options[:len(b.options):len(b.options)], opt)
+	return b
+}
+
 // ContentType sets the request content type.
 // Values: "json" (default) or "form"
 func (b RequestOptionsBuilder) ContentType(ct string) RequestOptionsBuilder {
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("contentType: ")
 		sb.WriteString(strconv.Quote(ct))
 	}))
-	return b
 }
 
 // FilterSignals filters which signals are sent with the request.
@@ -162,20 +168,18 @@ func (b RequestOptionsBuilder) FilterSignals(filter *FilterOptions) RequestOptio
 	if filter == nil {
 		return b
 	}
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("filterSignals: ")
 		filter.appendJS(sb)
 	}))
-	return b
 }
 
 // Selector specifies a CSS selector for form elements (when contentType is 'form').
 func (b RequestOptionsBuilder) Selector(sel string) RequestOptionsBuilder {
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("selector: ")
 		sb.WriteString(strconv.Quote(sel))
 	}))
-	return b
 }
 
 // Headers sets custom HTTP headers for the request. Header names are sorted
@@ -184,7 +188,7 @@ func (b RequestOptionsBuilder) Selector(sel string) RequestOptionsBuilder {
 //	ds.RequestOptions().Headers(map[string]string{"X-B": "2", "X-A": "1"})
 //	=>  headers: {"X-A": "1", "X-B": "2"}
 func (b RequestOptionsBuilder) Headers(headers map[string]string) RequestOptionsBuilder {
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("headers: {")
 		for i, k := range slices.Sorted(maps.Keys(headers)) {
 			if i > 0 {
@@ -196,13 +200,12 @@ func (b RequestOptionsBuilder) Headers(headers map[string]string) RequestOptions
 		}
 		sb.WriteString("}")
 	}))
-	return b
 }
 
 // OpenWhenHidden keeps the connection alive when the tab is hidden.
 // Defaults to false for GET requests and true for all other methods.
 func (b RequestOptionsBuilder) OpenWhenHidden(open bool) RequestOptionsBuilder {
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("openWhenHidden: ")
 		if open {
 			sb.WriteString("true")
@@ -210,71 +213,64 @@ func (b RequestOptionsBuilder) OpenWhenHidden(open bool) RequestOptionsBuilder {
 			sb.WriteString("false")
 		}
 	}))
-	return b
 }
 
 // RetryInterval sets the retry interval in milliseconds (default: 1000).
 func (b RequestOptionsBuilder) RetryInterval(ms int) RequestOptionsBuilder {
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("retryInterval: ")
 		sb.WriteString(strconv.Itoa(ms))
 	}))
-	return b
 }
 
 // RetryScaler sets the exponential backoff multiplier (default: 2).
 func (b RequestOptionsBuilder) RetryScaler(scaler float64) RequestOptionsBuilder {
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("retryScaler: ")
 		sb.WriteString(strconv.FormatFloat(scaler, 'f', -1, 64))
 	}))
-	return b
 }
 
 // RetryMaxWait sets the maximum wait between retries in milliseconds (default: 30000).
 func (b RequestOptionsBuilder) RetryMaxWait(ms int) RequestOptionsBuilder {
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("retryMaxWait: ")
 		sb.WriteString(strconv.Itoa(ms))
 	}))
-	return b
 }
 
 // RetryMaxCount sets the maximum number of retry attempts (default: 10).
 func (b RequestOptionsBuilder) RetryMaxCount(count int) RequestOptionsBuilder {
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("retryMaxCount: ")
 		sb.WriteString(strconv.Itoa(count))
 	}))
-	return b
 }
 
 // RequestCancellation sets the request cancellation mode.
 // Values: "auto" (default), "cleanup", "disabled"
 func (b RequestOptionsBuilder) RequestCancellation(mode string) RequestOptionsBuilder {
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("requestCancellation: ")
 		sb.WriteString(strconv.Quote(mode))
 	}))
-	return b
 }
 
 // Retry sets the retry strategy for the request.
 // Values: "auto" (default, retry on network errors), "error" (retry on errors and non-2xx),
 // "always" (always retry), "never" (never retry)
 func (b RequestOptionsBuilder) Retry(mode string) RequestOptionsBuilder {
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("retry: ")
 		sb.WriteString(strconv.Quote(mode))
 	}))
-	return b
 }
 
 // Payload overrides the data sent with the request (instead of the filtered
 // signals). Encoded as the request body for POST/PUT/PATCH, or as query
 // params for GET.
 func (b RequestOptionsBuilder) Payload(data any) RequestOptionsBuilder {
-	b.options = append(b.options, requestOptionFunc(func(sb *strings.Builder) {
+	return b.with(requestOptionFunc(func(sb *strings.Builder) {
 		sb.WriteString("payload: ")
 		bytes, err := json.Marshal(data)
 		if err != nil {
@@ -282,7 +278,6 @@ func (b RequestOptionsBuilder) Payload(data any) RequestOptionsBuilder {
 		}
 		sb.WriteString(string(bytes))
 	}))
-	return b
 }
 
 type requestOption interface {
