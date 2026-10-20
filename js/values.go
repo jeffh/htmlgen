@@ -3,7 +3,6 @@ package js
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -80,12 +79,22 @@ func Int(n int) Expr { return Expr{node: literal{strconv.Itoa(n)}} }
 // Int64 creates a JavaScript number literal from an int64.
 func Int64(n int64) Expr { return Expr{node: literal{strconv.FormatInt(n, 10)}} }
 
-// Float creates a JavaScript number literal from a float64. It panics if f is NaN or Inf.
+// Float creates a JavaScript number literal from a float64.
+//
+// Finite values use strconv.FormatFloat with format 'f' and precision -1.
+// NaN emits NaN (the same bytes FormatFloat produces). +Inf and -Inf emit
+// the JavaScript globals Infinity and -Infinity, which are valid in both
+// script and HTML event-handler attributes. The leading '-' on -Infinity
+// is written like other negative literals such as -2.5. Float never panics.
 func Float(f float64) Expr {
-	if math.IsNaN(f) || math.IsInf(f, 0) {
-		panic(fmt.Sprintf("js.Float: %v is not a finite number", f))
+	s := strconv.FormatFloat(f, 'f', -1, 64)
+	switch s {
+	case "+Inf":
+		s = "Infinity"
+	case "-Inf":
+		s = "-Infinity"
 	}
-	return Expr{node: literal{strconv.FormatFloat(f, 'f', -1, 64)}}
+	return Expr{node: literal{s}}
 }
 
 // Bool creates a JavaScript boolean literal.

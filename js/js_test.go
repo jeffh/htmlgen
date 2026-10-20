@@ -2,8 +2,11 @@ package js
 
 import (
 	"math"
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/jeffh/htmlgen/h"
 )
 
 func exprString(e Expr) string {
@@ -96,32 +99,52 @@ func TestFloat(t *testing.T) {
 	}
 }
 
-func TestFloatRejectsNonFinite(t *testing.T) {
+func TestFloatNonFinite(t *testing.T) {
 	tests := []struct {
-		name  string
-		value float64
+		name     string
+		value    float64
+		expected string
 	}{
-		{"NaN", math.NaN()},
-		{"positive infinity", math.Inf(1)},
-		{"negative infinity", math.Inf(-1)},
+		{"NaN", math.NaN(), "NaN"},
+		{"positive infinity", math.Inf(1), "Infinity"},
+		{"negative infinity", math.Inf(-1), "-Infinity"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				r := recover()
-				if r == nil {
-					t.Fatalf("Float(%v) did not panic", tt.value)
-				}
-				msg, ok := r.(string)
-				if !ok {
-					t.Fatalf("Float(%v) panic value = %#v, want string", tt.value, r)
-				}
-				if !strings.Contains(msg, "js.Float") {
-					t.Errorf("Float(%v) panic = %q, want substring %q", tt.value, msg, "js.Float")
-				}
-			}()
-			_ = ToJS(Float(tt.value))
+			got := exprString(Float(tt.value))
+			if got != tt.expected {
+				t.Errorf("Float(%v) = %q, want %q", tt.value, got, tt.expected)
+			}
+		})
+	}
+
+	// NaN must stay byte-identical to main / FormatFloat('f', -1, 64).
+	nan := exprString(Float(math.NaN()))
+	if want := strconv.FormatFloat(math.NaN(), 'f', -1, 64); nan != want {
+		t.Errorf("Float(NaN) = %q, want FormatFloat bytes %q", nan, want)
+	}
+}
+
+func TestFloatNonFiniteInRenderedHandler(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    float64
+		expected string
+	}{
+		{"NaN", math.NaN(), `<button onclick="x = NaN"></button>`},
+		{"positive infinity", math.Inf(1), `<button onclick="x = Infinity"></button>`},
+		{"negative infinity", math.Inf(-1), `<button onclick="x = -Infinity"></button>`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := h.RenderString(func(b *h.B) {
+				b.Button(h.AttrsOf(OnClick(Ident("x").Assign(Float(tt.value)))), nil)
+			})
+			if got != tt.expected {
+				t.Errorf("Float(%v) in handler = %q, want %q", tt.value, got, tt.expected)
+			}
 		})
 	}
 }
